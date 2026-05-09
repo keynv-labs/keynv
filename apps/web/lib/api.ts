@@ -5,7 +5,7 @@
  */
 import { redirect } from 'next/navigation';
 import { env } from './env';
-import { type Session, clearSession, getSession } from './session';
+import { type Session, getSession } from './session';
 
 const AGENT = 'keynv-web/0.0.0';
 
@@ -85,9 +85,11 @@ export async function api<T = unknown>(path: string, opts: RequestOpts = {}): Pr
 
     // If we presented a session token and the server rejected it, the
     // session is dead (expired access token, JWT secret rotated on a
-    // server restart, refresh token revoked, password changed). Wipe
-    // the cookie and bounce to /login so the user re-authenticates
-    // instead of seeing an error boundary on every authed page.
+    // server restart, refresh token revoked, password changed). Bounce
+    // to /login; the loginAction's setSession will overwrite the stale
+    // cookie. We can't call clearSession from here — Next.js forbids
+    // modifying cookies in a Server Component context, and api() is
+    // most often invoked from one.
     //
     // Login + refresh flows pass authed: false, so they never hit this
     // branch — wrong-password errors still surface to the form.
@@ -97,7 +99,6 @@ export async function api<T = unknown>(path: string, opts: RequestOpts = {}): Pr
       typeof errPayload?.code === 'string' &&
       errPayload.code.startsWith('auth.')
     ) {
-      await clearSession();
       redirect('/login');
     }
 
