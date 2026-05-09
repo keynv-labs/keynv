@@ -60,7 +60,7 @@ function fakePayload(): string {
 
 function runSingle(db: Database.Database, n: number): Run {
   const insert = db.prepare(
-    `INSERT INTO audit (prev_hash, hash, ts, actor, event_type, payload) VALUES (?, ?, ?, ?, ?, ?)`,
+    'INSERT INTO audit (prev_hash, hash, ts, actor, event_type, payload) VALUES (?, ?, ?, ?, ?, ?)',
   );
   let prev = '0'.repeat(64);
   const start = process.hrtime.bigint();
@@ -77,7 +77,7 @@ function runSingle(db: Database.Database, n: number): Run {
 
 function runBatched(db: Database.Database, n: number, batch: number): Run {
   const insert = db.prepare(
-    `INSERT INTO audit (prev_hash, hash, ts, actor, event_type, payload) VALUES (?, ?, ?, ?, ?, ?)`,
+    'INSERT INTO audit (prev_hash, hash, ts, actor, event_type, payload) VALUES (?, ?, ?, ?, ?, ?)',
   );
   const insertMany = db.transaction(
     (entries: Array<{ prev: string; hash: string; ts: string; payload: string }>) => {
