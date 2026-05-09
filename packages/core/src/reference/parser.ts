@@ -4,10 +4,12 @@ const PROJECT_RE = /^[a-z0-9][a-z0-9-]{0,47}$/;
 const ENV_RE = /^[a-z0-9][a-z0-9-]{0,23}$/;
 const KEY_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
-const TEXT_FIND_SOURCE =
-  '(?<![\\w.@/])@[a-z0-9][a-z0-9-]{0,47}\\.[a-z0-9][a-z0-9-]{0,23}\\.[a-z0-9][a-z0-9_-]{0,63}(?![\\w.])';
-const ARGV_FIND_SOURCE =
-  '@[a-z0-9][a-z0-9-]{0,47}\\.[a-z0-9][a-z0-9-]{0,23}\\.[a-z0-9][a-z0-9_-]{0,63}(?![\\w.])';
+// Trailing boundary: forbid an immediately-following word char (would extend
+// the key) AND forbid a `.<alias-start>` (would imply a 4-part alias). A bare
+// trailing `.` — sentence punctuation — is allowed.
+const TRAILING_BOUNDARY = '(?!\\w|\\.[a-z0-9])';
+const TEXT_FIND_SOURCE = `(?<![\\w.@/])@[a-z0-9][a-z0-9-]{0,47}\\.[a-z0-9][a-z0-9-]{0,23}\\.[a-z0-9][a-z0-9_-]{0,63}${TRAILING_BOUNDARY}`;
+const ARGV_FIND_SOURCE = `@[a-z0-9][a-z0-9-]{0,47}\\.[a-z0-9][a-z0-9-]{0,23}\\.[a-z0-9][a-z0-9_-]{0,63}${TRAILING_BOUNDARY}`;
 
 const TEXT_FIND_RE = new RegExp(TEXT_FIND_SOURCE, 'g');
 const ARGV_FIND_RE = new RegExp(ARGV_FIND_SOURCE, 'g');
@@ -20,7 +22,7 @@ const ARGV_FIND_RE = new RegExp(ARGV_FIND_SOURCE, 'g');
  * each within the documented length limits.
  */
 export function parseAlias(input: string): Alias | null {
-  if (typeof input !== 'string' || input.length < 7) return null;
+  if (typeof input !== 'string' || input.length < 6) return null;
   if (input.charCodeAt(0) !== 64) return null;
 
   const dot1 = input.indexOf('.', 1);

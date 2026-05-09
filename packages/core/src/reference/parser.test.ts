@@ -35,9 +35,9 @@ describe('parseAlias — happy paths', () => {
   });
 
   it('accepts max-length components', () => {
-    const project = 'a' + 'b'.repeat(47);
-    const environment = 'a' + 'b'.repeat(23);
-    const key = 'a' + 'b'.repeat(63);
+    const project = `a${'b'.repeat(47)}`;
+    const environment = `a${'b'.repeat(23)}`;
+    const key = `a${'b'.repeat(63)}`;
     const literal = `@${project}.${environment}.${key}`;
     expect(parseAlias(literal)).toEqual({ literal, project, environment, key });
   });

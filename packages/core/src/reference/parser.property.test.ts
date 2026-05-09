@@ -115,7 +115,10 @@ describe('findAliases — properties', () => {
       fc.property(fc.string({ maxLength: 400 }), (text) => {
         const matches = findAliases(text);
         for (let i = 1; i < matches.length; i++) {
-          expect(matches[i]!.start).toBeGreaterThanOrEqual(matches[i - 1]!.end);
+          const cur = matches[i];
+          const prev = matches[i - 1];
+          if (!cur || !prev) continue;
+          expect(cur.start).toBeGreaterThanOrEqual(prev.end);
         }
       }),
       { numRuns: 500 },
