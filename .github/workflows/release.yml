@@ -7,15 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v0.1.0). Must already exist.'
+        description: 'Tag to release (e.g. v0.1.0). Must already exist on origin.'
         required: true
         type: string
 
 permissions:
   contents: write
   packages: write
-  id-token: write
-  attestations: write
 
 env:
   REGISTRY: ghcr.io
@@ -27,25 +25,35 @@ concurrency:
 
 jobs:
   prepare:
+    name: prepare
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
       version: ${{ steps.resolve.outputs.version }}
+      prerelease: ${{ steps.resolve.outputs.prerelease }}
     steps:
       - id: resolve
         run: |
+          set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             tag="${{ inputs.tag }}"
           else
             tag="${GITHUB_REF#refs/tags/}"
           fi
           version="${tag#v}"
+          # Mark anything with a hyphen (rc, beta, alpha, dev) as prerelease.
+          if [[ "$version" == *-* ]]; then
+            prerelease=true
+          else
+            prerelease=false
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
   cli-binaries:
+    name: cli (${{ matrix.target }})
     needs: prepare
-    name: CLI binary (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -75,29 +83,36 @@ jobs:
           version: 9.12.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: pnpm
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - run: pnpm install --frozen-lockfile
+      # CLI depends on workspace packages; build their JS so Bun can
+      # compile against real dist/ outputs rather than walking sources.
+      - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
       - name: Build CLI binary
         shell: bash
         run: |
+          set -euo pipefail
+          mkdir -p dist-release
           cd apps/cli
-          OUT="${{ matrix.artifact }}"
-          bun build src/index.ts --compile --target ${{ matrix.target }} --outfile "../../dist-release/$OUT"
+          bun build src/index.ts \
+            --compile \
+            --target ${{ matrix.target }} \
+            --outfile "../../dist-release/${{ matrix.artifact }}"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: dist-release/${{ matrix.artifact }}
           retention-days: 1
+          if-no-files-found: error
 
   docker-image:
+    name: docker (multi-arch)
     needs: prepare
     runs-on: ubuntu-latest
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -113,12 +128,14 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # `latest` only on stable releases (no rc/beta/alpha suffix).
+          # Pre-1.0 also gets the {major}.{minor} alias so a user can
+          # pin to e.g. `0.1` and follow patches automatically.
           tags: |
             type=semver,pattern={{version}},value=${{ needs.prepare.outputs.tag }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.prepare.outputs.tag }}
-            type=raw,value=latest
-      - id: build
-        uses: docker/build-push-action@v6
+            type=raw,value=latest,enable=${{ needs.prepare.outputs.prerelease == 'false' }}
+      - uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/server/Dockerfile
@@ -128,51 +145,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - uses: sigstore/cosign-installer@v3
-      - name: Cosign keyless sign
-        env:
-          COSIGN_EXPERIMENTAL: "1"
-        run: |
-          for tag in ${{ steps.meta.outputs.tags }}; do
-            cosign sign --yes "${tag}@${{ steps.build.outputs.digest }}"
-          done
-
-  helm-chart:
-    needs: prepare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.prepare.outputs.tag }}
-      - uses: azure/setup-helm@v4
-        with:
-          version: v3.16.0
-      - name: Lint chart
-        run: helm lint deploy/helm/keynv --set server.jwtSecret=test-jwt-secret-must-be-at-least-32-chars-long
-      - name: Package chart
-        run: |
-          mkdir -p dist-release
-          helm package deploy/helm/keynv \
-            --version "${{ needs.prepare.outputs.version }}" \
-            --app-version "${{ needs.prepare.outputs.version }}" \
-            --destination dist-release
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push chart to GHCR (OCI)
-        run: |
-          helm push dist-release/keynv-${{ needs.prepare.outputs.version }}.tgz \
-            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
-      - uses: actions/upload-artifact@v4
-        with:
-          name: helm-chart
-          path: dist-release/*.tgz
-          retention-days: 1
 
   release:
-    needs: [prepare, cli-binaries, docker-image, helm-chart]
+    name: github release
+    needs: [prepare, cli-binaries, docker-image]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -182,25 +158,44 @@ jobs:
         with:
           path: dist-release
           merge-multiple: true
-      - uses: sigstore/cosign-installer@v3
-      - name: Sign each binary (cosign blob, keyless)
-        env:
-          COSIGN_EXPERIMENTAL: "1"
+      - name: Compute SHA256SUMS
+        working-directory: dist-release
         run: |
-          cd dist-release
-          for f in keynv-*; do
-            [ -f "$f" ] || continue
-            cosign sign-blob --yes "$f" \
-              --bundle "${f}.cosign.bundle"
-            sha256sum "$f" >> SHA256SUMS
-          done
+          set -euo pipefail
+          # Sort for deterministic ordering across re-runs.
+          ls keynv-* | sort | xargs sha256sum > SHA256SUMS
+          cat SHA256SUMS
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          # Pull the section between `## [version]` and the next `## [`
+          # header. Strip the section heading itself; keep the body.
+          awk -v ver="$version" '
+            /^## \[/ {
+              if (capture) exit
+              if ($0 ~ "\\["ver"\\]") { capture=1; next }
+            }
+            capture { print }
+          ' CHANGELOG.md > release-body.md
+          if [ -s release-body.md ]; then
+            echo "body_path=release-body.md" >> "$GITHUB_OUTPUT"
+          else
+            echo "No CHANGELOG section found for $version — falling back to autogen." >&2
+            rm -f release-body.md
+            echo "body_path=" >> "$GITHUB_OUTPUT"
+          fi
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           name: ${{ needs.prepare.outputs.tag }}
-          generate_release_notes: true
+          prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
+          # If we extracted a CHANGELOG section, use it; otherwise let
+          # GitHub auto-generate from PRs/commits.
+          body_path: ${{ steps.notes.outputs.body_path }}
+          generate_release_notes: ${{ steps.notes.outputs.body_path == '' }}
           files: |
             dist-release/keynv-*
             dist-release/SHA256SUMS
-            dist-release/*.tgz
