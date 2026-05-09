@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import Link from 'next/link';
 import { AddMemberForm, RemoveMemberButton } from './forms';
 
 interface Member {
@@ -47,7 +47,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
                 <th className="pb-2">Email</th>
                 <th className="pb-2">Role</th>
                 <th className="pb-2">Granted</th>
-                <th className="pb-2"></th>
+                <th className="pb-2" />
               </tr>
             </thead>
             <tbody>

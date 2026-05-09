@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { aider } from './aider.js';
 import { claudeCode } from './claude-code.js';
 import { cursor } from './cursor.js';
-import { findIntegration, REGISTRY } from './index.js';
+import { REGISTRY, findIntegration } from './index.js';
 
 let cwd: string;
 beforeEach(() => {
@@ -58,9 +58,10 @@ describe('claude-code', () => {
     await claudeCode.install({ cwd });
     const after = await claudeCode.uninstall({ cwd });
     expect(after.applied).toBe(true);
-    const settings = JSON.parse(
-      readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8'),
-    ) as { permissions?: { deny?: string[] }; hooks?: Record<string, unknown> };
+    const settings = JSON.parse(readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8')) as {
+      permissions?: { deny?: string[] };
+      hooks?: Record<string, unknown>;
+    };
     expect(settings.permissions?.deny ?? []).toEqual([]);
     expect(settings.hooks?.PostToolUse).toBeUndefined();
   });
@@ -69,7 +70,9 @@ describe('claude-code', () => {
     // Pretend the user already had unrelated denies.
     const userSettings = {
       permissions: { deny: ['Read(secret-from-user.txt)'] },
-      hooks: { PostToolUse: [{ matcher: 'Edit', hooks: [{ type: 'command', command: 'echo hi' }] }] },
+      hooks: {
+        PostToolUse: [{ matcher: 'Edit', hooks: [{ type: 'command', command: 'echo hi' }] }],
+      },
     };
     const fs = await import('node:fs');
     fs.mkdirSync(join(cwd, '.claude'), { recursive: true });
@@ -79,14 +82,14 @@ describe('claude-code', () => {
     );
     await claudeCode.install({ cwd });
     await claudeCode.uninstall({ cwd });
-    const settings = JSON.parse(
-      readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8'),
-    ) as {
+    const settings = JSON.parse(readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8')) as {
       permissions?: { deny?: string[] };
       hooks?: { PostToolUse?: Array<{ matcher?: string }> };
     };
     expect(settings.permissions?.deny).toContain('Read(secret-from-user.txt)');
-    expect(settings.hooks?.PostToolUse).toEqual([{ matcher: 'Edit', hooks: [{ type: 'command', command: 'echo hi' }] }]);
+    expect(settings.hooks?.PostToolUse).toEqual([
+      { matcher: 'Edit', hooks: [{ type: 'command', command: 'echo hi' }] },
+    ]);
   });
 
   it('dry-run does not modify the filesystem', async () => {

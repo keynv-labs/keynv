@@ -42,11 +42,7 @@ export function computeHash(prevHash: string, input: AuditInput): string {
  *
  * Pass `null` as `prev` when appending the very first entry.
  */
-export function appendEntry(
-  prev: AuditEntry | null,
-  input: AuditInput,
-  id: number,
-): AuditEntry {
+export function appendEntry(prev: AuditEntry | null, input: AuditInput, id: number): AuditEntry {
   const prevHash = prev?.hash ?? GENESIS_HASH;
   const hash = computeHash(prevHash, input);
   return {

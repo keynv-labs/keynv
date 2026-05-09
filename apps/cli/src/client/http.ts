@@ -1,9 +1,9 @@
 import { AGENT } from '../version.js';
 import {
+  type Credentials,
   loadCredentials,
   loadCredentialsAsync,
   saveCredentials,
-  type Credentials,
 } from './store.js';
 
 export interface ClientError extends Error {
@@ -12,7 +12,12 @@ export interface ClientError extends Error {
   details?: unknown;
 }
 
-function clientError(status: number, code: string, message: string, details?: unknown): ClientError {
+function clientError(
+  status: number,
+  code: string,
+  message: string,
+  details?: unknown,
+): ClientError {
   const err = Object.assign(new Error(message), { status, code, details });
   return err as ClientError;
 }
@@ -42,7 +47,11 @@ async function tryRefresh(creds: Credentials): Promise<Credentials | null> {
     body: JSON.stringify({ refresh_token: creds.refresh_token }),
   });
   if (!res.ok) return null;
-  const data = (await res.json()) as { access_token: string; refresh_token: string; expires_in: number };
+  const data = (await res.json()) as {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+  };
   const updated: Credentials = {
     ...creds,
     access_token: data.access_token,
@@ -100,9 +109,7 @@ export class ApiClient {
     if (this.creds && opts.authed !== false) {
       headers.authorization = `Bearer ${this.creds.access_token}`;
     }
-    const url = this.creds
-      ? buildUrl(this.creds.server_url, path, opts.query)
-      : path;
+    const url = this.creds ? buildUrl(this.creds.server_url, path, opts.query) : path;
     let res = await fetch(url, {
       method: opts.method ?? 'GET',
       headers,
@@ -134,7 +141,9 @@ export class ApiClient {
     }
 
     if (!res.ok) {
-      const errPayload = (parsed as { error?: { code?: string; message?: string; details?: unknown } })?.error;
+      const errPayload = (
+        parsed as { error?: { code?: string; message?: string; details?: unknown } }
+      )?.error;
       throw clientError(
         res.status,
         errPayload?.code ?? 'unknown',

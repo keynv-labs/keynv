@@ -1,4 +1,4 @@
-import { spawn, type StdioOptions } from 'node:child_process';
+import { type StdioOptions, spawn } from 'node:child_process';
 import { createRedactStream } from '@keynv/redactor';
 import type { ResolvedAlias } from './resolve.js';
 

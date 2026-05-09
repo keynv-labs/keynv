@@ -1,8 +1,8 @@
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
-import { api, type ApiError } from '@/lib/api';
+import { type ApiError, api } from '@/lib/api';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 interface ProjectDetail {
   id: string;

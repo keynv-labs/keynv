@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api';
-import { CreateSecretForm, RotateSecretForm, DeleteSecretButton } from './forms';
+import Link from 'next/link';
+import { CreateSecretForm, DeleteSecretButton, RotateSecretForm } from './forms';
 
 interface SecretRow {
   alias: string;
@@ -43,10 +43,7 @@ export default async function SecretsPage({ params }: { params: Promise<{ id: st
           displayed back. To resolve a value, use <span className="mono">keynv exec</span> from the
           CLI.
         </p>
-        <CreateSecretForm
-          projectId={id}
-          environments={project.environments.map((e) => e.name)}
-        />
+        <CreateSecretForm projectId={id} environments={project.environments.map((e) => e.name)} />
       </Card>
 
       <Card>
@@ -60,7 +57,7 @@ export default async function SecretsPage({ params }: { params: Promise<{ id: st
                 <th className="pb-2">Alias</th>
                 <th className="pb-2">Version</th>
                 <th className="pb-2">Created</th>
-                <th className="pb-2"></th>
+                <th className="pb-2" />
               </tr>
             </thead>
             <tbody>

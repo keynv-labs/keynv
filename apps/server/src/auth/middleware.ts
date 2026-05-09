@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { type Context, type MiddlewareHandler } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
@@ -19,9 +19,7 @@ declare module 'hono' {
   }
 }
 
-interface DepsFn {
-  (): { db: Db; jwtSecret: string };
-}
+type DepsFn = () => { db: Db; jwtSecret: string };
 
 /**
  * Bearer-token auth middleware. Loads the user (and project memberships
@@ -39,9 +37,10 @@ export function authMiddleware(deps: DepsFn): MiddlewareHandler {
     try {
       claims = await verifyAccessToken(token, { secret: jwtSecret });
     } catch (err) {
-      const code = err instanceof Error && /exp/i.test(err.message)
-        ? 'auth.token_expired'
-        : 'auth.invalid_credentials';
+      const code =
+        err instanceof Error && /exp/i.test(err.message)
+          ? 'auth.token_expired'
+          : 'auth.invalid_credentials';
       return jsonError(c, code, 'Invalid or expired access token.');
     }
 

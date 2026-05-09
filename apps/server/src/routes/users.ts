@@ -1,12 +1,12 @@
+import { authorize } from '@keynv/rbac';
 import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { authorize } from '@keynv/rbac';
-import type { Db } from '../db/index.js';
-import { schema } from '../db/index.js';
+import { appendAudit } from '../audit/append.js';
 import { authMiddleware } from '../auth/middleware.js';
 import { hashPassword } from '../auth/password.js';
-import { appendAudit } from '../audit/append.js';
+import type { Db } from '../db/index.js';
+import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newUserId } from '../lib/id.js';
@@ -28,7 +28,10 @@ const PatchOrgRoleBody = z.object({
 
 export function userRoutes(deps: UserDeps): Hono {
   const r = new Hono();
-  r.use('*', authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })));
+  r.use(
+    '*',
+    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
+  );
 
   r.get('/', async (c) => {
     const user = c.var.user;
@@ -59,12 +62,7 @@ export function userRoutes(deps: UserDeps): Hono {
     const existing = await deps.db
       .select({ id: schema.users.id })
       .from(schema.users)
-      .where(
-        and(
-          eq(schema.users.email, parsed.data.email),
-          eq(schema.users.org_id, user.org_id),
-        ),
-      )
+      .where(and(eq(schema.users.email, parsed.data.email), eq(schema.users.org_id, user.org_id)))
       .limit(1);
     if (existing[0]) {
       return jsonError(c, 'user.already_exists', 'User with this email already exists.');

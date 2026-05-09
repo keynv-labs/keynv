@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import Link from 'next/link';
 
 interface Project {
   id: string;
@@ -30,9 +30,7 @@ export default async function ProjectsPage() {
         <Card>
           <p className="text-sm text-[var(--color-fg-muted)]">
             No projects yet.{' '}
-            {canCreate
-              ? 'Create one to get started.'
-              : 'Ask an admin to add you to a project.'}
+            {canCreate ? 'Create one to get started.' : 'Ask an admin to add you to a project.'}
           </p>
         </Card>
       ) : (
@@ -41,9 +39,7 @@ export default async function ProjectsPage() {
             <Link key={p.id} href={{ pathname: `/projects/${p.id}` }}>
               <Card className="hover:bg-[var(--color-bg-card-hover)] transition-colors cursor-pointer">
                 <div className="font-semibold">{p.name}</div>
-                <div className="text-xs text-[var(--color-fg-muted)] mt-1 mono">
-                  {p.id}
-                </div>
+                <div className="text-xs text-[var(--color-fg-muted)] mt-1 mono">{p.id}</div>
                 <div className="text-xs text-[var(--color-fg-muted)] mt-2">
                   Created {new Date(p.created_at).toLocaleDateString()}
                 </div>

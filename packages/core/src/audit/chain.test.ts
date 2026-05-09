@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendEntry, computeHash, GENESIS_HASH, verifyChain } from './index.js';
+import { GENESIS_HASH, appendEntry, computeHash, verifyChain } from './index.js';
 import type { AuditEntry, AuditInput } from './index.js';
 
 function input(seed: number): AuditInput {
@@ -108,12 +108,7 @@ describe('verifyChain', () => {
 
   it('detects a re-ordered entry', () => {
     const chain = buildChain(10);
-    const swapped = [
-      ...chain.slice(0, 3),
-      chain[4]!,
-      chain[3]!,
-      ...chain.slice(5),
-    ];
+    const swapped = [...chain.slice(0, 3), chain[4]!, chain[3]!, ...chain.slice(5)];
     const result = verifyChain(swapped);
     expect(result.ok).toBe(false);
     expect(result.brokenAt).toBeGreaterThanOrEqual(3);
@@ -163,9 +158,9 @@ describe('verifyChain', () => {
     const page1 = chain.slice(0, 1000);
     const tail1 = page1.at(-1);
     if (!tail1) throw new Error('expected page1 non-empty');
-    const tamperedPage2 = chain.slice(1000).map((e, i) =>
-      i === 0 ? { ...e, prev_hash: 'a'.repeat(64) } : e,
-    );
+    const tamperedPage2 = chain
+      .slice(1000)
+      .map((e, i) => (i === 0 ? { ...e, prev_hash: 'a'.repeat(64) } : e));
     const result = verifyChain(tamperedPage2, { startingPrevHash: tail1.hash });
     expect(result.ok).toBe(false);
     expect(result.brokenAt).toBe(0);

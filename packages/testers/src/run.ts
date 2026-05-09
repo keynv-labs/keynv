@@ -1,6 +1,6 @@
 import type { ZodError } from 'zod';
 import { sanitizeResult } from './sanitize.js';
-import type { ResolvedSecret, Tester, TesterTarget, TestResult } from './types.js';
+import type { ResolvedSecret, TestResult, Tester, TesterTarget } from './types.js';
 import { DEFAULT_TIMEOUT_MS } from './types.js';
 
 export interface RunArgs {

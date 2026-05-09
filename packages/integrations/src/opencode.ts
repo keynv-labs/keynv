@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { KEYNV_FILE_DENY_PATTERNS } from './file-deny-list.js';
 import { ensureKeynvBlock, removeKeynvBlock } from './fs-utils.js';
 import type { InstallOptions, InstallReport, Integration } from './types.js';

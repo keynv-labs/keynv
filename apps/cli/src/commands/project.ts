@@ -10,7 +10,9 @@ interface ProjectListItem {
 
 export class ProjectListCommand extends Command {
   static override paths = [['project', 'list']];
-  static override usage = Command.Usage({ description: 'List projects visible to the current user.' });
+  static override usage = Command.Usage({
+    description: 'List projects visible to the current user.',
+  });
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {
@@ -25,7 +27,10 @@ export class ProjectListCommand extends Command {
       return 0;
     }
     this.context.stdout.write(
-      `${table(['name', 'id', 'created_at'], data.projects.map((p) => [p.name, p.id, p.created_at]))}\n`,
+      `${table(
+        ['name', 'id', 'created_at'],
+        data.projects.map((p) => [p.name, p.id, p.created_at]),
+      )}\n`,
     );
     return 0;
   }
@@ -40,7 +45,8 @@ export class ProjectCreateCommand extends Command {
 
   name = Option.String();
   envs = Option.Array('--env', {
-    description: 'Environment spec: name[:tier[:approval]]. Tier ∈ {production,non-production}; "approval" sets require_approval=true.',
+    description:
+      'Environment spec: name[:tier[:approval]]. Tier ∈ {production,non-production}; "approval" sets require_approval=true.',
   });
 
   async execute(): Promise<number> {
@@ -59,7 +65,9 @@ export class ProjectCreateCommand extends Command {
     });
     this.context.stdout.write(`created project ${result.name} (${result.id})\n`);
     for (const e of envs) {
-      this.context.stdout.write(`  env: ${e.name} (tier=${e.tier}, approval=${e.require_approval})\n`);
+      this.context.stdout.write(
+        `  env: ${e.name} (tier=${e.tier}, approval=${e.require_approval})\n`,
+      );
     }
     return 0;
   }

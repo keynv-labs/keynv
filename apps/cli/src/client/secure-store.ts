@@ -10,8 +10,8 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { Entry } from '@napi-rs/keyring';
 import { crypto } from '@keynv/core';
+import { Entry } from '@napi-rs/keyring';
 
 const SERVICE = 'keynv-cli';
 const KEY_ACCOUNT = 'credentials-key';
@@ -21,7 +21,9 @@ function defaultPath(): string {
 }
 
 function legacyPath(): string {
-  return process.env['KEYNV_CREDENTIALS_FILE_LEGACY'] ?? join(homedir(), '.keynv', 'credentials.json');
+  return (
+    process.env['KEYNV_CREDENTIALS_FILE_LEGACY'] ?? join(homedir(), '.keynv', 'credentials.json')
+  );
 }
 
 function entry(): Entry {
@@ -34,10 +36,9 @@ async function loadOrCreateKey(): Promise<Uint8Array> {
   try {
     stored = e.getPassword();
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     throw new Error(
-      `keynv: OS keychain unavailable (${err instanceof Error ? err.message : String(err)}). ` +
-        'Install libsecret on Linux, or set KEYNV_DISABLE_KEYCHAIN=1 to use a (less secure) ' +
-        'file-based key store.',
+      `keynv: OS keychain unavailable (${message}). Install libsecret on Linux, or set KEYNV_DISABLE_KEYCHAIN=1 to use a (less secure) file-based key store.`,
     );
   }
   if (stored) {
@@ -61,11 +62,7 @@ export async function saveCredentialsBlob(plaintext: Uint8Array): Promise<string
   if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   // [version=1][nonce 24][ciphertext]
   const header = Buffer.from([0x01]);
-  const blob = Buffer.concat([
-    header,
-    Buffer.from(sealed.nonce),
-    Buffer.from(sealed.ciphertext),
-  ]);
+  const blob = Buffer.concat([header, Buffer.from(sealed.nonce), Buffer.from(sealed.ciphertext)]);
   writeFileSync(path, blob, { mode: 0o600 });
   // Migrate: clear any legacy plaintext file so it can't be read later.
   const legacy = legacyPath();

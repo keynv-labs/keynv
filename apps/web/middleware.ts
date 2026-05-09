@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 /**
  * Auth middleware. Public paths: '/', '/login', '/_next/*', static

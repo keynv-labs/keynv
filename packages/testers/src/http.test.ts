@@ -1,5 +1,5 @@
+import { type Server, createServer } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createServer, type Server } from 'node:http';
 import { httpTester } from './http.js';
 
 let server: Server;
@@ -14,7 +14,7 @@ beforeEach(async () => {
       res.end('ok');
       return;
     }
-    if (auth === 'Basic ' + Buffer.from('alice:good-pass').toString('base64')) {
+    if (auth === `Basic ${Buffer.from('alice:good-pass').toString('base64')}`) {
       res.statusCode = 200;
       res.end('ok');
       return;
@@ -53,7 +53,14 @@ describe('httpTester', () => {
   it('handles basic auth', async () => {
     const r = await httpTester.test(
       { alias: '@x.dev.api', value: 'good-pass' },
-      { url, method: 'GET', auth: 'basic', user: 'alice', expect_status_min: 200, expect_status_max: 299 },
+      {
+        url,
+        method: 'GET',
+        auth: 'basic',
+        user: 'alice',
+        expect_status_min: 200,
+        expect_status_max: 299,
+      },
     );
     expect(r.ok).toBe(true);
   });
@@ -61,7 +68,14 @@ describe('httpTester', () => {
   it('handles custom-header auth', async () => {
     const r = await httpTester.test(
       { alias: '@x.dev.api', value: 'good-key' },
-      { url, method: 'GET', auth: 'header', header_name: 'x-api-key', expect_status_min: 200, expect_status_max: 299 },
+      {
+        url,
+        method: 'GET',
+        auth: 'header',
+        header_name: 'x-api-key',
+        expect_status_min: 200,
+        expect_status_max: 299,
+      },
     );
     expect(r.ok).toBe(true);
   });

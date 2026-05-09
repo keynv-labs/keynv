@@ -28,10 +28,4 @@ export function findTester(type: TesterType): Tester | null {
   return TESTERS.find((t) => t.type === type) ?? null;
 }
 
-export {
-  postgresTester,
-  mysqlTester,
-  redisTester,
-  sshTester,
-  httpTester,
-};
+export { postgresTester, mysqlTester, redisTester, sshTester, httpTester };

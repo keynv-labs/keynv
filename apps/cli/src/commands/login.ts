@@ -1,8 +1,8 @@
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { saveCredentials } from '../client/store.js';
-import { promptHidden, promptLine } from '../ui/input.js';
 import { fmtError } from '../ui/format.js';
+import { promptHidden, promptLine } from '../ui/input.js';
 import { AGENT } from '../version.js';
 
 interface LoginResponse {
@@ -24,7 +24,9 @@ export class LoginCommand extends Command {
 
   server = Option.String('--server', { description: 'Server base URL.' });
   email = Option.String('--email', { description: 'Email address.' });
-  password = Option.String('--password', { description: 'Password (use stdin to avoid argv leak).' });
+  password = Option.String('--password', {
+    description: 'Password (use stdin to avoid argv leak).',
+  });
 
   async execute(): Promise<number> {
     const serverUrl =
@@ -83,7 +85,9 @@ export class LoginCommand extends Command {
 
 export class LogoutCommand extends Command {
   static override paths = [['logout']];
-  static override usage = Command.Usage({ description: 'Clear local credentials and revoke the refresh token.' });
+  static override usage = Command.Usage({
+    description: 'Clear local credentials and revoke the refresh token.',
+  });
 
   async execute(): Promise<number> {
     const client = new ApiClient();
@@ -109,7 +113,9 @@ export class LogoutCommand extends Command {
 
 export class WhoamiCommand extends Command {
   static override paths = [['whoami']];
-  static override usage = Command.Usage({ description: 'Show current user identity and project memberships.' });
+  static override usage = Command.Usage({
+    description: 'Show current user identity and project memberships.',
+  });
 
   json = Option.Boolean('--json', false);
 

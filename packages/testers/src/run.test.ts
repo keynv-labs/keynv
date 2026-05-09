@@ -1,12 +1,14 @@
-import { z } from 'zod';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { runTest } from './run.js';
-import type { ResolvedSecret, Tester, TestResult } from './types.js';
+import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const FakeTarget = z.object({ host: z.string().min(1) });
 type FakeTarget = z.infer<typeof FakeTarget>;
 
-function fakeTester(behavior: (s: ResolvedSecret, t: FakeTarget) => Promise<TestResult>): Tester<FakeTarget> {
+function fakeTester(
+  behavior: (s: ResolvedSecret, t: FakeTarget) => Promise<TestResult>,
+): Tester<FakeTarget> {
   return {
     type: 'http',
     schema: FakeTarget,

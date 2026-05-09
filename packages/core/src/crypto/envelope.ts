@@ -1,5 +1,11 @@
-import { type SealedSecret, type SymmetricKey, type WrappedKey, KEY_BYTES, NONCE_BYTES } from './types.js';
 import { loadSodium } from './sodium.js';
+import {
+  KEY_BYTES,
+  NONCE_BYTES,
+  type SealedSecret,
+  type SymmetricKey,
+  type WrappedKey,
+} from './types.js';
 
 /**
  * Generates a fresh 32-byte symmetric key.

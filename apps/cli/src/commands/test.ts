@@ -1,6 +1,6 @@
-import { Command, Option } from 'clipanion';
 import { parseAlias } from '@keynv/core';
-import { findTester, runTest, TESTERS, type TesterType } from '@keynv/testers';
+import { TESTERS, type TesterType, findTester, runTest } from '@keynv/testers';
+import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 
 interface ProjectListItem {
@@ -38,8 +38,14 @@ credential errors are sanitized so the value cannot leak through
 the error message.
 `,
     examples: [
-      ['Postgres', '$0 test @billing.dev.db_pass --as postgres -t host=db.example.com -t port=5432 -t database=billing -t user=app'],
-      ['HTTP bearer', '$0 test @billing.prod.api_token --as http -t url=https://api.example.com/v1/me -t auth=bearer'],
+      [
+        'Postgres',
+        '$0 test @billing.dev.db_pass --as postgres -t host=db.example.com -t port=5432 -t database=billing -t user=app',
+      ],
+      [
+        'HTTP bearer',
+        '$0 test @billing.prod.api_token --as http -t url=https://api.example.com/v1/me -t auth=bearer',
+      ],
     ],
   });
 
@@ -47,7 +53,9 @@ the error message.
   as = Option.String('--as', { description: 'Tester type: postgres | mysql | redis | ssh | http' });
   targets = Option.Array('--target,-t', { description: 'key=value (repeatable).' });
   json = Option.Boolean('--json', false);
-  timeout = Option.String('--timeout', { description: 'Override the default 5s timeout (in seconds).' });
+  timeout = Option.String('--timeout', {
+    description: 'Override the default 5s timeout (in seconds).',
+  });
 
   async execute(): Promise<number> {
     const parsedAlias = parseAlias(this.alias);
@@ -110,14 +118,18 @@ the error message.
 
     if (this.json) {
       this.context.stdout.write(
-        `${JSON.stringify({
-          alias: parsedAlias.literal,
-          tester: tester.type,
-          ok: result.ok,
-          latency_ms: result.latency_ms,
-          ...(result.error ? { error: result.error } : {}),
-          ...(result.info ? { info: result.info } : {}),
-        }, null, 2)}\n`,
+        `${JSON.stringify(
+          {
+            alias: parsedAlias.literal,
+            tester: tester.type,
+            ok: result.ok,
+            latency_ms: result.latency_ms,
+            ...(result.error ? { error: result.error } : {}),
+            ...(result.info ? { info: result.info } : {}),
+          },
+          null,
+          2,
+        )}\n`,
       );
       return result.ok ? 0 : 1;
     }

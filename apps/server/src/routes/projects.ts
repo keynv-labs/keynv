@@ -1,12 +1,12 @@
+import { crypto } from '@keynv/core';
+import { authorize } from '@keynv/rbac';
 import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { authorize } from '@keynv/rbac';
-import { crypto } from '@keynv/core';
+import { appendAudit } from '../audit/append.js';
+import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { authMiddleware } from '../auth/middleware.js';
-import { appendAudit } from '../audit/append.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newEnvironmentId, newProjectId } from '../lib/id.js';
@@ -42,7 +42,10 @@ const CreateProjectBody = z.object({
 
 export function projectRoutes(deps: ProjectDeps): Hono {
   const r = new Hono();
-  r.use('*', authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })));
+  r.use(
+    '*',
+    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
+  );
 
   r.get('/', async (c) => {
     const user = c.var.user;
@@ -63,7 +66,11 @@ export function projectRoutes(deps: ProjectDeps): Hono {
     }
 
     const rows = await deps.db
-      .select({ id: schema.projects.id, name: schema.projects.name, created_at: schema.projects.created_at })
+      .select({
+        id: schema.projects.id,
+        name: schema.projects.name,
+        created_at: schema.projects.created_at,
+      })
       .from(schema.projects)
       .where(and(eq(schema.projects.org_id, user.org_id), isNull(schema.projects.deleted_at)));
     return c.json({ projects: rows });
@@ -85,10 +92,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       .select({ id: schema.projects.id })
       .from(schema.projects)
       .where(
-        and(
-          eq(schema.projects.org_id, user.org_id),
-          eq(schema.projects.name, parsed.data.name),
-        ),
+        and(eq(schema.projects.org_id, user.org_id), eq(schema.projects.name, parsed.data.name)),
       )
       .limit(1);
     if (existing[0]) {

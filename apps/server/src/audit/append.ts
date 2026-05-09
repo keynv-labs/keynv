@@ -1,5 +1,5 @@
-import { desc, sql } from 'drizzle-orm';
 import { audit as auditCore } from '@keynv/core';
+import { desc, sql } from 'drizzle-orm';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 
@@ -76,7 +76,11 @@ export async function appendAudit(db: Db, args: AppendArgs): Promise<auditCore.A
 
 export async function listAudit(
   db: Db,
-  opts: { limit?: number | undefined; sinceId?: number | undefined; eventType?: string | undefined } = {},
+  opts: {
+    limit?: number | undefined;
+    sinceId?: number | undefined;
+    eventType?: string | undefined;
+  } = {},
 ): Promise<auditCore.AuditEntry[]> {
   const limit = Math.min(opts.limit ?? 100, 1000);
   const conditions: ReturnType<typeof sql>[] = [];

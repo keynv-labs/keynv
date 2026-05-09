@@ -1,15 +1,12 @@
 'use client';
 
-import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { addMemberAction, removeMemberAction, type MemberActionState } from './actions';
+import { useActionState } from 'react';
+import { type MemberActionState, addMemberAction, removeMemberAction } from './actions';
 
 export function AddMemberForm({ projectId }: { projectId: string }) {
-  const [state, action, pending] = useActionState<MemberActionState, FormData>(
-    addMemberAction,
-    {},
-  );
+  const [state, action, pending] = useActionState<MemberActionState, FormData>(addMemberAction, {});
   return (
     <form action={action} className="flex flex-col md:flex-row gap-2 items-end">
       <input type="hidden" name="project_id" value={projectId} />

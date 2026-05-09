@@ -1,7 +1,7 @@
+import { getSession } from '@/lib/session';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { getSession } from '@/lib/session';
 import { logoutAction } from './actions';
 
 export default async function AuthedLayout({ children }: { children: ReactNode }) {

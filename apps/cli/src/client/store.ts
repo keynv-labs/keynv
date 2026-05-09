@@ -10,11 +10,7 @@
  * keychain entry an attacker has nothing useful even with full
  * filesystem read access.
  */
-import {
-  clearCredentialsFile,
-  loadCredentialsBlob,
-  saveCredentialsBlob,
-} from './secure-store.js';
+import { clearCredentialsFile, loadCredentialsBlob, saveCredentialsBlob } from './secure-store.js';
 
 export interface Credentials {
   server_url: string;

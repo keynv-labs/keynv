@@ -1,11 +1,11 @@
+import { authorize } from '@keynv/rbac';
 import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { authorize } from '@keynv/rbac';
+import { appendAudit } from '../audit/append.js';
+import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { authMiddleware } from '../auth/middleware.js';
-import { appendAudit } from '../audit/append.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 
@@ -46,7 +46,10 @@ const PatchMemberBody = z.object({
 
 export function memberRoutes(deps: MemberDeps): Hono {
   const r = new Hono();
-  r.use('*', authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })));
+  r.use(
+    '*',
+    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
+  );
 
   r.get('/:projectId/members', async (c) => {
     const user = c.var.user;
@@ -85,12 +88,7 @@ export function memberRoutes(deps: MemberDeps): Hono {
     const targetRows = await deps.db
       .select()
       .from(schema.users)
-      .where(
-        and(
-          eq(schema.users.email, parsed.data.email),
-          eq(schema.users.org_id, user.org_id),
-        ),
-      )
+      .where(and(eq(schema.users.email, parsed.data.email), eq(schema.users.org_id, user.org_id)))
       .limit(1);
     const target = targetRows[0];
     if (!target) {
@@ -144,7 +142,9 @@ export function memberRoutes(deps: MemberDeps): Hono {
   r.patch('/:projectId/members/:userId', async (c) => {
     const user = c.var.user;
     const projectId = c.req.param('projectId');
-    if (authorize('member.role_change', { user, resource: { project_id: projectId } }) !== 'allow') {
+    if (
+      authorize('member.role_change', { user, resource: { project_id: projectId } }) !== 'allow'
+    ) {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
     if (!(await projectInOrg(deps.db, projectId, user.org_id))) {

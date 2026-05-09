@@ -102,7 +102,9 @@ async function main(): Promise<void> {
 
   const env = loadEnv();
   if (existsSync(env.KEYNV_DB_PATH)) {
-    console.error(`bootstrap: refusing to overwrite ${env.KEYNV_DB_PATH}; remove it manually first.`);
+    console.error(
+      `bootstrap: refusing to overwrite ${env.KEYNV_DB_PATH}; remove it manually first.`,
+    );
     process.exit(2);
   }
 
@@ -120,13 +122,9 @@ async function main(): Promise<void> {
     org_role: 'owner',
   });
 
-  // biome-ignore lint/suspicious/noConsoleLog: intentional bootstrap output
   console.log(`bootstrap: created org "${orgName}" (id=${orgId})`);
-  // biome-ignore lint/suspicious/noConsoleLog: intentional bootstrap output
   console.log(`bootstrap: owner ${ownerEmail} (id=${userId})`);
-  // biome-ignore lint/suspicious/noConsoleLog: intentional bootstrap output
   console.log(`bootstrap: master key file at ${env.KEYNV_MASTER_KEY_FILE}`);
-  // biome-ignore lint/suspicious/noConsoleLog: intentional bootstrap output
   console.log('bootstrap: store the master key file safely; loss bricks the deployment.');
   // Reduce password lifetime in process memory; not a guarantee but
   // helps if the process is then re-used (it isn't, but defensive).

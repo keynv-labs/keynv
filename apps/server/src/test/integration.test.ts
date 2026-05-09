@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { crypto } from '@keynv/core';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { hashPassword } from '../auth/password.js';
 import { openDb } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { makeLogger } from '../lib/logger.js';
 import { newOrgId, newUserId } from '../lib/id.js';
+import { makeLogger } from '../lib/logger.js';
 
 const SILENT_LOGGER = makeLogger('silent');
 
@@ -310,14 +310,11 @@ describe('Phase 1 acceptance flow', () => {
       headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
       body: JSON.stringify({ env: 'dev', key: 'k', value: 'v1' }),
     });
-    await harness.app.request(
-      `http://localhost/v1/projects/${project.id}/secrets/dev/k/rotate`,
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
-        body: JSON.stringify({ new_value: 'v2' }),
-      },
-    );
+    await harness.app.request(`http://localhost/v1/projects/${project.id}/secrets/dev/k/rotate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ new_value: 'v2' }),
+    });
     const getRes = await harness.app.request(
       `http://localhost/v1/projects/${project.id}/secrets/dev/k`,
       { headers: { authorization: `Bearer ${ownerToken}` } },
@@ -412,16 +409,14 @@ describe('B2 regression — cross-org access is denied', () => {
       );
       expect(read.status).toBe(404);
 
-      const list = await h.app.request(
-        `http://localhost/v1/projects/${project.id}/secrets`,
-        { headers: { authorization: `Bearer ${h.tokenB}` } },
-      );
+      const list = await h.app.request(`http://localhost/v1/projects/${project.id}/secrets`, {
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
       expect(list.status).toBe(404);
 
-      const members = await h.app.request(
-        `http://localhost/v1/projects/${project.id}/members`,
-        { headers: { authorization: `Bearer ${h.tokenB}` } },
-      );
+      const members = await h.app.request(`http://localhost/v1/projects/${project.id}/members`, {
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
       expect(members.status).toBe(404);
 
       const del = await h.app.request(`http://localhost/v1/projects/${project.id}`, {

@@ -1,8 +1,8 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
 import { clearSession, getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 
 export async function logoutAction(): Promise<void> {
   const session = await getSession();

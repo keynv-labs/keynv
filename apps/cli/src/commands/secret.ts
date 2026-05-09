@@ -1,5 +1,5 @@
-import { Command, Option } from 'clipanion';
 import { parseAlias } from '@keynv/core';
+import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { table } from '../ui/format.js';
 import { promptHidden } from '../ui/input.js';
@@ -21,19 +21,26 @@ export class SecretCreateCommand extends Command {
   static override usage = Command.Usage({
     description: 'Create a new secret.',
     examples: [
-      ['Inline value (avoid in shell history; prefer --stdin)', '$0 secret create @billing.dev.db_password --value example-fake-pass-do-not-use'],
+      [
+        'Inline value (avoid in shell history; prefer --stdin)',
+        '$0 secret create @billing.dev.db_password --value example-fake-pass-do-not-use',
+      ],
       ['From stdin', 'echo -n "..." | $0 secret create @billing.dev.db_password --stdin'],
     ],
   });
 
   alias = Option.String();
-  value = Option.String('--value', { description: 'Secret value (avoid this in shell history; prefer --stdin).' });
+  value = Option.String('--value', {
+    description: 'Secret value (avoid this in shell history; prefer --stdin).',
+  });
   stdin = Option.Boolean('--stdin', false);
 
   async execute(): Promise<number> {
     const parsed = parseAlias(this.alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${this.alias}'. Expected @project.env.key.\n`);
+      this.context.stderr.write(
+        `keynv: invalid alias '${this.alias}'. Expected @project.env.key.\n`,
+      );
       return 1;
     }
     let value: string;
@@ -51,13 +58,10 @@ export class SecretCreateCommand extends Command {
 
     const client = new ApiClient();
     const projectId = await findProjectIdByName(client, parsed.project);
-    await client.request<{ alias: string; version: number }>(
-      `/v1/projects/${projectId}/secrets`,
-      {
-        method: 'POST',
-        body: { env: parsed.environment, key: parsed.key, value },
-      },
-    );
+    await client.request<{ alias: string; version: number }>(`/v1/projects/${projectId}/secrets`, {
+      method: 'POST',
+      body: { env: parsed.environment, key: parsed.key, value },
+    });
     this.context.stdout.write(`created ${parsed.literal}\n`);
     return 0;
   }
@@ -83,7 +87,9 @@ export class SecretGetCommand extends Command {
       `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
     );
     if (this.json) {
-      this.context.stdout.write(`${JSON.stringify({ alias: data.alias, version: data.version, value: data.value })}\n`);
+      this.context.stdout.write(
+        `${JSON.stringify({ alias: data.alias, version: data.version, value: data.value })}\n`,
+      );
     } else {
       this.context.stdout.write(`${data.value}\n`);
     }
@@ -93,7 +99,9 @@ export class SecretGetCommand extends Command {
 
 export class SecretListCommand extends Command {
   static override paths = [['secret', 'list']];
-  static override usage = Command.Usage({ description: 'List alias names in a project (no values returned).' });
+  static override usage = Command.Usage({
+    description: 'List alias names in a project (no values returned).',
+  });
   project = Option.String();
   json = Option.Boolean('--json', false);
 
@@ -170,10 +178,9 @@ export class SecretDeleteCommand extends Command {
     }
     const client = new ApiClient();
     const projectId = await findProjectIdByName(client, parsed.project);
-    await client.request(
-      `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
-      { method: 'DELETE' },
-    );
+    await client.request(`/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`, {
+      method: 'DELETE',
+    });
     this.context.stdout.write(`deleted ${parsed.literal}\n`);
     return 0;
   }

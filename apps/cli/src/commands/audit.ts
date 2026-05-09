@@ -15,7 +15,9 @@ export class AuditListCommand extends Command {
   static override paths = [['audit', 'list']];
   static override usage = Command.Usage({
     description: 'List audit log entries.',
-    examples: [['Filter by event type', '$0 audit list --event-type secret.read.allowed --limit 50']],
+    examples: [
+      ['Filter by event type', '$0 audit list --event-type secret.read.allowed --limit 50'],
+    ],
   });
 
   eventType = Option.String('--event-type');
@@ -64,7 +66,9 @@ export class AuditListCommand extends Command {
 
 export class AuditVerifyCommand extends Command {
   static override paths = [['audit', 'verify']];
-  static override usage = Command.Usage({ description: 'Walk the audit hash chain and report inconsistencies.' });
+  static override usage = Command.Usage({
+    description: 'Walk the audit hash chain and report inconsistencies.',
+  });
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {

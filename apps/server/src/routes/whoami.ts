@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import type { Db } from '../db/index.js';
 import { authMiddleware } from '../auth/middleware.js';
+import type { Db } from '../db/index.js';
 
 interface WhoamiDeps {
   db: Db;
@@ -9,7 +9,10 @@ interface WhoamiDeps {
 
 export function whoamiRoute(deps: WhoamiDeps): Hono {
   const r = new Hono();
-  r.use('*', authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })));
+  r.use(
+    '*',
+    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
+  );
   r.get('/', (c) => {
     const u = c.var.user;
     return c.json({

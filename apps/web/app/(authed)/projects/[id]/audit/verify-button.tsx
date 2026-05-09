@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
-import { verifyChainAction, type VerifyState } from './actions';
+import { useActionState } from 'react';
+import { type VerifyState, verifyChainAction } from './actions';
 
 export function VerifyChainButton() {
   const [state, action, pending] = useActionState<VerifyState, FormData>(verifyChainAction, {});

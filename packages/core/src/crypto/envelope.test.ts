@@ -1,11 +1,11 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
+  KEY_BYTES,
+  NONCE_BYTES,
   decryptSecret,
   encryptSecret,
   generateKey,
-  KEY_BYTES,
-  NONCE_BYTES,
   unwrapDek,
   wrapDek,
 } from './index.js';

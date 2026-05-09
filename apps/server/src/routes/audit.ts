@@ -1,10 +1,10 @@
-import { Hono } from 'hono';
-import { z } from 'zod';
 import { audit as auditCore } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
-import type { Db } from '../db/index.js';
-import { authMiddleware } from '../auth/middleware.js';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { listAudit } from '../audit/append.js';
+import { authMiddleware } from '../auth/middleware.js';
+import type { Db } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 
 interface AuditDeps {
@@ -20,7 +20,10 @@ const ListQuery = z.object({
 
 export function auditRoutes(deps: AuditDeps): Hono {
   const r = new Hono();
-  r.use('*', authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })));
+  r.use(
+    '*',
+    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
+  );
 
   r.get('/', async (c) => {
     const user = c.var.user;

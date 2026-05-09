@@ -1,4 +1,4 @@
-import { jwtVerify, SignJWT } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
 
 const ISSUER = 'keynv-server';
 const AUDIENCE = 'keynv';

@@ -1,6 +1,6 @@
 'use server';
 
-import { api, type ApiError } from '@/lib/api';
+import { type ApiError, api } from '@/lib/api';
 
 export interface VerifyState {
   ok?: boolean;

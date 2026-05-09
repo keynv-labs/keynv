@@ -1,8 +1,8 @@
 'use server';
 
+import { type ApiError, api } from '@/lib/api';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { api, type ApiError } from '@/lib/api';
 
 const AddBody = z.object({
   project_id: z.string().min(1),
@@ -25,7 +25,9 @@ export async function addMemberAction(
     role: formData.get('role'),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') };
+    return {
+      error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+    };
   }
   try {
     await api(`/v1/projects/${parsed.data.project_id}/members`, {

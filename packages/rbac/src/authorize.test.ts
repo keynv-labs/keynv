@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authorize, ROLE_ALLOWS_ACTION } from './index.js';
+import { ROLE_ALLOWS_ACTION, authorize } from './index.js';
 import type { Action, AuthorizeContext, OrgRole, ProjectRole } from './index.js';
 
 const PROJECT_ID = 'proj_demo';
@@ -43,12 +43,9 @@ describe('authorize — org-level actions', () => {
     ['admin', 'project.create', 'allow'],
     ['developer', 'project.create', 'deny'],
     ['reader', 'project.create', 'deny'],
-  ] as Array<[OrgRole, Action, 'allow' | 'deny']>)(
-    '%s + %s → %s',
-    (orgRole, action, expected) => {
-      expect(authorize(action, ctx({ org: orgRole }))).toBe(expected);
-    },
-  );
+  ] as Array<[OrgRole, Action, 'allow' | 'deny']>)('%s + %s → %s', (orgRole, action, expected) => {
+    expect(authorize(action, ctx({ org: orgRole }))).toBe(expected);
+  });
 });
 
 describe('authorize — owner/admin implicit access', () => {

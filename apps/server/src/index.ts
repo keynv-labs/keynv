@@ -21,7 +21,6 @@ async function main(): Promise<void> {
   });
 
   serve({ fetch: app.fetch, port: env.KEYNV_PORT });
-  // biome-ignore lint/suspicious/noConsoleLog: startup banner is intentionally on stdout
   console.log(`keynv-server listening on http://localhost:${env.KEYNV_PORT}`);
 }
 

@@ -1,15 +1,15 @@
 import { Hono } from 'hono';
 import type { Db } from './db/index.js';
-import { authRoutes } from './routes/auth.js';
+import { jsonError } from './lib/errors.js';
+import { type Logger, makeLogger } from './lib/logger.js';
 import { auditRoutes } from './routes/audit.js';
+import { authRoutes } from './routes/auth.js';
 import { healthRoute } from './routes/health.js';
 import { memberRoutes } from './routes/members.js';
 import { projectRoutes } from './routes/projects.js';
 import { secretRoutes } from './routes/secrets.js';
 import { userRoutes } from './routes/users.js';
 import { whoamiRoute } from './routes/whoami.js';
-import { jsonError } from './lib/errors.js';
-import { makeLogger, type Logger } from './lib/logger.js';
 
 export interface AppDeps {
   db: Db;

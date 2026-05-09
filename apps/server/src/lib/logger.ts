@@ -1,5 +1,5 @@
-import pino from 'pino';
 import { redact } from '@keynv/redactor';
+import pino from 'pino';
 
 /**
  * Structured logger. Three layers of secret protection:

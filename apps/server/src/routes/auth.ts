@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import type { Db } from '../db/index.js';
-import { schema } from '../db/index.js';
+import { appendAudit } from '../audit/append.js';
 import { signAccessToken } from '../auth/jwt.js';
 import { verifyPassword } from '../auth/password.js';
 import { issueRefreshToken, revokeRefreshToken, rotateRefreshToken } from '../auth/tokens.js';
-import { appendAudit } from '../audit/append.js';
+import type { Db } from '../db/index.js';
+import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 
@@ -46,7 +46,8 @@ export function authRoutes(deps: AuthDeps): Hono {
 
     // Run argon2 verify even on a missing user, with a dummy hash, to keep
     // timing constant. Argon2 rejects malformed hashes by returning false.
-    const dummyHash = '$argon2id$v=19$m=19456,t=2,p=1$MAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const dummyHash =
+      '$argon2id$v=19$m=19456,t=2,p=1$MAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
     const ok = await verifyPassword(user?.password_hash ?? dummyHash, parsed.data.password);
 
     if (!user || !ok) {

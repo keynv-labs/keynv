@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it } from 'vitest';
-import { openDb, type Db } from './index.js';
+import { type Db, openDb } from './index.js';
 import * as schema from './schema.js';
 
 let cleanup: (() => void) | null = null;

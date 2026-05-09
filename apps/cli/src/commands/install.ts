@@ -1,5 +1,5 @@
+import { type InstallReport, REGISTRY, findIntegration } from '@keynv/integrations';
 import { Command, Option } from 'clipanion';
-import { findIntegration, REGISTRY, type InstallReport } from '@keynv/integrations';
 
 function printReport(stdout: NodeJS.WritableStream, report: InstallReport): void {
   stdout.write(`[${report.agent}] ${report.summary}\n`);
@@ -57,13 +57,15 @@ land.
 
     if (!this.agent) {
       this.context.stderr.write(
-        "keynv: usage: keynv install <agent> | keynv install --all | keynv install list\n",
+        'keynv: usage: keynv install <agent> | keynv install --all | keynv install list\n',
       );
       return 2;
     }
     const integration = findIntegration(this.agent);
     if (!integration) {
-      this.context.stderr.write(`keynv: unknown integration '${this.agent}'. Try \`keynv install list\`.\n`);
+      this.context.stderr.write(
+        `keynv: unknown integration '${this.agent}'. Try \`keynv install list\`.\n`,
+      );
       return 1;
     }
     const report = await integration.install({ cwd: process.cwd(), dryRun: this.dryRun });
@@ -84,7 +86,9 @@ export class UninstallCommand extends Command {
   async execute(): Promise<number> {
     const integration = findIntegration(this.agent);
     if (!integration) {
-      this.context.stderr.write(`keynv: unknown integration '${this.agent}'. Try \`keynv install list\`.\n`);
+      this.context.stderr.write(
+        `keynv: unknown integration '${this.agent}'. Try \`keynv install list\`.\n`,
+      );
       return 1;
     }
     const report = await integration.uninstall({ cwd: process.cwd(), dryRun: this.dryRun });

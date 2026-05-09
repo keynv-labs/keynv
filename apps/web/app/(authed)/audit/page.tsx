@@ -56,9 +56,7 @@ export default async function GlobalAuditPage({
           </tbody>
         </table>
         {audit.entries.length === 0 ? (
-          <p className="text-sm text-[var(--color-fg-muted)] text-center py-6">
-            No audit entries.
-          </p>
+          <p className="text-sm text-[var(--color-fg-muted)] text-center py-6">No audit entries.</p>
         ) : null}
       </Card>
     </div>

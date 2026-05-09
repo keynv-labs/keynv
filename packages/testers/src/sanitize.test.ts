@@ -5,7 +5,11 @@ import type { ResolvedSecret, TestResult } from './types.js';
 describe('sanitizeResult', () => {
   it('redacts the literal secret value when it appears in the error', () => {
     const secret: ResolvedSecret = { alias: '@x.dev.k', value: 'super-pass-123' };
-    const result: TestResult = { ok: false, latency_ms: 12, error: 'auth failed for super-pass-123' };
+    const result: TestResult = {
+      ok: false,
+      latency_ms: 12,
+      error: 'auth failed for super-pass-123',
+    };
     expect(sanitizeResult(result, secret).error).toBe('auth failed for <redacted>');
   });
 

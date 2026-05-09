@@ -1,5 +1,13 @@
 import { sql } from 'drizzle-orm';
-import { blob, index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import {
+  blob,
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  unique,
+} from 'drizzle-orm/sqlite-core';
 
 /**
  * Organizations. A single self-hosted deployment typically holds one
@@ -103,7 +111,12 @@ export const secrets = sqliteTable(
     deleted_at: text('deleted_at'),
   },
   (t) => ({
-    alias_unique: unique('secrets_alias_unique').on(t.project_id, t.environment_id, t.key, t.version),
+    alias_unique: unique('secrets_alias_unique').on(
+      t.project_id,
+      t.environment_id,
+      t.key,
+      t.version,
+    ),
     by_project_env: index('secrets_by_project_env').on(t.project_id, t.environment_id),
   }),
 );

@@ -39,9 +39,7 @@ describe('createRedactStream', () => {
   it('handles many small chunks without losing bytes', async () => {
     const stream = createRedactStream({ entropy: { enabled: false } });
     const input = 'aws=AKIAEXAMPLEEXAMPLEEX done\n';
-    const reader = Readable.from(
-      input.split('').map((c) => Buffer.from(c, 'utf8')),
-    );
+    const reader = Readable.from(input.split('').map((c) => Buffer.from(c, 'utf8')));
     const chunks: Buffer[] = [];
     for await (const chunk of reader.pipe(stream)) {
       chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));

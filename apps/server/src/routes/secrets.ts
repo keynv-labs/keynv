@@ -1,12 +1,12 @@
+import { crypto } from '@keynv/core';
+import { authorize } from '@keynv/rbac';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { authorize } from '@keynv/rbac';
-import { crypto } from '@keynv/core';
+import { appendAudit } from '../audit/append.js';
+import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { authMiddleware } from '../auth/middleware.js';
-import { appendAudit } from '../audit/append.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newSecretId } from '../lib/id.js';
@@ -26,11 +26,17 @@ const CreateSecretBody = z.object({
     .max(24)
     .regex(/^[a-z0-9][a-z0-9-]*$/),
   key: z.string().min(1).max(64).regex(KEY_RE),
-  value: z.string().min(0).max(1024 * 64),
+  value: z
+    .string()
+    .min(0)
+    .max(1024 * 64),
 });
 
 const RotateSecretBody = z.object({
-  new_value: z.string().min(0).max(1024 * 64),
+  new_value: z
+    .string()
+    .min(0)
+    .max(1024 * 64),
 });
 
 /**
@@ -70,7 +76,10 @@ async function loadProjectDek(
 
 export function secretRoutes(deps: SecretDeps): Hono {
   const r = new Hono();
-  r.use('*', authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })));
+  r.use(
+    '*',
+    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
+  );
 
   // POST /v1/projects/:id/secrets
   r.post('/:projectId/secrets', async (c) => {
@@ -222,7 +231,9 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const envRows = await deps.db
       .select()
       .from(schema.environments)
-      .where(and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)))
+      .where(
+        and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)),
+      )
       .limit(1);
     const env = envRows[0];
     if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');
@@ -329,7 +340,9 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const envRows = await deps.db
       .select()
       .from(schema.environments)
-      .where(and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)))
+      .where(
+        and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)),
+      )
       .limit(1);
     const env = envRows[0];
     if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');
@@ -422,7 +435,9 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const envRows = await deps.db
       .select()
       .from(schema.environments)
-      .where(and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)))
+      .where(
+        and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)),
+      )
       .limit(1);
     const env = envRows[0];
     if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');

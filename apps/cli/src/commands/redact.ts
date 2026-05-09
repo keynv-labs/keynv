@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { Command, Option } from 'clipanion';
 import { createRedactStream, redact } from '@keynv/redactor';
+import { Command, Option } from 'clipanion';
 
 export class RedactCommand extends Command {
   static override paths = [['redact']];

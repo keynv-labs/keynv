@@ -25,7 +25,11 @@ export const cursor: Integration = {
         agent: 'cursor',
         applied: false,
         changes: [
-          { path, action: 'update', note: `would add ${KEYNV_FILE_DENY_PATTERNS.length} ignore patterns` },
+          {
+            path,
+            action: 'update',
+            note: `would add ${KEYNV_FILE_DENY_PATTERNS.length} ignore patterns`,
+          },
         ],
         summary: `[dry-run] would write ${path}`,
       };
@@ -35,7 +39,9 @@ export const cursor: Integration = {
       agent: 'cursor',
       applied: true,
       changes: [{ path, action: changed ? 'update' : 'skip' }],
-      summary: changed ? `wrote ${KEYNV_FILE_DENY_PATTERNS.length} patterns to ${CURSOR_IGNORE_REL}` : 'unchanged',
+      summary: changed
+        ? `wrote ${KEYNV_FILE_DENY_PATTERNS.length} patterns to ${CURSOR_IGNORE_REL}`
+        : 'unchanged',
     };
   },
 

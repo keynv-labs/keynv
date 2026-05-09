@@ -3,21 +3,57 @@ import { redact } from './batch.js';
 
 describe('pattern bank — true positives', () => {
   it.each([
-    ['postgres URI', 'connect to postgres://app:hunter2@db.example.com:5432/billing for the migration', 'postgres-uri'],
+    [
+      'postgres URI',
+      'connect to postgres://app:hunter2@db.example.com:5432/billing for the migration',
+      'postgres-uri',
+    ],
     ['mysql URI', 'mysql://root:rootpass@10.0.0.5:3306/app', 'mysql-uri'],
     ['mongodb+srv URI', 'mongodb+srv://u:p@cluster0.mongo.net/app?retryWrites=true', 'mongodb-uri'],
-    ['Redis with password', 'rediss://default:abc123@redis.example.com:6379/0', 'redis-uri-with-password'],
-    ['Slack webhook', 'POST https://hooks.slack.com/services/T01ABCDEFGH/B02IJKLMNOP/abcdefGHijklMNOP1234567890', 'slack-webhook'],
+    [
+      'Redis with password',
+      'rediss://default:abc123@redis.example.com:6379/0',
+      'redis-uri-with-password',
+    ],
+    [
+      'Slack webhook',
+      'POST https://hooks.slack.com/services/T01ABCDEFGH/B02IJKLMNOP/abcdefGHijklMNOP1234567890',
+      'slack-webhook',
+    ],
     ['AWS AKIA', 'AWS_ACCESS_KEY_ID=AKIAEXAMPLEEXAMPLEEX', 'aws-access-key-id'],
     ['AWS ASIA temp', 'token=ASIAEXAMPLEEXAMPLEDD', 'aws-access-key-id'],
     ['GCP API key', 'key: AIzaXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 'gcp-api-key'],
-    ['GitHub PAT classic', 'gh auth login --token ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 'github-pat-classic'],
-    ['GitHub fine-grained PAT', 'PAT=github_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 'github-pat-fine-grained'],
-    ['Slack bot token', 'export SLACK_BOT=xoxb-XXXXXXXXXX-XXXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX', 'slack-bot-token'],
+    [
+      'GitHub PAT classic',
+      'gh auth login --token ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      'github-pat-classic',
+    ],
+    [
+      'GitHub fine-grained PAT',
+      'PAT=github_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      'github-pat-fine-grained',
+    ],
+    [
+      'Slack bot token',
+      'export SLACK_BOT=xoxb-XXXXXXXXXX-XXXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX',
+      'slack-bot-token',
+    ],
     ['Stripe live key', 'STRIPE_KEY=sk_live_XXXXXXXXXXXXXXXXXXXXXXXXXX', 'stripe-live-secret-key'],
-    ['OpenAI API key', 'OPENAI_API_KEY=sk-proj-XXXXXXXXXXXXXXXXXXXXXXXX', 'openai-api-key'],
-    ['Anthropic API key', 'ANTHROPIC_API_KEY=sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXX', 'anthropic-api-key'],
-    ['JWT', 'Authorization: Bearer eyJXXXXXXXXXXXXXXXXXXXX.eyJXXXXXXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXX', 'jwt'],
+    [
+      'OpenAI API key',
+      'OPENAI_API_KEY=sk-proj-XXXXXXXXXXXXXXXXXXXXXXXX',
+      'openai-api-key',
+    ],
+    [
+      'Anthropic API key',
+      'ANTHROPIC_API_KEY=sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXX',
+      'anthropic-api-key',
+    ],
+    [
+      'JWT',
+      'Authorization: Bearer eyJXXXXXXXXXXXXXXXXXXXX.eyJXXXXXXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXX',
+      'jwt',
+    ],
   ])('redacts %s', (_label, input, expectedPattern) => {
     const { text, matches } = redact(input);
     expect(matches.length).toBeGreaterThan(0);
@@ -61,7 +97,10 @@ describe('pattern bank — false positives (innocent fixtures must NOT be redact
     ['long git SHA', 'a3f9b8c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7'],
     ['lorem ipsum', 'lorem ipsum dolor sit amet consectetur adipiscing elit'],
     ['file path', '/usr/local/bin/keynv-server'],
-    ['public RSA key marker (not private)', '-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----'],
+    [
+      'public RSA key marker (not private)',
+      '-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----',
+    ],
     ['email address', 'support@billing.example.com'],
     ['public GitHub URL', 'https://github.com/anthropic/keynv'],
     ['version string', 'keynv 1.2.3-rc.4'],
@@ -103,7 +142,10 @@ describe('redact — literals (resolved-value pre-emptive redaction)', () => {
   });
 
   it('escapes regex metacharacters in literal', () => {
-    const { text } = redact('value: a.b+c?d', { literals: ['a.b+c?d'], entropy: { enabled: false } });
+    const { text } = redact('value: a.b+c?d', {
+      literals: ['a.b+c?d'],
+      entropy: { enabled: false },
+    });
     expect(text).not.toContain('a.b+c?d');
   });
 });

@@ -1,8 +1,8 @@
 'use server';
 
+import { type ApiError, api } from '@/lib/api';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { api, type ApiError } from '@/lib/api';
 
 const Env = z.object({
   name: z.string().min(1),
@@ -28,7 +28,10 @@ export async function createProjectAction(
   formData: FormData,
 ): Promise<CreateProjectState> {
   const name = String(formData.get('name') ?? '');
-  const envSpecs = String(formData.get('environments') ?? 'dev').split(',').map((s) => s.trim()).filter(Boolean);
+  const envSpecs = String(formData.get('environments') ?? 'dev')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const environments = envSpecs.map((spec) => {
     const [n, tier, approval] = spec.split(':');
     return {
@@ -40,7 +43,9 @@ export async function createProjectAction(
 
   const parsed = Body.safeParse({ name, environments });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') };
+    return {
+      error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+    };
   }
 
   let project: { id: string };

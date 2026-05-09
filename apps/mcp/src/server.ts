@@ -1,9 +1,9 @@
+import { parseAlias } from '@keynv/core';
+import { redact } from '@keynv/redactor';
+import { TESTERS, type TesterType, findTester, runTest } from '@keynv/testers';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { redact } from '@keynv/redactor';
-import { parseAlias } from '@keynv/core';
-import { findTester, runTest, TESTERS, type TesterType } from '@keynv/testers';
 import { McpApiClient } from './api-client.js';
 import type { Credentials } from './credentials.js';
 import { issueReferenceToken } from './tokens.js';
@@ -15,8 +15,7 @@ interface ServerDeps {
 const TOOLS = [
   {
     name: 'keynv.who_am_i',
-    description:
-      'Returns the user identity and project memberships available to this MCP session.',
+    description: 'Returns the user identity and project memberships available to this MCP session.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {

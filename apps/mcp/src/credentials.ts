@@ -22,7 +22,8 @@ export interface Credentials {
 }
 
 export function loadCredentials(): Credentials | null {
-  const path = process.env['KEYNV_CREDENTIALS_FILE'] ?? join(homedir(), '.keynv', 'credentials.json');
+  const path =
+    process.env['KEYNV_CREDENTIALS_FILE'] ?? join(homedir(), '.keynv', 'credentials.json');
   if (!existsSync(path)) return null;
   try {
     return JSON.parse(readFileSync(path, 'utf8')) as Credentials;

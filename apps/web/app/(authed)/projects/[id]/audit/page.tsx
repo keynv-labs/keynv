@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import Link from 'next/link';
 import { VerifyChainButton } from './verify-button';
 
 interface AuditEntry {
@@ -29,7 +29,9 @@ export default async function ProjectAuditPage({
   // Best-effort filter on payload.project_id; the server-wide audit
   // doesn't index per-project today (Phase 5 hardening).
   const entries = audit.entries.filter(
-    (e) => !e.payload || (e.payload as { project_id?: string }).project_id === undefined ||
+    (e) =>
+      !e.payload ||
+      (e.payload as { project_id?: string }).project_id === undefined ||
       (e.payload as { project_id: string }).project_id === id,
   );
 

@@ -44,7 +44,10 @@ describe('validateAuditPayload — happy paths', () => {
     ['member.added', { project_id: 'p_1', target_user_id: 'u_1', role: 'developer' }],
     ['secret.created', { project_id: 'p_1', env: 'dev', key: 'db_pass', version: 1 }],
     ['secret.read.allowed', { alias: '@p.dev.k', version: 3 }],
-    ['secret.rotated', { project_id: 'p_1', env: 'dev', key: 'db_pass', from_version: 1, to_version: 2 }],
+    [
+      'secret.rotated',
+      { project_id: 'p_1', env: 'dev', key: 'db_pass', from_version: 1, to_version: 2 },
+    ],
     ['approval.requested', { alias: '@p.prod.db' }],
   ] as Array<[AuditEventType, Record<string, unknown>]>)(
     'accepts %s with %j',

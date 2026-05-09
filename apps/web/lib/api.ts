@@ -4,7 +4,7 @@
  * the access token directly.
  */
 import { env } from './env';
-import { getSession, type Session } from './session';
+import { type Session, getSession } from './session';
 
 const AGENT = 'keynv-web/0.0.0';
 
@@ -14,7 +14,12 @@ export interface ApiError extends Error {
   details?: unknown;
 }
 
-function apiError(status: number, code: string | undefined, message: string, details?: unknown): ApiError {
+function apiError(
+  status: number,
+  code: string | undefined,
+  message: string,
+  details?: unknown,
+): ApiError {
   const e = new Error(message) as ApiError;
   e.status = status;
   if (code !== undefined) e.code = code;
@@ -73,7 +78,9 @@ export async function api<T = unknown>(path: string, opts: RequestOpts = {}): Pr
   }
 
   if (!res.ok) {
-    const errPayload = (parsed as { error?: { code?: string; message?: string; details?: unknown } })?.error;
+    const errPayload = (
+      parsed as { error?: { code?: string; message?: string; details?: unknown } }
+    )?.error;
     throw apiError(
       res.status,
       errPayload?.code,

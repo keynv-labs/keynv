@@ -3,7 +3,9 @@ import { ApiClient } from '../client/http.js';
 import { table } from '../ui/format.js';
 
 async function findProjectIdByName(client: ApiClient, name: string): Promise<string> {
-  const data = await client.request<{ projects: Array<{ id: string; name: string }> }>('/v1/projects');
+  const data = await client.request<{ projects: Array<{ id: string; name: string }> }>(
+    '/v1/projects',
+  );
   const match = data.projects.find((p) => p.name === name);
   if (!match) throw new Error(`unknown project: ${name}`);
   return match.id;
@@ -23,7 +25,7 @@ export class MemberAddCommand extends Command {
   async execute(): Promise<number> {
     const role = this.role;
     if (!['lead', 'developer', 'reader'].includes(role)) {
-      this.context.stderr.write(`keynv: --role must be one of lead, developer, reader\n`);
+      this.context.stderr.write('keynv: --role must be one of lead, developer, reader\n');
       return 1;
     }
     const client = new ApiClient();

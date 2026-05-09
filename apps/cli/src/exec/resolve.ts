@@ -1,5 +1,5 @@
-import { findAliasesInArgv, type Alias } from '@keynv/core';
-import { ApiClient } from '../client/http.js';
+import { type Alias, findAliasesInArgv } from '@keynv/core';
+import type { ApiClient } from '../client/http.js';
 
 export interface ResolvedAlias {
   alias: Alias;

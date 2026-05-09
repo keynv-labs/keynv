@@ -44,9 +44,10 @@ export function ensureKeynvBlock(path: string, lines: ReadonlyArray<string>): bo
   if (beginIdx >= 0 && endIdx > beginIdx) {
     next = [...marked.slice(0, beginIdx), ...block, ...marked.slice(endIdx + 1)];
   } else {
-    next = existing.length > 0 && !existing.endsWith('\n')
-      ? [...marked, '', ...block]
-      : [...(marked[marked.length - 1] === '' ? marked.slice(0, -1) : marked), ...block, ''];
+    next =
+      existing.length > 0 && !existing.endsWith('\n')
+        ? [...marked, '', ...block]
+        : [...(marked[marked.length - 1] === '' ? marked.slice(0, -1) : marked), ...block, ''];
   }
   const out = next.join('\n');
   if (out === existing) return false;

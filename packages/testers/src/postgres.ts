@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ResolvedSecret, Tester, TestResult } from './types.js';
+import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const Target = z.object({
   host: z.string().min(1),

@@ -1,8 +1,8 @@
 'use server';
 
+import { type ApiError, api } from '@/lib/api';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { api, type ApiError } from '@/lib/api';
 
 const KEY_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
@@ -14,7 +14,10 @@ const CreateBody = z.object({
     .max(24)
     .regex(/^[a-z0-9][a-z0-9-]*$/),
   key: z.string().min(1).max(64).regex(KEY_RE),
-  value: z.string().min(0).max(64 * 1024),
+  value: z
+    .string()
+    .min(0)
+    .max(64 * 1024),
 });
 
 export interface SecretActionState {
@@ -33,7 +36,9 @@ export async function createSecretAction(
     value: formData.get('value'),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') };
+    return {
+      error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+    };
   }
   try {
     await api<{ alias: string; version: number }>(
@@ -54,7 +59,10 @@ const RotateBody = z.object({
   project_id: z.string().min(1),
   env: z.string().min(1),
   key: z.string().min(1),
-  new_value: z.string().min(0).max(64 * 1024),
+  new_value: z
+    .string()
+    .min(0)
+    .max(64 * 1024),
 });
 
 export async function rotateSecretAction(

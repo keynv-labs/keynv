@@ -3,8 +3,6 @@ import { AuditListCommand, AuditVerifyCommand } from './commands/audit.js';
 import { ExecCommand } from './commands/exec.js';
 import { InstallCommand, UninstallCommand } from './commands/install.js';
 import { LoginCommand, LogoutCommand, WhoamiCommand } from './commands/login.js';
-import { RedactCommand, RedactStreamCommand } from './commands/redact.js';
-import { TestCommand } from './commands/test.js';
 import { MemberAddCommand, MemberListCommand, MemberRemoveCommand } from './commands/member.js';
 import {
   ProjectCreateCommand,
@@ -12,6 +10,7 @@ import {
   ProjectDescribeCommand,
   ProjectListCommand,
 } from './commands/project.js';
+import { RedactCommand, RedactStreamCommand } from './commands/redact.js';
 import {
   SecretCreateCommand,
   SecretDeleteCommand,
@@ -19,6 +18,7 @@ import {
   SecretListCommand,
   SecretRotateCommand,
 } from './commands/secret.js';
+import { TestCommand } from './commands/test.js';
 import { fmtError } from './ui/format.js';
 import { VERSION } from './version.js';
 

@@ -3,9 +3,7 @@
  * external dependency we want is none.
  */
 export function table(headers: string[], rows: string[][]): string {
-  const widths = headers.map((h, i) =>
-    Math.max(h.length, ...rows.map((r) => (r[i] ?? '').length)),
-  );
+  const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? '').length)));
   const renderRow = (cells: readonly string[]): string =>
     cells.map((cell, i) => cell.padEnd(widths[i] ?? 0)).join('  ');
   const border = widths.map((w) => '─'.repeat(w)).join('  ');

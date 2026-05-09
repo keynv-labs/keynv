@@ -28,13 +28,9 @@ export const PAYLOAD_SCHEMAS = {
   'auth.login.denied': z.object({ email }).strict(),
   'auth.logout': empty,
   'auth.refresh': empty,
-  'user.invited': z
-    .object({ target_user_id: userId, email, org_role: orgRole })
-    .strict(),
+  'user.invited': z.object({ target_user_id: userId, email, org_role: orgRole }).strict(),
   'user.removed': z.object({ target_user_id: userId }).strict(),
-  'user.role_changed': z
-    .object({ target_user_id: userId, org_role: orgRole })
-    .strict(),
+  'user.role_changed': z.object({ target_user_id: userId, org_role: orgRole }).strict(),
   'project.created': z
     .object({
       project_id: projectId,
@@ -44,18 +40,10 @@ export const PAYLOAD_SCHEMAS = {
     .strict(),
   'project.deleted': z.object({ project_id: projectId, name: z.string() }).strict(),
   'project.dek_rotated': z.object({ project_id: projectId }).strict(),
-  'member.added': z
-    .object({ project_id: projectId, target_user_id: userId, role })
-    .strict(),
-  'member.removed': z
-    .object({ project_id: projectId, target_user_id: userId })
-    .strict(),
-  'member.role_changed': z
-    .object({ project_id: projectId, target_user_id: userId, role })
-    .strict(),
-  'secret.created': z
-    .object({ project_id: projectId, env, key, version })
-    .strict(),
+  'member.added': z.object({ project_id: projectId, target_user_id: userId, role }).strict(),
+  'member.removed': z.object({ project_id: projectId, target_user_id: userId }).strict(),
+  'member.role_changed': z.object({ project_id: projectId, target_user_id: userId, role }).strict(),
+  'secret.created': z.object({ project_id: projectId, env, key, version }).strict(),
   'secret.read.allowed': z.object({ alias, version }).strict(),
   'secret.read.denied': z.object({ alias }).strict(),
   'secret.rotated': z

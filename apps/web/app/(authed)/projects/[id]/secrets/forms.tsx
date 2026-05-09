@@ -1,13 +1,13 @@
 'use client';
 
-import { useActionState, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useActionState, useState } from 'react';
 import {
+  type SecretActionState,
   createSecretAction,
   deleteSecretAction,
   rotateSecretAction,
-  type SecretActionState,
 } from './actions';
 
 export function CreateSecretForm({
@@ -40,16 +40,17 @@ export function CreateSecretForm({
       </label>
       <label className="block">
         <span className="text-xs text-[var(--color-fg-muted)] block mb-1">Key</span>
-        <Input
-          name="key"
-          required
-          placeholder="db_password"
-          pattern="^[a-z0-9][a-z0-9_-]{0,63}$"
-        />
+        <Input name="key" required placeholder="db_password" pattern="^[a-z0-9][a-z0-9_-]{0,63}$" />
       </label>
       <label className="block md:col-span-2">
         <span className="text-xs text-[var(--color-fg-muted)] block mb-1">Value</span>
-        <Input type="password" name="value" required placeholder="Sent over TLS, encrypted at rest." autoComplete="off" />
+        <Input
+          type="password"
+          name="value"
+          required
+          placeholder="Sent over TLS, encrypted at rest."
+          autoComplete="off"
+        />
       </label>
       <div className="md:col-span-4 flex items-center justify-between">
         <div className="text-xs">

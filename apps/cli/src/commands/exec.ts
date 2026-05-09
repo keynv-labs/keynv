@@ -22,10 +22,14 @@ shell from being seen by the subprocess (and by extension, the AI
 agent that wraps it).
 `,
     examples: [
-      ['Run mysql with the alias substituted at fork-exec time',
-        '$0 exec -- mysql -p@billing.dev.db_pass -h db.example.com'],
-      ['Inject env vars without showing them in argv',
-        '$0 exec --via-env DB_PASS=@billing.dev.db_pass -- node ./scripts/migrate.js'],
+      [
+        'Run mysql with the alias substituted at fork-exec time',
+        '$0 exec -- mysql -p@billing.dev.db_pass -h db.example.com',
+      ],
+      [
+        'Inject env vars without showing them in argv',
+        '$0 exec --via-env DB_PASS=@billing.dev.db_pass -- node ./scripts/migrate.js',
+      ],
     ],
   });
 
@@ -42,7 +46,9 @@ agent that wraps it).
 
   async execute(): Promise<number> {
     if (!this.rest || this.rest.length === 0) {
-      this.context.stderr.write('keynv: missing command. Usage: keynv exec [opts] -- <cmd> [args...]\n');
+      this.context.stderr.write(
+        'keynv: missing command. Usage: keynv exec [opts] -- <cmd> [args...]\n',
+      );
       return 2;
     }
     const [command, ...args] = this.rest;

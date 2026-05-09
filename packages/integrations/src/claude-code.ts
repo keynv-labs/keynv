@@ -11,7 +11,10 @@ interface ClaudeSettings {
   permissions?: {
     deny?: string[];
   };
-  hooks?: Record<string, Array<{ matcher?: string; hooks?: Array<{ type: string; command: string }> }>>;
+  hooks?: Record<
+    string,
+    Array<{ matcher?: string; hooks?: Array<{ type: string; command: string }> }>
+  >;
   /** keynv writes a marker so we can locate our entries on uninstall. */
   [KEYNV_DENY_TAG]?: {
     deny_added: string[];
@@ -115,23 +118,26 @@ export const claudeCode: Integration = {
     const settings = readJsonOrEmpty(path) as ClaudeSettings;
     const tracker = settings[KEYNV_DENY_TAG];
     const removedDeny: string[] = [];
-    if (tracker?.deny_added && Array.isArray(settings.permissions?.deny)) {
+    const permissions = settings.permissions;
+    if (tracker?.deny_added && permissions && Array.isArray(permissions.deny)) {
       const remove = new Set(tracker.deny_added);
-      const before = settings.permissions!.deny ?? [];
-      settings.permissions!.deny = before.filter((entry) => {
+      const before = permissions.deny;
+      permissions.deny = before.filter((entry) => {
         if (remove.has(entry)) {
           removedDeny.push(entry);
           return false;
         }
         return true;
       });
-      if (settings.permissions!.deny.length === 0) delete settings.permissions!.deny;
+      if (permissions.deny.length === 0) delete permissions.deny;
     }
-    if (tracker?.hook_added && Array.isArray(settings.hooks?.PostToolUse)) {
-      settings.hooks!.PostToolUse = settings.hooks!.PostToolUse.filter(
+    const hooks = settings.hooks;
+    if (tracker?.hook_added && hooks && Array.isArray(hooks.PostToolUse)) {
+      const filtered = hooks.PostToolUse.filter(
         (entry) => !(entry.hooks ?? []).some((h) => h.command?.includes('keynv redact-stream')),
       );
-      if (settings.hooks!.PostToolUse.length === 0) delete settings.hooks!.PostToolUse;
+      hooks.PostToolUse = filtered;
+      if (filtered.length === 0) delete hooks.PostToolUse;
     }
     delete settings[KEYNV_DENY_TAG];
 
@@ -139,7 +145,9 @@ export const claudeCode: Integration = {
       return {
         agent: 'claude-code',
         applied: false,
-        changes: [{ path, action: 'update', note: `would remove ${removedDeny.length} denies + hook` }],
+        changes: [
+          { path, action: 'update', note: `would remove ${removedDeny.length} denies + hook` },
+        ],
         summary: `[dry-run] would remove ${removedDeny.length} denies`,
       };
     }
