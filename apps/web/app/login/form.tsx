@@ -1,18 +1,18 @@
 'use client';
 
+import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useActionState } from 'react';
 import { type LoginState, loginAction } from './actions';
 
 export function LoginForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
 
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form action={action} className="mt-4 space-y-3">
       <input type="hidden" name="next" value={next} />
-      <label className="block">
-        <span className="text-xs text-[var(--color-fg-muted)] block mb-1">Email</span>
+
+      <Field label="Email">
         <Input
           type="email"
           name="email"
@@ -21,23 +21,34 @@ export function LoginForm({ next }: { next: string }) {
           autoFocus
           placeholder="alice@team.com"
         />
-      </label>
-      <label className="block">
-        <span className="text-xs text-[var(--color-fg-muted)] block mb-1">Password</span>
+      </Field>
+
+      <Field label="Password">
         <Input
           type="password"
           name="password"
           autoComplete="current-password"
           required
-          placeholder="•••••••••"
+          placeholder="••••••••••"
         />
-      </label>
-      {state.error ? (
-        <p className="text-xs text-[var(--color-danger)] mt-1">{state.error}</p>
-      ) : null}
-      <Button type="submit" disabled={pending} className="mt-2">
+      </Field>
+
+      {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+
+      <Button type="submit" disabled={pending} className="w-full mt-1">
         {pending ? 'Signing in…' : 'Sign in'}
       </Button>
     </form>
+  );
+}
+
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

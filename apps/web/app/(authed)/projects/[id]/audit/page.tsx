@@ -1,4 +1,3 @@
-import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { type AuditEntry, AuditTimeline } from '@/components/audit/audit-timeline';
 import { ChainBanner } from '@/components/audit/chain-banner';
 import { api } from '@/lib/api';
@@ -12,12 +11,9 @@ export default async function ProjectAuditPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const [project, audit] = await Promise.all([
-    api<{ name: string }>(`/v1/projects/${id}`),
-    api<{ entries: AuditEntry[] }>('/v1/audit', {
-      query: { event_type: sp.event_type, limit: sp.limit ?? 200 },
-    }),
-  ]);
+  const audit = await api<{ entries: AuditEntry[] }>('/v1/audit', {
+    query: { event_type: sp.event_type, limit: sp.limit ?? 200 },
+  });
 
   // Best-effort filter to project scope. The org-wide audit endpoint
   // doesn't index by project_id today (Phase 5 hardening will add a
@@ -31,25 +27,8 @@ export default async function ProjectAuditPage({
   );
 
   return (
-    <div className="space-y-6">
-      <Breadcrumb
-        segments={[
-          { label: 'Projects', href: '/projects' },
-          { label: project.name, href: `/projects/${id}` },
-          { label: 'Audit' },
-        ]}
-      />
-
-      <header>
-        <h1 className="text-[22px] font-semibold tracking-tight">Audit log</h1>
-        <p className="text-sm text-fg-muted mt-1">
-          Tamper-evident events scoped to{' '}
-          <span className="font-mono text-fg">{project.name}</span>.
-        </p>
-      </header>
-
+    <div className="space-y-5">
       <ChainBanner />
-
       <AuditTimeline entries={entries} />
     </div>
   );

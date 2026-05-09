@@ -1,14 +1,24 @@
-import { Card, CardTitle } from '@/components/ui/card';
+import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { CreateProjectForm } from './form';
 
 export default function NewProjectPage() {
   return (
-    <div className="max-w-xl">
-      <h1 className="text-xl font-semibold mb-6">New project</h1>
-      <Card>
-        <CardTitle>Project details</CardTitle>
+    <div className="space-y-6 max-w-xl">
+      <Breadcrumb
+        segments={[{ label: 'Projects', href: '/projects' }, { label: 'New project' }]}
+      />
+
+      <header>
+        <h1 className="text-[22px] font-semibold tracking-tight">New project</h1>
+        <p className="text-sm text-fg-muted mt-1">
+          A project is a namespace for secrets. Each environment in the project gets its own
+          encrypted DEK.
+        </p>
+      </header>
+
+      <div className="rounded-lg border border-border bg-bg-elevated p-5">
         <CreateProjectForm />
-      </Card>
+      </div>
     </div>
   );
 }

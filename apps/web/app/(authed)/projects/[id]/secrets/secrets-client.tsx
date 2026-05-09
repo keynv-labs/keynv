@@ -87,20 +87,13 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
   const isFiltering = activeEnvs.size > 0 || search.length > 0;
 
   return (
-    <div className="space-y-5">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-tight">Secrets</h1>
-          <p className="text-sm text-fg-muted mt-1">
-            {parsed.length} {parsed.length === 1 ? 'alias' : 'aliases'} across{' '}
-            {environments.length} {environments.length === 1 ? 'environment' : 'environments'}
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
         <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
           <Plus size={14} strokeWidth={2.25} />
           New secret
         </Button>
-      </header>
+      </div>
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1">

@@ -1,4 +1,3 @@
-import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { api } from '@/lib/api';
 import { SecretsClient } from './secrets-client';
 
@@ -22,20 +21,10 @@ export default async function SecretsPage({ params }: { params: Promise<{ id: st
   ]);
 
   return (
-    <div className="space-y-6">
-      <Breadcrumb
-        segments={[
-          { label: 'Projects', href: '/projects' },
-          { label: project.name, href: `/projects/${id}` },
-          { label: 'Secrets' },
-        ]}
-      />
-
-      <SecretsClient
-        projectId={id}
-        environments={project.environments.map((e) => ({ name: e.name, tier: e.tier }))}
-        secrets={secretsResp.secrets}
-      />
-    </div>
+    <SecretsClient
+      projectId={id}
+      environments={project.environments.map((e) => ({ name: e.name, tier: e.tier }))}
+      secrets={secretsResp.secrets}
+    />
   );
 }
