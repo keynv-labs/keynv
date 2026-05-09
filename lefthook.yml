@@ -1,0 +1,32 @@
+# Lefthook git hooks — install with `lefthook install` after `pnpm install`.
+# Hooks are designed to be fast: only run against staged files, not the whole repo.
+
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: '*.{js,ts,jsx,tsx,json,jsonc}'
+      run: pnpm biome check --staged --no-errors-on-unmatched {staged_files}
+    gitleaks:
+      run: gitleaks protect --staged --redact --verbose
+      skip:
+        - merge
+        - rebase
+
+commit-msg:
+  commands:
+    conventional:
+      run: |
+        # Conventional Commits enforcement (lightweight regex).
+        # Allowed types: feat, fix, chore, docs, refactor, test, ci, build, perf, security.
+        if ! grep -qE '^(feat|fix|chore|docs|refactor|test|ci|build|perf|security)(\([^)]+\))?(!)?: .+' "{1}" &&
+           ! grep -qE '^(Merge|Revert)' "{1}"; then
+          echo "Commit message must follow Conventional Commits."
+          echo "  e.g. 'feat(core): add reference parser'"
+          exit 1
+        fi
+
+pre-push:
+  commands:
+    typecheck:
+      run: pnpm typecheck

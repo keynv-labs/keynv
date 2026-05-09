@@ -1,0 +1,19 @@
+# gitleaks config — extends the default ruleset.
+# Allowlist for fixtures and docs that contain example-shaped tokens.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "keynv allowlist for documentation examples and clearly-fake fixtures"
+paths = [
+  '''docs/.*\.md$''',
+  '''.*test/fixtures/innocent.*$''',
+  '''.*\.example\..*$''',
+]
+regexes = [
+  '''example-fake-(?:token|key|password|secret)''',
+  '''supersecret123''',
+  '''sk-(?:proj-)?example''',
+  '''AKIAEXAMPLE''',
+]
