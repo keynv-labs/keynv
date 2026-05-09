@@ -4,16 +4,8 @@ import { type RouteTab, RouteTabs } from '@/components/ui/route-tabs';
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const tabs: RouteTab[] = [
-    {
-      href: '/settings/account',
-      label: 'Profile',
-      match: (p) => p === '/settings/account',
-    },
-    {
-      href: '/settings/account/cli-tokens',
-      label: 'CLI tokens',
-      match: (p) => p.startsWith('/settings/account/cli-tokens'),
-    },
+    { href: '/settings/account', label: 'Profile' },
+    { href: '/settings/account/cli-tokens', label: 'CLI tokens', nested: true },
   ];
 
   return (

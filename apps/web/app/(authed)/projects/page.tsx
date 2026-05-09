@@ -224,7 +224,7 @@ function EmptyState({ canCreate }: { canCreate: boolean }) {
             <Terminal size={12} />
             Example
           </div>
-          <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed">
+          <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
             <span className="text-fg-subtle">$ </span>keynv exec -- pnpm dev{'\n'}
             <span className="text-fg-subtle">  </span>resolves{' '}
             <span className="text-fg">@billing.dev.STRIPE_KEY</span> into the subprocess

@@ -26,26 +26,10 @@ export default async function ProjectLayout({
   }
 
   const tabs: RouteTab[] = [
-    {
-      href: `/projects/${id}`,
-      label: 'Overview',
-      match: (p) => p === `/projects/${id}`,
-    },
-    {
-      href: `/projects/${id}/secrets`,
-      label: 'Secrets',
-      match: (p) => p.startsWith(`/projects/${id}/secrets`),
-    },
-    {
-      href: `/projects/${id}/audit`,
-      label: 'Audit',
-      match: (p) => p.startsWith(`/projects/${id}/audit`),
-    },
-    {
-      href: `/projects/${id}/members`,
-      label: 'Members',
-      match: (p) => p.startsWith(`/projects/${id}/members`),
-    },
+    { href: `/projects/${id}`, label: 'Overview' },
+    { href: `/projects/${id}/secrets`, label: 'Secrets', nested: true },
+    { href: `/projects/${id}/audit`, label: 'Audit', nested: true },
+    { href: `/projects/${id}/members`, label: 'Members', nested: true },
   ];
 
   return (

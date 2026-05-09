@@ -284,7 +284,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
             <Terminal size={12} />
             Example
           </div>
-          <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed">
+          <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
             <span className="text-fg-subtle">$ </span>
             <span className="text-fg">keynv exec</span> -- pnpm dev{'\n'}
             <span className="text-fg-subtle">  </span>resolves{' '}

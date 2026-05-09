@@ -171,7 +171,7 @@ function CodeFrame() {
         <span className="h-2.5 w-2.5 rounded-full bg-bg-elevated-hover" />
         <span className="ml-2 text-[11px] font-mono text-fg-subtle">~/billing-app</span>
       </div>
-      <pre className="px-4 py-4 font-mono text-[13px] leading-relaxed overflow-x-auto">
+      <pre className="px-4 py-4 font-mono text-[12px] sm:text-[13px] leading-relaxed overflow-x-auto whitespace-pre">
         <span className="text-fg-subtle">$</span>{' '}
         <span className="text-fg">keynv</span> exec --{'\n'}
         <span className="text-fg-subtle">    </span>

@@ -7,7 +7,12 @@ import { cn } from '@/lib/cn';
 export interface RouteTab {
   href: string;
   label: string;
-  match: (pathname: string) => boolean;
+  /**
+   * When true, the tab is also active for any pathname nested below
+   * `href` (e.g. `/projects/abc/secrets/some-future-detail`). Default
+   * is exact match only — the parent / index tab uses the bare `href`.
+   */
+  nested?: boolean;
 }
 
 export function RouteTabs({ tabs }: { tabs: RouteTab[] }) {
@@ -20,7 +25,9 @@ export function RouteTabs({ tabs }: { tabs: RouteTab[] }) {
     >
       <ul className="flex items-center gap-0">
         {tabs.map((tab) => {
-          const active = tab.match(pathname);
+          const active = tab.nested
+            ? pathname === tab.href || pathname.startsWith(`${tab.href}/`)
+            : pathname === tab.href;
           return (
             <li key={tab.href}>
               <Link
