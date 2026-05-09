@@ -1,8 +1,10 @@
 # Phase 0 spikes
 
-One-off measurement scripts that validate the master plan's load-bearing performance assumptions before Phase 1 starts. Each script prints a single result line plus a verdict against the documented target.
+One-off measurement scripts that validated the master plan's load-bearing performance assumptions before Phase 1 started. Each script prints a single result line plus a verdict against the documented target.
 
-## Targets (from `docs/phases/00-discovery-and-spike.md`)
+Phase 0 is closed; these scripts are kept around as regression tooling — re-run them whenever a major dependency upgrade lands (Bun, libsodium, better-sqlite3) to confirm the targets still hold.
+
+## Targets
 
 | Spike | Target | Hard fail |
 |---|---|---|
@@ -30,7 +32,7 @@ pnpm --filter @keynv/spikes spike:sqlite
 pnpm --filter @keynv/spikes spike:all
 ```
 
-Results should be captured in `docs/phases/00-discovery-and-spike-<topic>.md` per the phase doc.
+Spike numbers are recorded once per dependency upgrade in the relevant commit's body — there's no separate measurement file to maintain.
 
 ## Notes
 

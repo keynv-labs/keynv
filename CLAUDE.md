@@ -7,10 +7,10 @@ You are working on **keynv**, an AI-safe secrets management platform. The produc
 keynv lets developers store secrets (DB passwords, API keys, SSH credentials) in a self-hosted vault, then reference them by alias (`@project.env.key`) in code, configs, and shell commands. A privileged shell wrapper and MCP server inject the real value into subprocesses that the AI agent's process tree never sees. Tool outputs are scanned and redacted before being returned to the agent.
 
 For full context read in this order:
-- [`docs/00-vision-and-scope.md`](./docs/00-vision-and-scope.md)
+- [`README.md`](./README.md) — product positioning + quick start
 - [`docs/01-architecture.md`](./docs/01-architecture.md)
 - [`docs/02-threat-model.md`](./docs/02-threat-model.md)
-- [`docs/phases/`](./docs/phases/) — current phase has the active task list
+- [`docs/ROADMAP.md`](./docs/ROADMAP.md) — phase status + active slice list
 
 The master plan that produced these docs lives at `~/.claude/plans/geli-tiriciler-s-rekli-env-leri-gleaming-bentley.md` (outside this repo).
 
@@ -61,7 +61,7 @@ The master plan that produced these docs lives at `~/.claude/plans/geli-tiricile
 
 ## Working style
 
-- Read the active phase doc in `docs/phases/` before changing anything in `apps/` or `packages/`. The phase doc lists deliverables and acceptance criteria. If a change crosses phase boundaries, flag it.
+- Check [`docs/ROADMAP.md`](./docs/ROADMAP.md) before changing anything in `apps/` or `packages/`. It lists what's shipped, what's in progress (Phase 4 slice tracker), and what's deliberately not started yet. If a change crosses phase boundaries, flag it.
 - Use `pnpm test` and `pnpm typecheck` locally before claiming a task done.
 - For UI work in Phase 4+, also run the dev server and click through the change yourself; don't rely on type-check alone.
 - When you find yourself pattern-matching on secrets in code (e.g., adding a new redactor pattern), add a regression test in `packages/redactor/test/patterns.test.ts`.

@@ -33,7 +33,7 @@ export function authorize(action: Action, ctx: AuthorizeContext): Decision {
   if (!allowed.includes(effective)) return 'deny';
 
   // Production-tier secret reads may require explicit approval for
-  // developers (per docs/04-rbac-and-permissions.md).
+  // developers when the environment is marked require_approval.
   if (
     action === 'secret.read' &&
     effective === 'developer' &&

@@ -1,16 +1,13 @@
-# keynv self-host stack. One server + a Litestream sidecar that
-# replicates the SQLite WAL to S3/B2 in real time. Bring up with:
+# keynv self-host stack. One server + an optional Litestream sidecar
+# that replicates the SQLite WAL to S3/B2 in real time. Bring up with:
 #
 #   cp deploy/.env.example deploy/.env
-#   # edit deploy/.env (set KEYNV_JWT_SECRET, S3 creds, owner email)
+#   # edit deploy/.env (KEYNV_JWT_SECRET + KEYNV_BOOTSTRAP_OWNER_*)
 #   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
-#   docker compose -f deploy/docker-compose.yml exec keynv-server \
-#     node dist/bootstrap.js --owner-email lead@team.com --org-name acme
 #
-# After bootstrap, restart the server so the master key file is read
-# fresh:
-#
-#   docker compose -f deploy/docker-compose.yml restart keynv-server
+# The server auto-bootstraps on first start: it generates the master
+# key, runs migrations, and creates the owner account from the env
+# vars. No separate `docker compose run` step required.
 #
 # Litestream is OPTIONAL. Comment the litestream service out if you
 # don't have S3 yet — keynv works fine without backup, you just lose
@@ -31,16 +28,22 @@ services:
       KEYNV_JWT_SECRET: ${KEYNV_JWT_SECRET:?set in deploy/.env}
       KEYNV_LOG_LEVEL: ${KEYNV_LOG_LEVEL:-info}
       KEYNV_PORT: 8080
+      # First-deploy auto-bootstrap. After /data/master.key exists
+      # these are no-ops; blank them out post-deploy to keep the
+      # password out of the running config.
+      KEYNV_BOOTSTRAP_OWNER_EMAIL: ${KEYNV_BOOTSTRAP_OWNER_EMAIL:-}
+      KEYNV_BOOTSTRAP_OWNER_PASSWORD: ${KEYNV_BOOTSTRAP_OWNER_PASSWORD:-}
+      KEYNV_BOOTSTRAP_ORG_NAME: ${KEYNV_BOOTSTRAP_ORG_NAME:-default}
     ports:
-      - "${KEYNV_PORT:-8080}:8080"
+      - '${KEYNV_PORT:-8080}:8080'
     volumes:
       - keynv-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health || exit 1"]
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/v1/health || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
 
   # Real-time SQLite WAL replication. Comment out to disable.
   litestream:

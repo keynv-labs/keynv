@@ -1,18 +1,40 @@
 # Self-host deployment
 
-Two supported paths:
+Two supported paths. Pick whichever matches how you operate.
 
-- **[Coolify](./COOLIFY.md)** (recommended for personal/team self-hosting) — Coolify
-  pulls the repo, builds the image, handles HTTPS + the persistent volume, and
-  the server auto-bootstraps on first start from env vars. No shell-step
-  required after deploy.
-- **Plain Docker Compose** (this guide, below) — single-VM stack with the
-  keynv-server container plus an optional Litestream sidecar replicating the
-  SQLite WAL to S3/B2 for disaster recovery. Bootstrap is a separate one-shot
-  command.
+|                  | Coolify ([guide](./COOLIFY.md))                | Plain Docker Compose (this guide)        |
+| ---------------- | ---------------------------------------------- | ---------------------------------------- |
+| **Best when**    | You already run Coolify or want HTTPS handled  | You want full control over the host      |
+| **Time**         | ~15 minutes                                    | ~10 minutes + your own TLS proxy         |
+| **HTTPS**        | automatic (Coolify proxy + Let's Encrypt)      | bring your own (Caddy / nginx / Traefik) |
+| **Auto-deploy**  | optional, on push to `main`                    | manual `docker compose pull && up -d`    |
 
-Pick Coolify if you have a Coolify instance; pick plain compose if you want
-full control over the host.
+> [!TIP]
+> If both paths work for you, use Coolify — it removes the TLS proxy step
+> and the manual update flow.
+
+---
+
+## What this stack runs
+
+```mermaid
+flowchart LR
+  Caller["CLI / web UI"]
+  TLS["Your TLS proxy<br/>Caddy · nginx · Traefik"]
+  subgraph Compose["docker compose stack"]
+    Server["<b>keynv-server</b><br/>Hono · :8080"]
+    Lite["litestream<br/>(optional sidecar)"]
+  end
+  Vol[("/data volume<br/>keynv.db · master.key")]
+  S3[("S3 / B2<br/>WAL replicas")]
+
+  Caller -- HTTPS --> TLS --> Server
+  Server --> Vol
+  Lite -. read .-> Vol
+  Lite --> S3
+```
+
+---
 
 ## First-time bring-up
 
@@ -20,26 +42,56 @@ full control over the host.
 # 1. configure
 cp deploy/.env.example deploy/.env
 $EDITOR deploy/.env
-# Required: KEYNV_JWT_SECRET (32+ chars, e.g. `openssl rand -base64 32`).
-# Optional: Litestream S3 creds. Leave blank and comment out the
-# litestream service in docker-compose.yml if you don't have S3 yet.
+```
 
+Required values in `deploy/.env`:
+
+| Key | How to fill |
+|---|---|
+| `KEYNV_JWT_SECRET` | `openssl rand -base64 48` |
+| `KEYNV_BOOTSTRAP_OWNER_EMAIL` | your login email |
+| `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | 12+ char password — what you'll type into `keynv login` |
+| `KEYNV_BOOTSTRAP_ORG_NAME` | optional, defaults to `default` |
+| `LITESTREAM_*` | only if you keep the litestream sidecar; otherwise comment that service out |
+
+```bash
 # 2. build the server image
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env build keynv-server
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env build
 
-# 3. bootstrap the org + owner + master KEK
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env run --rm \
-  -e KEYNV_BOOTSTRAP_PASSWORD='your-12-plus-char-password' \
-  keynv-server \
-  node dist/bootstrap.js --owner-email lead@team.test --org-name acme
-
-# 4. start the stack
+# 3. start the stack — the server auto-bootstraps on first start
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
 
-# 5. verify
+# 4. verify
 curl http://localhost:8080/v1/health
 # {"ok":true,"version":"...","db":"ok"}
 ```
+
+You should see this in the server logs (`docker compose logs keynv-server`):
+
+```text
+[auto-bootstrap] master key missing — initializing fresh deployment
+[auto-bootstrap] created org "default" (id=org_...)
+[auto-bootstrap] created owner you@example.com (id=u_...)
+keynv-server listening on http://localhost:8080
+```
+
+> [!IMPORTANT]
+> Once the master key has been generated, **back it up off-host**:
+>
+> ```bash
+> docker compose exec keynv-server cat /data/master.key | base64
+> ```
+>
+> Paste the base64 output into your password manager. If you lose
+> `master.key` AND the database, no backup recovers anything — that
+> separation is the whole point of envelope encryption.
+
+> [!TIP]
+> After the first successful boot, blank out `KEYNV_BOOTSTRAP_OWNER_PASSWORD`
+> in `deploy/.env` and restart. The bootstrap branch is unreachable now
+> that the master key file exists, so removing the var is safe.
+
+---
 
 ## Ops
 
@@ -49,18 +101,24 @@ curl http://localhost:8080/v1/health
 | Tail Litestream logs | `docker compose logs -f litestream` |
 | Restart server | `docker compose restart keynv-server` |
 | Stop everything | `docker compose down` |
-| Stop + delete data | `docker compose down -v` (DESTRUCTIVE — wipes the volume incl. master.key) |
-| Inspect master key file (host) | `docker compose exec keynv-server ls -l /data/master.key` |
+| Inspect master key file (host-side) | `docker compose exec keynv-server ls -l /data/master.key` |
+
+> [!CAUTION]
+> `docker compose down -v` **wipes the volume** including `master.key`.
+> If you do this without a master-key backup off-host, every secret in
+> the DB becomes unrecoverable.
+
+---
 
 ## Disaster recovery
 
-If the server-side `keynv.db` is lost or corrupted:
+If `keynv.db` is lost or corrupted but you have Litestream replicas in S3:
 
 ```bash
 # 1. stop the stack
 docker compose down
 
-# 2. restore from Litestream
+# 2. restore from Litestream into the named volume
 docker run --rm \
   -v keynv_keynv-data:/data \
   -e LITESTREAM_ACCESS_KEY_ID -e LITESTREAM_SECRET_ACCESS_KEY \
@@ -72,23 +130,32 @@ docker run --rm \
 docker compose up -d
 ```
 
-The master.key file is **NOT** replicated by Litestream by design — losing it would lock you out, so the operator is responsible for storing a copy off-host (e.g., in a separate password manager). If you lose master.key, the restored DB is unreadable.
+> [!IMPORTANT]
+> `master.key` is **not** replicated by Litestream — that's deliberate.
+> Lose the key, lose the data. Keep your off-host backup current
+> before the next rotation.
+
+---
 
 ## Behind a TLS proxy
 
-This compose file does not include a TLS reverse proxy. In production:
+This compose file does not include HTTPS. In production:
 
-- Run nginx / Caddy / Traefik on the same host
+- Run nginx / Caddy / Traefik on the same host (or in front of it)
 - Proxy `https://keynv.your-domain.com` → `http://keynv-server:8080`
-- Set the public CLI/web `KEYNV_SERVER_URL` to the public HTTPS URL
+- Set the public CLI / web `KEYNV_SERVER_URL` to the public HTTPS URL
 
-A worked example (Caddy) lives in `deploy/caddy.example.Caddyfile`.
+A worked Caddyfile lives at [`deploy/caddy.example.Caddyfile`](./caddy.example.Caddyfile).
+
+---
 
 ## Resource sizing
 
 For a 15-person team:
-- 1 vCPU / 1 GB RAM / 10 GB disk is plenty
-- ~50 audit rows/day, <100 KB/day SQLite growth
-- Litestream uploads <10 MB/day to S3 typically
 
-For 50–100 users you'll want 2 vCPU / 2 GB RAM. Beyond that, consider the Phase 6 Postgres adapter.
+- 1 vCPU · 1 GB RAM · 10 GB disk is plenty
+- ~50 audit rows / day, < 100 KB / day SQLite growth
+- Litestream uploads typically < 10 MB / day to S3
+
+For 50–100 users you'll want 2 vCPU · 2 GB RAM. Beyond that, see the Phase 6
+Postgres adapter plan in [`docs/ROADMAP.md`](../docs/ROADMAP.md).

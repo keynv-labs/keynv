@@ -34,8 +34,9 @@ export interface AliasMatch extends Alias {
 export type FindMode = 'text' | 'argv';
 
 /**
- * Lexical limits for each component, copied from `docs/03-reference-syntax.md`.
- * Exposed here so callers (e.g. validation in the server API) can reuse them.
+ * Lexical limits for each component of an `@project.environment.key`
+ * alias. Exposed here so callers (e.g. validation in the server API)
+ * can reuse them.
  */
 export const ALIAS_LIMITS = {
   project: { min: 1, max: 48 },
