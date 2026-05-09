@@ -1,5 +1,6 @@
 import { Builtins, Cli } from 'clipanion';
 import { AuditListCommand, AuditVerifyCommand } from './commands/audit.js';
+import { ExecCommand } from './commands/exec.js';
 import { LoginCommand, LogoutCommand, WhoamiCommand } from './commands/login.js';
 import { MemberAddCommand, MemberListCommand, MemberRemoveCommand } from './commands/member.js';
 import {
@@ -49,6 +50,8 @@ cli.register(MemberListCommand);
 
 cli.register(AuditListCommand);
 cli.register(AuditVerifyCommand);
+
+cli.register(ExecCommand);
 
 cli
   .runExit(process.argv.slice(2))
