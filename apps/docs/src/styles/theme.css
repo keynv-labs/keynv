@@ -1,0 +1,31 @@
+/* keynv brand tweaks on top of Starlight's dark default. */
+
+:root {
+  --sl-color-accent-low: #1a2540;
+  --sl-color-accent: #5b8def;
+  --sl-color-accent-high: #a8c1f7;
+  --sl-color-white: #f5f7fa;
+  --sl-color-gray-1: #e6e9ef;
+  --sl-color-gray-2: #b3b9c3;
+  --sl-color-gray-3: #8a93a0;
+  --sl-color-gray-4: #545b66;
+  --sl-color-gray-5: #2d323a;
+  --sl-color-gray-6: #1f2229;
+  --sl-color-black: #0b0d10;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #d0deff;
+  --sl-color-accent: #345fc7;
+  --sl-color-accent-high: #1a3f9c;
+}
+
+.site-title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Code blocks: subtle border for readability. */
+.expressive-code .frame {
+  border-color: var(--sl-color-gray-5);
+}

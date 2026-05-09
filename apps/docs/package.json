@@ -1,0 +1,20 @@
+{
+  "name": "@keynv/docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "keynv documentation site (Astro Starlight).",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro build",
+    "preview": "astro preview --port 4321",
+    "check": "astro check",
+    "typecheck": "astro check",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.34.0",
+    "astro": "^5.0.0",
+    "sharp": "^0.33.5"
+  }
+}
