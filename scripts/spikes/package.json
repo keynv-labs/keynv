@@ -1,0 +1,24 @@
+{
+  "name": "@keynv/spikes",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Phase 0 measurement scripts for the keynv discovery & spike phase.",
+  "type": "module",
+  "scripts": {
+    "spike:cli-startup": "tsx src/cli-startup.ts",
+    "spike:mcp-overhead": "tsx src/mcp-overhead.ts",
+    "spike:libsodium": "tsx src/libsodium-throughput.ts",
+    "spike:sqlite": "tsx src/sqlite-write.ts",
+    "spike:all": "tsx src/cli-startup.ts && tsx src/mcp-overhead.ts && tsx src/libsodium-throughput.ts && tsx src/sqlite-write.ts"
+  },
+  "dependencies": {
+    "@keynv/core": "workspace:*",
+    "better-sqlite3": "^11.10.0",
+    "libsodium-wrappers": "^0.7.15"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/libsodium-wrappers": "^0.7.14",
+    "tsx": "^4.19.2"
+  }
+}
