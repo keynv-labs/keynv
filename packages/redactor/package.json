@@ -1,0 +1,15 @@
+{
+  "name": "@keynv/redactor",
+  "version": "0.0.0",
+  "private": true,
+  "description": "keynv output and file redaction (regex + entropy + per-project custom patterns).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  }
+}

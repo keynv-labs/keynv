@@ -1,0 +1,24 @@
+{
+  "name": "@keynv/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "keynv command-line interface — Bun-compiled single binary.",
+  "type": "module",
+  "bin": {
+    "keynv": "./dist/keynv"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile dist/keynv",
+    "build:js": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@keynv/core": "workspace:*",
+    "@keynv/rbac": "workspace:*",
+    "@keynv/redactor": "workspace:*"
+  }
+}

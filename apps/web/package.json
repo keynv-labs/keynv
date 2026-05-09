@@ -1,0 +1,13 @@
+{
+  "name": "@keynv/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "keynv web dashboard for team leads (Phase 4).",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Phase 4 — Next.js dashboard not yet scaffolded' && exit 0",
+    "build": "echo 'Phase 4' && exit 0",
+    "typecheck": "echo 'Phase 4' && exit 0",
+    "test": "echo 'Phase 4' && exit 0"
+  }
+}

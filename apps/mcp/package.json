@@ -1,0 +1,20 @@
+{
+  "name": "@keynv/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "keynv-mcp Model Context Protocol server (stdio + http transports).",
+  "type": "module",
+  "bin": {
+    "keynv-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "node --watch --import tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@keynv/core": "workspace:*"
+  }
+}
