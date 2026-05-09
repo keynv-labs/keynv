@@ -12,11 +12,15 @@ paths = [
   '''docs/.*\.md$''',
   '''apps/docs/src/content/docs/.*\.md$''',
 
-  # The redactor's own test fixtures intentionally contain every
-  # supported secret-shape so the pattern bank can be regression-tested.
-  # Allowlisting the entire packages/redactor/src/*.test.ts surface is
-  # safe because real values never live here — see the inline negative
-  # corpus assertions in patterns.test.ts.
+  # The redactor's own pattern source + test fixtures intentionally
+  # contain every supported secret-shape so the pattern bank can be
+  # regression-tested. patterns.ts contains the regex literals that
+  # define what a private-key block looks like (BEGIN/END markers
+  # appear verbatim in the source); the default gitleaks `private-key`
+  # rule false-positives on those literals. Real values never live in
+  # this directory — see the inline negative corpus assertions in
+  # patterns.test.ts.
+  '''packages/redactor/src/patterns\.ts$''',
   '''packages/redactor/src/.*\.test\.ts$''',
 
   # Test fixtures explicitly named "innocent" or "*.example.*"
