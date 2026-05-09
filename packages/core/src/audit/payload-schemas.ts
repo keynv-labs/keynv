@@ -28,8 +28,10 @@ export const PAYLOAD_SCHEMAS = {
   'auth.login.denied': z.object({ email }).strict(),
   'auth.logout': empty,
   'auth.refresh': empty,
+  'auth.password_change.allowed': empty,
+  'auth.password_change.denied': empty,
   'user.invited': z.object({ target_user_id: userId, email, org_role: orgRole }).strict(),
-  'user.removed': z.object({ target_user_id: userId }).strict(),
+  'user.removed': z.object({ target_user_id: userId, email }).strict(),
   'user.role_changed': z.object({ target_user_id: userId, org_role: orgRole }).strict(),
   'project.created': z
     .object({

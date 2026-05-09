@@ -9,6 +9,8 @@ describe('PAYLOAD_SCHEMAS', () => {
       'auth.login.denied',
       'auth.logout',
       'auth.refresh',
+      'auth.password_change.allowed',
+      'auth.password_change.denied',
       'user.invited',
       'user.removed',
       'user.role_changed',

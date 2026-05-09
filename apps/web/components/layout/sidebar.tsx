@@ -1,6 +1,6 @@
 'use client';
 
-import { FolderKanban, ScrollText, ShieldCheck } from 'lucide-react';
+import { FolderKanban, ScrollText, Settings, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
@@ -15,27 +15,63 @@ interface NavItem {
   match: (pathname: string) => boolean;
 }
 
-const navGroups: { title: string; items: NavItem[] }[] = [
-  {
-    title: 'Home',
-    items: [
-      {
-        href: '/projects',
-        label: 'Projects',
-        icon: FolderKanban,
-        shortcut: 'g p',
-        match: (p) => p === '/projects' || p.startsWith('/projects/'),
-      },
-      {
-        href: '/audit',
-        label: 'Audit log',
-        icon: ScrollText,
-        shortcut: 'g a',
-        match: (p) => p === '/audit',
-      },
-    ],
-  },
-];
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+function buildGroups(role: string): NavGroup[] {
+  const groups: NavGroup[] = [
+    {
+      title: 'Home',
+      items: [
+        {
+          href: '/projects',
+          label: 'Projects',
+          icon: FolderKanban,
+          shortcut: 'g p',
+          match: (p) => p === '/projects' || p.startsWith('/projects/'),
+        },
+        {
+          href: '/audit',
+          label: 'Audit log',
+          icon: ScrollText,
+          shortcut: 'g a',
+          match: (p) => p === '/audit',
+        },
+      ],
+    },
+    {
+      title: 'Workspace',
+      items: [
+        {
+          href: '/settings/account',
+          label: 'Account',
+          icon: Settings,
+          shortcut: 'g s',
+          match: (p) => p.startsWith('/settings'),
+        },
+      ],
+    },
+  ];
+
+  if (role === 'owner' || role === 'admin') {
+    groups.push({
+      title: 'Admin',
+      items: [
+        {
+          href: '/admin/users',
+          label: 'Users',
+          icon: Users,
+          shortcut: 'g u',
+          match: (p) => p.startsWith('/admin/users'),
+        },
+      ],
+    });
+  }
+
+  return groups;
+}
 
 interface SidebarContentProps {
   email: string;
@@ -55,6 +91,7 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
   const pathname = usePathname() ?? '';
   const initials = email.slice(0, 2).toUpperCase();
   const handleNavigate = onNavigate ?? NOOP;
+  const navGroups = buildGroups(role);
 
   return (
     <div className="flex h-full flex-col">

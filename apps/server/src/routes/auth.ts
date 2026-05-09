@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { appendAudit } from '../audit/append.js';
 import { signAccessToken } from '../auth/jwt.js';
-import { verifyPassword } from '../auth/password.js';
+import { authMiddleware } from '../auth/middleware.js';
+import { hashPassword, verifyPassword } from '../auth/password.js';
 import { issueRefreshToken, revokeRefreshToken, rotateRefreshToken } from '../auth/tokens.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
@@ -28,6 +29,11 @@ const RefreshBody = z.object({
 
 const LogoutBody = z.object({
   refresh_token: z.string().min(1).optional(),
+});
+
+const ChangePasswordBody = z.object({
+  current_password: z.string().min(1),
+  new_password: z.string().min(12).max(256),
 });
 
 export function authRoutes(deps: AuthDeps): Hono {
@@ -150,6 +156,78 @@ export function authRoutes(deps: AuthDeps): Hono {
     });
     return c.body(null, 204);
   });
+
+  // POST /v1/auth/password — current user changes own password.
+  // Verifies current_password, hashes new_password (argon2id), updates
+  // the row, and revokes every other refresh token for the user so
+  // any leaked sessions die. The caller's current session keeps
+  // working until its access token expires; the next refresh will
+  // require a fresh login since the rotated token is gone.
+  const authedSubrouter = new Hono();
+  authedSubrouter.use(
+    '*',
+    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
+  );
+  authedSubrouter.post('/password', async (c) => {
+    const me = c.var.user;
+    const parsed = ChangePasswordBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return jsonError(c, 'validation.failed', 'Invalid body. New password must be 12+ chars.');
+    }
+
+    const rows = await deps.db
+      .select({ id: schema.users.id, password_hash: schema.users.password_hash })
+      .from(schema.users)
+      .where(eq(schema.users.id, me.id))
+      .limit(1);
+    const row = rows[0];
+    if (!row) return jsonError(c, 'auth.invalid_credentials', 'User not found.');
+
+    const ok = await verifyPassword(row.password_hash, parsed.data.current_password);
+    if (!ok) {
+      await appendAudit(deps.db, {
+        actor_user_id: me.id,
+        actor_agent: readAgent(c),
+        event_type: 'auth.password_change.denied',
+        payload: {},
+      });
+      return jsonError(c, 'auth.invalid_credentials', 'Current password is incorrect.');
+    }
+
+    if (parsed.data.current_password === parsed.data.new_password) {
+      return jsonError(c, 'validation.failed', 'New password must differ from current.');
+    }
+
+    const new_hash = await hashPassword(parsed.data.new_password);
+    await deps.db
+      .update(schema.users)
+      .set({ password_hash: new_hash })
+      .where(eq(schema.users.id, me.id));
+
+    // Revoke every active refresh token for this user. Their current
+    // access token still works until expiry, but any other device that
+    // holds a refresh token is now locked out.
+    await deps.db
+      .update(schema.auth_refresh_tokens)
+      .set({ revoked_at: new Date().toISOString() })
+      .where(
+        and(
+          eq(schema.auth_refresh_tokens.user_id, me.id),
+          isNull(schema.auth_refresh_tokens.revoked_at),
+        ),
+      );
+
+    await appendAudit(deps.db, {
+      actor_user_id: me.id,
+      actor_agent: readAgent(c),
+      event_type: 'auth.password_change.allowed',
+      payload: {},
+    });
+
+    return c.body(null, 204);
+  });
+
+  r.route('/', authedSubrouter);
 
   return r;
 }

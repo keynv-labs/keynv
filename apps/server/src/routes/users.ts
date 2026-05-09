@@ -127,5 +127,38 @@ export function userRoutes(deps: UserDeps): Hono {
     return c.json({ id: targetId, org_role: parsed.data.org_role });
   });
 
+  // DELETE /v1/users/:id  — owner/admin removes a user from the org.
+  // Cascade rules in schema drop their memberships + refresh tokens.
+  r.delete('/:id', async (c) => {
+    const user = c.var.user;
+    if (authorize('user.remove', { user }) !== 'allow') {
+      return jsonError(c, 'rbac.denied', 'Permission denied.');
+    }
+    const targetId = c.req.param('id');
+    if (targetId === user.id) {
+      return jsonError(c, 'rbac.denied', 'Cannot remove yourself.');
+    }
+    const targets = await deps.db
+      .select({ id: schema.users.id, email: schema.users.email, org_role: schema.users.org_role })
+      .from(schema.users)
+      .where(and(eq(schema.users.id, targetId), eq(schema.users.org_id, user.org_id)))
+      .limit(1);
+    const target = targets[0];
+    if (!target) return jsonError(c, 'user.not_found', 'User not found.');
+    if (target.org_role === 'owner') {
+      return jsonError(c, 'rbac.denied', 'Owner cannot be removed via this endpoint.');
+    }
+
+    await deps.db.delete(schema.users).where(eq(schema.users.id, targetId));
+
+    await appendAudit(deps.db, {
+      actor_user_id: user.id,
+      actor_agent: readAgent(c),
+      event_type: 'user.removed',
+      payload: { target_user_id: targetId, email: target.email },
+    });
+    return c.body(null, 204);
+  });
+
   return r;
 }

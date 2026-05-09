@@ -8,7 +8,9 @@ import {
   Plus,
   ScrollText,
   Search,
+  Settings,
   ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -79,6 +81,12 @@ export function AppPalette() {
         } else if (e.key === 'a') {
           e.preventDefault();
           router.push('/audit');
+        } else if (e.key === 's') {
+          e.preventDefault();
+          router.push('/settings/account');
+        } else if (e.key === 'u') {
+          e.preventDefault();
+          router.push('/admin/users');
         }
         setPendingPrefix(null);
         if (prefixTimeoutRef.current) clearTimeout(prefixTimeoutRef.current);
@@ -156,6 +164,20 @@ export function AppPalette() {
                     keywords={['audit', 'log', 'history', 'events']}
                     hint="g a"
                     onSelect={() => closeAndGo('/audit')}
+                  />
+                  <PaletteItem
+                    icon={<Settings size={14} strokeWidth={2} />}
+                    label="Account settings"
+                    keywords={['settings', 'account', 'profile', 'password']}
+                    hint="g s"
+                    onSelect={() => closeAndGo('/settings/account')}
+                  />
+                  <PaletteItem
+                    icon={<Users size={14} strokeWidth={2} />}
+                    label="Org users"
+                    keywords={['admin', 'users', 'members', 'invite']}
+                    hint="g u"
+                    onSelect={() => closeAndGo('/admin/users')}
                   />
                 </Command.Group>
 
@@ -265,6 +287,12 @@ function GPrefixHint() {
       <span className="mx-2 text-fg-subtle">·</span>
       <span className="font-mono text-fg">a</span>
       <span className="text-fg-muted"> audit</span>
+      <span className="mx-2 text-fg-subtle">·</span>
+      <span className="font-mono text-fg">s</span>
+      <span className="text-fg-muted"> settings</span>
+      <span className="mx-2 text-fg-subtle">·</span>
+      <span className="font-mono text-fg">u</span>
+      <span className="text-fg-muted"> users</span>
     </div>
   );
 }

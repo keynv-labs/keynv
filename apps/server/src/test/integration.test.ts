@@ -447,3 +447,198 @@ describe('B2 regression — cross-org access is denied', () => {
     }
   });
 });
+
+describe('User management — DELETE /v1/users/:id', () => {
+  it('owner can remove a developer; subsequent login is rejected', async () => {
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+
+    const listBefore = await harness.app.request('http://localhost/v1/users', {
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    const beforeBody = (await listBefore.json()) as { users: Array<{ id: string; email: string }> };
+    const dev = beforeBody.users.find((u) => u.email === harness.developerEmail);
+    if (!dev) throw new Error('developer not found in setup');
+
+    const del = await harness.app.request(`http://localhost/v1/users/${dev.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    expect(del.status).toBe(204);
+
+    // Subsequent login fails.
+    const loginRes = await harness.app.request('http://localhost/v1/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: harness.developerEmail,
+        password: harness.developerPassword,
+      }),
+    });
+    expect(loginRes.status).toBe(401);
+  });
+
+  it('developer cannot remove anyone (rbac denied)', async () => {
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+
+    const list = await harness.app.request('http://localhost/v1/users', {
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    const body = (await list.json()) as { users: Array<{ id: string; email: string }> };
+    const dev = body.users.find((u) => u.email === harness.developerEmail);
+    if (!dev) throw new Error('developer not found');
+
+    const del = await harness.app.request(`http://localhost/v1/users/${dev.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${devToken}` },
+    });
+    expect(del.status).toBe(403);
+  });
+
+  it('owner cannot remove themselves', async () => {
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const me = await harness.app.request('http://localhost/v1/whoami', {
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    const meBody = (await me.json()) as { id: string };
+    const del = await harness.app.request(`http://localhost/v1/users/${meBody.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    expect(del.status).toBe(403);
+  });
+
+  it('owner cannot be removed by an admin (owner role is protected)', async () => {
+    // Promote the developer to admin first.
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const list = await harness.app.request('http://localhost/v1/users', {
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    const body = (await list.json()) as {
+      users: Array<{ id: string; email: string; org_role: string }>;
+    };
+    const dev = body.users.find((u) => u.email === harness.developerEmail);
+    const owner = body.users.find((u) => u.email === harness.ownerEmail);
+    if (!dev || !owner) throw new Error('seed users missing');
+
+    await harness.app.request(`http://localhost/v1/users/${dev.id}/org-role`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ org_role: 'admin' }),
+    });
+
+    const adminToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+    const del = await harness.app.request(`http://localhost/v1/users/${owner.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(del.status).toBe(403);
+    const errBody = (await del.json()) as { error: { code: string } };
+    expect(errBody.error.code).toBe('rbac.denied');
+  });
+});
+
+describe('Password change — POST /v1/auth/password', () => {
+  async function changePassword(
+    token: string,
+    body: { current_password: string; new_password: string },
+  ) {
+    return harness.app.request('http://localhost/v1/auth/password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it('happy path: new password works, old password rejected, refresh tokens revoked', async () => {
+    // Login twice to get two refresh tokens (simulating two devices).
+    const loginRes1 = await harness.app.request('http://localhost/v1/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: harness.ownerEmail, password: harness.ownerPassword }),
+    });
+    const session1 = (await loginRes1.json()) as { access_token: string; refresh_token: string };
+
+    const loginRes2 = await harness.app.request('http://localhost/v1/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: harness.ownerEmail, password: harness.ownerPassword }),
+    });
+    const session2 = (await loginRes2.json()) as { refresh_token: string };
+
+    // Change password.
+    const newPassword = 'rotated-password-9876';
+    const change = await changePassword(session1.access_token, {
+      current_password: harness.ownerPassword,
+      new_password: newPassword,
+    });
+    expect(change.status).toBe(204);
+
+    // Old password no longer accepted.
+    const oldLogin = await harness.app.request('http://localhost/v1/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: harness.ownerEmail, password: harness.ownerPassword }),
+    });
+    expect(oldLogin.status).toBe(401);
+
+    // New password works.
+    const newLogin = await harness.app.request('http://localhost/v1/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: harness.ownerEmail, password: newPassword }),
+    });
+    expect(newLogin.status).toBe(200);
+
+    // Both old refresh tokens are revoked.
+    for (const refresh of [session1.refresh_token, session2.refresh_token]) {
+      const r = await harness.app.request('http://localhost/v1/auth/refresh', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+      expect(r.status).toBe(401);
+    }
+  });
+
+  it('rejects wrong current password and writes auth.password_change.denied', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const res = await changePassword(token, {
+      current_password: 'definitely-not-the-password',
+      new_password: 'whatever-12-chars-long',
+    });
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('auth.invalid_credentials');
+  });
+
+  it('rejects new password shorter than 12 characters', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const res = await changePassword(token, {
+      current_password: harness.ownerPassword,
+      new_password: 'short',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects new password equal to current', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const res = await changePassword(token, {
+      current_password: harness.ownerPassword,
+      new_password: harness.ownerPassword,
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('requires authentication', async () => {
+    const res = await harness.app.request('http://localhost/v1/auth/password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        current_password: 'x',
+        new_password: 'twelve-chars-min',
+      }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
