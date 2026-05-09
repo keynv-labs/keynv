@@ -789,3 +789,212 @@ describe('CLI tokens — /v1/cli-tokens', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('Approvals — /v1/projects/:id/approvals', () => {
+  async function setupProductionScenario() {
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projRes = await harness.app.request('http://localhost/v1/projects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({
+        name: 'billing',
+        environments: [{ name: 'prod', tier: 'production', require_approval: true }],
+      }),
+    });
+    const project = (await projRes.json()) as { id: string };
+    await harness.app.request(`http://localhost/v1/projects/${project.id}/members`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ email: harness.developerEmail, role: 'developer' }),
+    });
+    await harness.app.request(`http://localhost/v1/projects/${project.id}/secrets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ env: 'prod', key: 'db_password', value: 'prod-secret' }),
+    });
+    return { ownerToken, project };
+  }
+
+  it('developer read of a require_approval secret creates a pending row, idempotent', async () => {
+    const { ownerToken, project } = await setupProductionScenario();
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+
+    const r1 = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+    expect(r1.status).toBe(202);
+
+    const r2 = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+    expect(r2.status).toBe(202);
+
+    const list = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals?status=pending`,
+      { headers: { authorization: `Bearer ${ownerToken}` } },
+    );
+    expect(list.status).toBe(200);
+    const body = (await list.json()) as { approvals: Array<{ alias: string; status: string }> };
+    expect(body.approvals).toHaveLength(1);
+    expect(body.approvals[0]?.alias).toBe('@billing.prod.db_password');
+    expect(body.approvals[0]?.status).toBe('pending');
+  });
+
+  it('after grant, developer can read; after expiry, the read is gated again', async () => {
+    const { ownerToken, project } = await setupProductionScenario();
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+
+    await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+
+    const list = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals?status=pending`,
+      { headers: { authorization: `Bearer ${ownerToken}` } },
+    );
+    const approvalId = ((await list.json()) as { approvals: Array<{ id: string }> }).approvals[0]
+      ?.id;
+    if (!approvalId) throw new Error('expected pending approval');
+
+    const grant = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals/${approvalId}/grant`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+        body: JSON.stringify({ expires_in_seconds: 1 }),
+      },
+    );
+    expect(grant.status).toBe(200);
+
+    const allowed = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+    expect(allowed.status).toBe(200);
+    const got = (await allowed.json()) as { value: string };
+    expect(got.value).toBe('prod-secret');
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    const reGated = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+    expect(reGated.status).toBe(202);
+  });
+
+  it('deny path requires a reason and the row reflects it', async () => {
+    const { ownerToken, project } = await setupProductionScenario();
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+
+    await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+
+    const list = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals?status=pending`,
+      { headers: { authorization: `Bearer ${ownerToken}` } },
+    );
+    const id = ((await list.json()) as { approvals: Array<{ id: string }> }).approvals[0]?.id;
+
+    const denyEmpty = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals/${id}/deny`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(denyEmpty.status).toBe(400);
+
+    const deny = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals/${id}/deny`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+        body: JSON.stringify({ reason: 'use staging instead' }),
+      },
+    );
+    expect(deny.status).toBe(200);
+
+    const r = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+    expect(r.status).toBe(202);
+
+    const allList = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals`,
+      { headers: { authorization: `Bearer ${ownerToken}` } },
+    );
+    const all = (await allList.json()) as {
+      approvals: Array<{ status: string; reason: string | null }>;
+    };
+    expect(all.approvals.map((a) => a.status).sort()).toEqual(['denied', 'pending']);
+    expect(all.approvals.find((a) => a.status === 'denied')?.reason).toBe('use staging instead');
+  });
+
+  it('developer cannot grant their own request', async () => {
+    const { ownerToken, project } = await setupProductionScenario();
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+
+    await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+    const list = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals?status=pending`,
+      { headers: { authorization: `Bearer ${ownerToken}` } },
+    );
+    const id = ((await list.json()) as { approvals: Array<{ id: string }> }).approvals[0]?.id;
+
+    const r = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals/${id}/grant`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${devToken}` },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(r.status).toBe(403);
+  });
+
+  it('cannot grant the same approval twice', async () => {
+    const { ownerToken, project } = await setupProductionScenario();
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+
+    await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/prod/db_password`,
+      { headers: { authorization: `Bearer ${devToken}` } },
+    );
+    const list = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals?status=pending`,
+      { headers: { authorization: `Bearer ${ownerToken}` } },
+    );
+    const id = ((await list.json()) as { approvals: Array<{ id: string }> }).approvals[0]?.id;
+
+    const grant1 = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals/${id}/grant`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(grant1.status).toBe(200);
+
+    const grant2 = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/approvals/${id}/grant`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(grant2.status).toBe(404);
+  });
+});

@@ -10,3 +10,4 @@ export const newProjectId = (): string => `p_${make()}`;
 export const newEnvironmentId = (): string => `e_${make()}`;
 export const newSecretId = (): string => `s_${make()}`;
 export const newRefreshTokenId = (): string => `rt_${make()}`;
+export const newApprovalId = (): string => `apr_${make()}`;

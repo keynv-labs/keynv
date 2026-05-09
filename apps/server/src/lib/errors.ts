@@ -20,6 +20,7 @@ export type ErrorCode =
   | 'user.not_found'
   | 'user.already_exists'
   | 'membership.not_found'
+  | 'approval.not_found'
   | 'cli_token.not_found'
   | 'validation.failed'
   | 'rate_limited'
@@ -41,6 +42,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   'user.not_found': 404,
   'user.already_exists': 409,
   'membership.not_found': 404,
+  'approval.not_found': 404,
   'cli_token.not_found': 404,
   'validation.failed': 400,
   rate_limited: 429,

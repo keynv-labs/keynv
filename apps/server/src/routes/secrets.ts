@@ -11,6 +11,7 @@ import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newSecretId } from '../lib/id.js';
+import { ensurePendingApproval, findActiveGrant } from './approvals.js';
 
 interface SecretDeps {
   db: Db;
@@ -239,6 +240,18 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const env = envRows[0];
     if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');
 
+    const alias = `@${projectRow.name}.${envName}.${keyName}`;
+
+    // Pre-load any active grant so authorize() can short-circuit the
+    // pending_approval branch when the lead has already pre-authorised
+    // this developer for this alias.
+    const grant = await findActiveGrant({
+      db: deps.db,
+      projectId,
+      alias,
+      requesterUserId: user.id,
+    });
+
     const decision = authorize('secret.read', {
       user,
       resource: {
@@ -246,17 +259,27 @@ export function secretRoutes(deps: SecretDeps): Hono {
         environment_tier: env.tier,
         require_approval: env.require_approval,
       },
+      approval: grant ? { granted: true } : undefined,
     });
 
-    const alias = `@${projectRow.name}.${envName}.${keyName}`;
-
     if (decision === 'pending_approval') {
-      await appendAudit(deps.db, {
-        actor_user_id: user.id,
-        actor_agent: readAgent(c),
-        event_type: 'approval.requested',
-        payload: { alias },
+      const ensured = await ensurePendingApproval({
+        db: deps.db,
+        projectId,
+        alias,
+        requesterUserId: user.id,
       });
+      // Audit on creation only — repeated reads from the same dev
+      // shouldn't spam the chain, the existing pending row already
+      // captured the request.
+      if (ensured.created) {
+        await appendAudit(deps.db, {
+          actor_user_id: user.id,
+          actor_agent: readAgent(c),
+          event_type: 'approval.requested',
+          payload: { alias },
+        });
+      }
       return jsonError(c, 'rbac.approval_required', 'Production access requires approval.');
     }
     if (decision !== 'allow') {

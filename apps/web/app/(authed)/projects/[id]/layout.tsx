@@ -29,6 +29,7 @@ export default async function ProjectLayout({
     { href: `/projects/${id}`, label: 'Overview' },
     { href: `/projects/${id}/secrets`, label: 'Secrets', nested: true },
     { href: `/projects/${id}/status`, label: 'Status', nested: true },
+    { href: `/projects/${id}/approvals`, label: 'Approvals', nested: true },
     { href: `/projects/${id}/audit`, label: 'Audit', nested: true },
     { href: `/projects/${id}/members`, label: 'Members', nested: true },
   ];

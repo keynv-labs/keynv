@@ -167,6 +167,44 @@ export const audit = sqliteTable(
 );
 
 /**
+ * Approval lifecycle for production-gated reads. A developer who hits
+ * an environment with `require_approval=true` causes a 'pending' row to
+ * be inserted; a lead / admin / owner transitions it to 'granted'
+ * (with an optional `expires_at`) or 'denied'. The next read on the
+ * same alias by the same user checks for a granted-and-unexpired row
+ * and bypasses the pending_approval branch.
+ */
+export const approvals = sqliteTable(
+  'approvals',
+  {
+    id: text('id').primaryKey(),
+    project_id: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    alias: text('alias').notNull(),
+    requester_user_id: text('requester_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status', { enum: ['pending', 'granted', 'denied', 'expired'] }).notNull(),
+    reason: text('reason'),
+    decided_by_user_id: text('decided_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    decided_at: text('decided_at'),
+    expires_at: text('expires_at'),
+    created_at: text('created_at').notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => ({
+    by_project_status: index('approvals_by_project_status').on(t.project_id, t.status),
+    by_alias_user: index('approvals_by_alias_user').on(
+      t.alias,
+      t.requester_user_id,
+      t.status,
+    ),
+  }),
+);
+
+/**
  * Long-lived CLI tokens. Distinct from auth_refresh_tokens (those back
  * short-lived web/CLI sessions). CLI tokens are user-managed via
  * /settings/account/cli-tokens and used for headless agents, CI
