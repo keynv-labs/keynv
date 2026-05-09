@@ -2,12 +2,27 @@
   "name": "@keynv/web",
   "version": "0.0.0",
   "private": true,
-  "description": "keynv web dashboard for team leads (Phase 4).",
+  "description": "keynv web dashboard for team leads — Next.js 15 + App Router.",
   "type": "module",
   "scripts": {
-    "dev": "echo 'Phase 4 — Next.js dashboard not yet scaffolded' && exit 0",
-    "build": "echo 'Phase 4' && exit 0",
-    "typecheck": "echo 'Phase 4' && exit 0",
-    "test": "echo 'Phase 4' && exit 0"
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0-beta.7",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.0-beta.7"
   }
 }
