@@ -98,23 +98,26 @@ export function projectRoutes(deps: ProjectDeps): Hono {
     const dek = await crypto.generateKey();
     const wrapped = await crypto.wrapDek(dek, deps.getKek());
     const projectId = newProjectId();
+    const envInserts = parsed.data.environments.map((env) => ({
+      id: newEnvironmentId(),
+      project_id: projectId,
+      name: env.name,
+      tier: env.tier,
+      require_approval: env.require_approval,
+    }));
 
-    await deps.db.transaction(async (tx) => {
-      await tx.insert(schema.projects).values({
-        id: projectId,
-        org_id: user.org_id,
-        name: parsed.data.name,
-        dek_wrapped: Buffer.from(wrapped.ciphertext),
-        dek_nonce: Buffer.from(wrapped.nonce),
-      });
-      for (const env of parsed.data.environments) {
-        await tx.insert(schema.environments).values({
-          id: newEnvironmentId(),
-          project_id: projectId,
-          name: env.name,
-          tier: env.tier,
-          require_approval: env.require_approval,
-        });
+    deps.db.transaction((tx) => {
+      tx.insert(schema.projects)
+        .values({
+          id: projectId,
+          org_id: user.org_id,
+          name: parsed.data.name,
+          dek_wrapped: Buffer.from(wrapped.ciphertext),
+          dek_nonce: Buffer.from(wrapped.nonce),
+        })
+        .run();
+      for (const row of envInserts) {
+        tx.insert(schema.environments).values(row).run();
       }
     });
 

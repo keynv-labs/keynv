@@ -309,22 +309,25 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const sealed = await crypto.encryptSecret(parsed.data.new_value, loaded.dek);
     const newId = newSecretId();
     const newVersion = prev.version + 1;
-    await deps.db.transaction(async (tx) => {
-      await tx.insert(schema.secrets).values({
-        id: newId,
-        project_id: projectId,
-        environment_id: env.id,
-        key: keyName,
-        ciphertext: Buffer.from(sealed.ciphertext),
-        nonce: Buffer.from(sealed.nonce),
-        version: newVersion,
-        prev_version_id: prev.id,
-        created_by: user.id,
-      });
-      await tx
-        .update(schema.secrets)
-        .set({ deleted_at: new Date().toISOString() })
-        .where(eq(schema.secrets.id, prev.id));
+    const now = new Date().toISOString();
+    deps.db.transaction((tx) => {
+      tx.insert(schema.secrets)
+        .values({
+          id: newId,
+          project_id: projectId,
+          environment_id: env.id,
+          key: keyName,
+          ciphertext: Buffer.from(sealed.ciphertext),
+          nonce: Buffer.from(sealed.nonce),
+          version: newVersion,
+          prev_version_id: prev.id,
+          created_by: user.id,
+        })
+        .run();
+      tx.update(schema.secrets)
+        .set({ deleted_at: now })
+        .where(eq(schema.secrets.id, prev.id))
+        .run();
     });
 
     await appendAudit(deps.db, {
