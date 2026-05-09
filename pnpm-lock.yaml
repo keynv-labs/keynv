@@ -51,7 +51,14 @@ importers:
   apps/web: {}
 
   packages/core:
+    dependencies:
+      libsodium-wrappers:
+        specifier: ^0.7.16
+        version: 0.7.16
     devDependencies:
+      '@types/libsodium-wrappers':
+        specifier: ^0.7.14
+        version: 0.7.14
       fast-check:
         specifier: ^3.23.0
         version: 3.23.2

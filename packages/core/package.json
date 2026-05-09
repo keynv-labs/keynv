@@ -23,7 +23,11 @@
     "test:watch": "vitest",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "libsodium-wrappers": "^0.7.16"
+  },
   "devDependencies": {
+    "@types/libsodium-wrappers": "^0.7.14",
     "fast-check": "^3.23.0"
   }
 }
