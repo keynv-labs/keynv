@@ -1,0 +1,12 @@
+{
+  "name": "@keynv/tests-security",
+  "version": "0.0.0",
+  "private": true,
+  "description": "End-to-end security regression suite — one scenario per row of docs/02-threat-model.md.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

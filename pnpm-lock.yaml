@@ -64,6 +64,8 @@ importers:
 
   packages/testers: {}
 
+  tests/security: {}
+
 packages:
 
   '@biomejs/biome@1.9.4':
