@@ -4,6 +4,7 @@ import { ExecCommand } from './commands/exec.js';
 import { InstallCommand, UninstallCommand } from './commands/install.js';
 import { LoginCommand, LogoutCommand, WhoamiCommand } from './commands/login.js';
 import { RedactCommand, RedactStreamCommand } from './commands/redact.js';
+import { TestCommand } from './commands/test.js';
 import { MemberAddCommand, MemberListCommand, MemberRemoveCommand } from './commands/member.js';
 import {
   ProjectCreateCommand,
@@ -59,6 +60,8 @@ cli.register(RedactStreamCommand);
 
 cli.register(InstallCommand);
 cli.register(UninstallCommand);
+
+cli.register(TestCommand);
 
 cli
   .runExit(process.argv.slice(2))

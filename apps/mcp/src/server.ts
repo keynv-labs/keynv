@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { redact } from '@keynv/redactor';
 import { parseAlias } from '@keynv/core';
+import { findTester, runTest, TESTERS, type TesterType } from '@keynv/testers';
 import { McpApiClient } from './api-client.js';
 import type { Credentials } from './credentials.js';
 import { issueReferenceToken } from './tokens.js';
@@ -57,6 +58,30 @@ const TOOLS = [
         text: { type: 'string' },
       },
       required: ['text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'keynv.test_connection',
+    description:
+      'Verifies a credential actually works against a target service. Returns OK/FAIL + latency; the secret value is resolved internally and never returned. Errors are sanitized so wrong-credential responses cannot leak the value.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        alias: { type: 'string', description: '@project.environment.key reference.' },
+        tester: {
+          type: 'string',
+          enum: ['postgres', 'mysql', 'redis', 'ssh', 'http'],
+          description: 'Which tester to run.',
+        },
+        target: {
+          type: 'object',
+          description:
+            'Tester-specific configuration. See docs/06-api-spec.md or `keynv test --help` for the per-tester schema.',
+          additionalProperties: true,
+        },
+      },
+      required: ['alias', 'tester', 'target'],
       additionalProperties: false,
     },
   },
@@ -133,6 +158,45 @@ export function buildServer(deps: ServerDeps): Server {
             expires_at: issued.expires_at,
             usage_hint:
               'Pass reference_token to a privileged subprocess (keynv exec --resolve). Token is single-use and expires in 60s. Raw value never leaves the keynv exec boundary.',
+          });
+        }
+
+        case 'keynv.test_connection': {
+          const alias = String(args.alias ?? '');
+          const parsed = parseAlias(alias);
+          if (!parsed) return jsonError(`invalid alias: ${alias}`);
+          const testerType = String(args.tester ?? '') as TesterType;
+          const tester = findTester(testerType);
+          if (!tester) {
+            return jsonError(
+              `unknown tester '${testerType}'. Try one of: ${TESTERS.map((t) => t.type).join(', ')}`,
+            );
+          }
+          const target = (args.target ?? {}) as Record<string, unknown>;
+
+          const projects = await api.request<{
+            projects: Array<{ id: string; name: string }>;
+          }>('/v1/projects');
+          const found = projects.projects.find((p) => p.name === parsed.project);
+          if (!found) return jsonError(`unknown project: ${parsed.project}`);
+          const data = await api.request<{ value: string }>(
+            `/v1/projects/${found.id}/secrets/${parsed.environment}/${parsed.key}`,
+          );
+
+          const result = await runTest({
+            tester,
+            secret: { alias: parsed.literal, value: data.value },
+            target,
+          });
+          // The result already passes through the redactor / sanitizer
+          // inside runTest; we pass it back verbatim.
+          return jsonContent({
+            alias: parsed.literal,
+            tester: testerType,
+            ok: result.ok,
+            latency_ms: result.latency_ms,
+            ...(result.error ? { error: result.error } : {}),
+            ...(result.info ? { info: result.info } : {}),
           });
         }
 

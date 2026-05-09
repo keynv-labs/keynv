@@ -9,7 +9,19 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@keynv/redactor": "workspace:*",
+    "ioredis": "^5.4.1",
+    "mysql2": "^3.11.5",
+    "pg": "^8.13.1",
+    "ssh2": "^1.16.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "@types/ssh2": "^1.15.1"
   }
 }

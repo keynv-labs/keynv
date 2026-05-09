@@ -17,6 +17,7 @@
   "dependencies": {
     "@keynv/core": "workspace:*",
     "@keynv/redactor": "workspace:*",
+    "@keynv/testers": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.4"
   },
   "devDependencies": {

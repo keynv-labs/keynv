@@ -9,7 +9,8 @@
     { "path": "../../packages/core" },
     { "path": "../../packages/rbac" },
     { "path": "../../packages/redactor" },
-    { "path": "../../packages/integrations" }
+    { "path": "../../packages/integrations" },
+    { "path": "../../packages/testers" }
   ],
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]
