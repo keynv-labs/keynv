@@ -257,7 +257,11 @@ importers:
         specifier: ^4.19.2
         version: 4.21.0
 
-  tests/security: {}
+  tests/security:
+    dependencies:
+      '@keynv/redactor':
+        specifier: workspace:*
+        version: link:../../packages/redactor
 
 packages:
 

@@ -4,17 +4,27 @@ keynv is a secrets-management product. Vulnerability reports are taken seriously
 
 ## Reporting a vulnerability
 
-**Do not file a public issue.** Please email the maintainers privately:
+**Do not file a public issue.** Two private channels work today; pick whichever
+fits:
 
-- `security@keynv.dev` (placeholder — finalized in Phase 5)
+1. **GitHub Private Vulnerability Reporting** (recommended) — open a private
+   advisory at <https://github.com/keynv-labs/keynv/security/advisories/new>.
+   GitHub-native, end-to-end private until coordinated disclosure.
+2. **Email** the maintainer at `meinrufretterinfo@gmail.com` (we run keynv
+   solo until the project graduates a real `security@` mailbox under the
+   `keynv.dev` domain — that's a Phase 6 deliverable).
 
 Include:
+
 - A description of the issue and its impact.
 - Steps to reproduce, or a proof-of-concept.
 - The keynv version (`keynv --version` and `keynv-server --version`).
 - The affected component(s).
 
-We aim to acknowledge reports within **3 business days** and provide a remediation timeline within **7 business days**.
+We aim to acknowledge reports within **3 business days** and provide a
+remediation timeline within **7 business days**. Solo-maintainer turnaround
+during real-life events may stretch this; the GitHub advisory channel keeps
+correspondence durable.
 
 ## Scope
 
@@ -51,4 +61,7 @@ Reporters of valid issues are listed (with consent) on the docs site security pa
 
 ## PGP
 
-A PGP key for `security@keynv.dev` will be published in Phase 5. Until then, please use the email above and we will coordinate a private channel if needed.
+No PGP key today. The recommended channel (GitHub Private Vulnerability
+Reporting) is end-to-end private without one. A keynv-specific key will be
+published once `security@keynv.dev` is provisioned — that's part of the
+Phase 6 cloud / domain rollout.
