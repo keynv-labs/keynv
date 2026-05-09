@@ -4,7 +4,10 @@ import { createApp } from '../app.js';
 import { hashPassword } from '../auth/password.js';
 import { openDb } from '../db/index.js';
 import { schema } from '../db/index.js';
+import { makeLogger } from '../lib/logger.js';
 import { newOrgId, newUserId } from '../lib/id.js';
+
+const SILENT_LOGGER = makeLogger('silent');
 
 interface Harness {
   app: ReturnType<typeof createApp>;
@@ -51,6 +54,7 @@ async function makeHarness(): Promise<Harness> {
     refreshTtlS: 7 * 24 * 3600,
     getKek: () => kek,
     version: 'test',
+    logger: SILENT_LOGGER,
   });
 
   return {
@@ -321,5 +325,130 @@ describe('Phase 1 acceptance flow', () => {
     const got = (await getRes.json()) as { value: string; version: number };
     expect(got.value).toBe('v2');
     expect(got.version).toBe(2);
+  });
+});
+
+// Regression suite for audit finding B2 — cross-org access.
+describe('B2 regression — cross-org access is denied', () => {
+  async function twoOrgHarness() {
+    const { db, raw } = openDb({ path: ':memory:', migrate: true });
+    const kek = await crypto.generateKey();
+
+    const orgA = newOrgId();
+    const orgB = newOrgId();
+    const ownerA = newUserId();
+    const ownerB = newUserId();
+    const passA = 'owner-a-password-12345';
+    const passB = 'owner-b-password-12345';
+
+    await db.insert(schema.orgs).values([
+      { id: orgA, name: 'acme' },
+      { id: orgB, name: 'globex' },
+    ]);
+    await db.insert(schema.users).values([
+      {
+        id: ownerA,
+        org_id: orgA,
+        email: 'a@team.test',
+        password_hash: await hashPassword(passA),
+        org_role: 'owner',
+      },
+      {
+        id: ownerB,
+        org_id: orgB,
+        email: 'b@team.test',
+        password_hash: await hashPassword(passB),
+        org_role: 'owner',
+      },
+    ]);
+
+    const app = createApp({
+      db,
+      jwtSecret: JWT_SECRET,
+      accessTtlS: 900,
+      refreshTtlS: 7 * 24 * 3600,
+      getKek: () => kek,
+      version: 'test',
+      logger: SILENT_LOGGER,
+    });
+
+    return {
+      app,
+      cleanup: () => raw.close(),
+      tokenA: await login(app, 'a@team.test', passA),
+      tokenB: await login(app, 'b@team.test', passB),
+    };
+  }
+
+  it("owner of org B cannot read org A's project, secret, or members", async () => {
+    const h = await twoOrgHarness();
+    try {
+      // Owner A creates project + secret in org A.
+      const projRes = await h.app.request('http://localhost/v1/projects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({
+          name: 'demo',
+          environments: [{ name: 'dev', tier: 'non-production' }],
+        }),
+      });
+      const project = (await projRes.json()) as { id: string };
+
+      await h.app.request(`http://localhost/v1/projects/${project.id}/secrets`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({ env: 'dev', key: 'db_pass', value: 'secret-from-A' }),
+      });
+
+      // Owner B knows the project_id; every cross-org access must 404.
+      const get = await h.app.request(`http://localhost/v1/projects/${project.id}`, {
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
+      expect(get.status).toBe(404);
+
+      const read = await h.app.request(
+        `http://localhost/v1/projects/${project.id}/secrets/dev/db_pass`,
+        { headers: { authorization: `Bearer ${h.tokenB}` } },
+      );
+      expect(read.status).toBe(404);
+
+      const list = await h.app.request(
+        `http://localhost/v1/projects/${project.id}/secrets`,
+        { headers: { authorization: `Bearer ${h.tokenB}` } },
+      );
+      expect(list.status).toBe(404);
+
+      const members = await h.app.request(
+        `http://localhost/v1/projects/${project.id}/members`,
+        { headers: { authorization: `Bearer ${h.tokenB}` } },
+      );
+      expect(members.status).toBe(404);
+
+      const del = await h.app.request(`http://localhost/v1/projects/${project.id}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
+      expect(del.status).toBe(404);
+
+      const rotate = await h.app.request(
+        `http://localhost/v1/projects/${project.id}/secrets/dev/db_pass/rotate`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenB}` },
+          body: JSON.stringify({ new_value: 'pwned' }),
+        },
+      );
+      expect(rotate.status).toBe(404);
+
+      // Owner A's value is untouched.
+      const verify = await h.app.request(
+        `http://localhost/v1/projects/${project.id}/secrets/dev/db_pass`,
+        { headers: { authorization: `Bearer ${h.tokenA}` } },
+      );
+      const verifyBody = (await verify.json()) as { value: string };
+      expect(verifyBody.value).toBe('secret-from-A');
+    } finally {
+      h.cleanup();
+    }
   });
 });

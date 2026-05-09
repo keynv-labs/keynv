@@ -33,15 +33,28 @@ const RotateSecretBody = z.object({
   new_value: z.string().min(0).max(1024 * 64),
 });
 
+/**
+ * Loads a project + unwraps its DEK if and only if `projectId` belongs
+ * to `orgId`. Returns null on cross-org access (audit finding B2);
+ * callers respond with 404 so the existence of cross-org projects is
+ * not disclosed.
+ */
 async function loadProjectDek(
   db: Db,
   projectId: string,
+  orgId: string,
   kek: Uint8Array,
 ): Promise<{ project: typeof schema.projects.$inferSelect; dek: Uint8Array } | null> {
   const rows = await db
     .select()
     .from(schema.projects)
-    .where(and(eq(schema.projects.id, projectId), isNull(schema.projects.deleted_at)))
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.org_id, orgId),
+        isNull(schema.projects.deleted_at),
+      ),
+    )
     .limit(1);
   const project = rows[0];
   if (!project) return null;
@@ -69,6 +82,11 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const parsed = CreateSecretBody.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid secret body.');
 
+    // Verify project belongs to caller's org BEFORE any env probing
+    // (audit B2 — env query alone would leak existence cross-org).
+    const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
+    if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
+
     const envRows = await deps.db
       .select()
       .from(schema.environments)
@@ -81,9 +99,6 @@ export function secretRoutes(deps: SecretDeps): Hono {
       .limit(1);
     const env = envRows[0];
     if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');
-
-    const loaded = await loadProjectDek(deps.db, projectId, deps.getKek());
-    if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
     const existing = await deps.db
       .select({ id: schema.secrets.id })
@@ -145,7 +160,13 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const projectRows = await deps.db
       .select({ name: schema.projects.name })
       .from(schema.projects)
-      .where(and(eq(schema.projects.id, projectId), isNull(schema.projects.deleted_at)))
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
       .limit(1);
     const project = projectRows[0];
     if (!project) return jsonError(c, 'project.not_found', 'Project not found.');
@@ -181,6 +202,23 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const envName = c.req.param('env');
     const keyName = c.req.param('key');
 
+    // org_id-scoped project lookup FIRST so the env query below cannot
+    // confirm the existence of cross-org projects via env probing
+    // (audit finding B2).
+    const projectRows = await deps.db
+      .select({ name: schema.projects.name })
+      .from(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
+      .limit(1);
+    const projectRow = projectRows[0];
+    if (!projectRow) return jsonError(c, 'project.not_found', 'Project not found.');
+
     const envRows = await deps.db
       .select()
       .from(schema.environments)
@@ -198,13 +236,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
       },
     });
 
-    const projectRows = await deps.db
-      .select({ name: schema.projects.name })
-      .from(schema.projects)
-      .where(eq(schema.projects.id, projectId))
-      .limit(1);
-    const projectName = projectRows[0]?.name ?? '?';
-    const alias = `@${projectName}.${envName}.${keyName}`;
+    const alias = `@${projectRow.name}.${envName}.${keyName}`;
 
     if (decision === 'pending_approval') {
       await appendAudit(deps.db, {
@@ -241,7 +273,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const secret = rows[0];
     if (!secret) return jsonError(c, 'secret.not_found', 'Secret not found.');
 
-    const loaded = await loadProjectDek(deps.db, projectId, deps.getKek());
+    const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
     if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
     const value = await crypto.decryptSecret(
@@ -279,6 +311,21 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const parsed = RotateSecretBody.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid rotate body.');
 
+    // Org-scope project lookup before any env probing (audit B2).
+    const projectRows = await deps.db
+      .select({ name: schema.projects.name })
+      .from(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
+      .limit(1);
+    const projectRow = projectRows[0];
+    if (!projectRow) return jsonError(c, 'project.not_found', 'Project not found.');
+
     const envRows = await deps.db
       .select()
       .from(schema.environments)
@@ -303,7 +350,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const prev = previousRows[0];
     if (!prev) return jsonError(c, 'secret.not_found', 'Secret not found. Create it first.');
 
-    const loaded = await loadProjectDek(deps.db, projectId, deps.getKek());
+    const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
     if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
     const sealed = await crypto.encryptSecret(parsed.data.new_value, loaded.dek);
@@ -343,13 +390,8 @@ export function secretRoutes(deps: SecretDeps): Hono {
       },
     });
 
-    const projectRows = await deps.db
-      .select({ name: schema.projects.name })
-      .from(schema.projects)
-      .where(eq(schema.projects.id, projectId))
-      .limit(1);
     return c.json({
-      alias: `@${projectRows[0]?.name}.${envName}.${keyName}`,
+      alias: `@${projectRow.name}.${envName}.${keyName}`,
       version: newVersion,
     });
   });
@@ -363,6 +405,20 @@ export function secretRoutes(deps: SecretDeps): Hono {
     if (authorize('secret.delete', { user, resource: { project_id: projectId } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
+    // Org-scope project lookup before env probing (audit B2).
+    const projectRows = await deps.db
+      .select({ id: schema.projects.id })
+      .from(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
+      .limit(1);
+    if (!projectRows[0]) return jsonError(c, 'project.not_found', 'Project not found.');
+
     const envRows = await deps.db
       .select()
       .from(schema.environments)

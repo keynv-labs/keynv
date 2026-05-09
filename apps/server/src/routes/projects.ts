@@ -151,7 +151,13 @@ export function projectRoutes(deps: ProjectDeps): Hono {
     const projectRows = await deps.db
       .select()
       .from(schema.projects)
-      .where(and(eq(schema.projects.id, id), isNull(schema.projects.deleted_at)))
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
       .limit(1);
     const project = projectRows[0];
     if (!project) return jsonError(c, 'project.not_found', 'Project not found.');
@@ -181,7 +187,13 @@ export function projectRoutes(deps: ProjectDeps): Hono {
     const projectRows = await deps.db
       .select({ id: schema.projects.id, name: schema.projects.name })
       .from(schema.projects)
-      .where(and(eq(schema.projects.id, id), isNull(schema.projects.deleted_at)))
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
       .limit(1);
     const project = projectRows[0];
     if (!project) return jsonError(c, 'project.not_found', 'Project not found.');

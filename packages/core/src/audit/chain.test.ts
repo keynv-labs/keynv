@@ -137,4 +137,38 @@ describe('verifyChain', () => {
     const chain = buildChain(1000);
     expect(verifyChain(chain)).toEqual({ ok: true });
   });
+
+  it('verifies across page boundaries when startingPrevHash is threaded (regression for audit B1)', () => {
+    const chain = buildChain(2500);
+    const page1 = chain.slice(0, 1000);
+    const page2 = chain.slice(1000, 2000);
+    const page3 = chain.slice(2000);
+
+    expect(verifyChain(page1)).toEqual({ ok: true });
+
+    // Without startingPrevHash the second page falsely reports a
+    // mismatch — exactly the bug audit B1 caught.
+    expect(verifyChain(page2)).toMatchObject({ ok: false, reason: 'prev_hash_mismatch' });
+
+    // With startingPrevHash threaded, every page boundary checks out.
+    const tail1 = page1.at(-1);
+    const tail2 = page2.at(-1);
+    if (!tail1 || !tail2) throw new Error('expected non-empty pages');
+    expect(verifyChain(page2, { startingPrevHash: tail1.hash })).toEqual({ ok: true });
+    expect(verifyChain(page3, { startingPrevHash: tail2.hash })).toEqual({ ok: true });
+  });
+
+  it('flags a tampered cross-page boundary', () => {
+    const chain = buildChain(2000);
+    const page1 = chain.slice(0, 1000);
+    const tail1 = page1.at(-1);
+    if (!tail1) throw new Error('expected page1 non-empty');
+    const tamperedPage2 = chain.slice(1000).map((e, i) =>
+      i === 0 ? { ...e, prev_hash: 'a'.repeat(64) } : e,
+    );
+    const result = verifyChain(tamperedPage2, { startingPrevHash: tail1.hash });
+    expect(result.ok).toBe(false);
+    expect(result.brokenAt).toBe(0);
+    expect(result.reason).toBe('prev_hash_mismatch');
+  });
 });

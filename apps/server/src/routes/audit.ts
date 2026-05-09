@@ -46,13 +46,21 @@ export function auditRoutes(deps: AuditDeps): Hono {
     if (authorize('audit.read', { user }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
-    // Walk the chain in pages of 1000.
+    // Walk the chain in pages of 1000. Thread the previous page's
+    // tail hash into each subsequent verify so the cross-page
+    // boundary is checked — without this, verification would falsely
+    // report prev_hash_mismatch on every chain longer than one page
+    // (audit finding B1).
     let cursor: number | undefined;
     let total = 0;
+    let lastTailHash: string | undefined;
     for (;;) {
       const page = await listAudit(deps.db, { limit: 1000, sinceId: cursor });
       if (page.length === 0) break;
-      const result = auditCore.verifyChain(page);
+      const result = auditCore.verifyChain(
+        page,
+        lastTailHash ? { startingPrevHash: lastTailHash } : {},
+      );
       if (!result.ok) {
         return c.json({
           ok: false,
@@ -62,9 +70,10 @@ export function auditRoutes(deps: AuditDeps): Hono {
         });
       }
       total += page.length;
-      const lastId = page.at(-1)?.id;
-      if (!lastId) break;
-      cursor = lastId;
+      const tail = page.at(-1);
+      if (!tail) break;
+      cursor = tail.id;
+      lastTailHash = tail.hash;
     }
     return c.json({ ok: true, checked: total });
   });

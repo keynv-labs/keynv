@@ -68,19 +68,34 @@ export interface VerifyResult {
   readonly reason?: 'prev_hash_mismatch' | 'hash_mismatch';
 }
 
+export interface VerifyOptions {
+  /**
+   * The expected `prev_hash` of the first entry in `entries`. Defaults
+   * to GENESIS_HASH (the start of the chain). Set to the tail hash of
+   * the previous page when verifying a paginated chain so the cross-
+   * page boundary is checked. Without this, verifying any chain of
+   * more than one page produces a false `prev_hash_mismatch`.
+   */
+  readonly startingPrevHash?: string;
+}
+
 /**
  * Walks an audit chain and reports the first inconsistency, if any.
  *
  * Verifies two invariants per row:
- *  1. row.prev_hash equals the predecessor's hash (or GENESIS_HASH for
- *     the first row).
+ *  1. row.prev_hash equals the predecessor's hash (or
+ *     `opts.startingPrevHash` / GENESIS_HASH for the first row).
  *  2. row.hash equals the recomputed hash over (prev_hash, inputs).
  */
-export function verifyChain(entries: readonly AuditEntry[]): VerifyResult {
+export function verifyChain(
+  entries: readonly AuditEntry[],
+  opts: VerifyOptions = {},
+): VerifyResult {
+  const expectedFirstPrevHash = opts.startingPrevHash ?? GENESIS_HASH;
   for (let i = 0; i < entries.length; i++) {
     const cur = entries[i];
     if (!cur) continue;
-    const expectedPrevHash = i === 0 ? GENESIS_HASH : entries[i - 1]?.hash;
+    const expectedPrevHash = i === 0 ? expectedFirstPrevHash : entries[i - 1]?.hash;
     if (cur.prev_hash !== expectedPrevHash) {
       return { ok: false, brokenAt: i, reason: 'prev_hash_mismatch' };
     }

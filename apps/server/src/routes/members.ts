@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { authorize } from '@keynv/rbac';
@@ -12,6 +12,27 @@ import { jsonError } from '../lib/errors.js';
 interface MemberDeps {
   db: Db;
   jwtSecret: string;
+}
+
+/**
+ * Returns true if `projectId` exists in `orgId` and is not deleted.
+ * Used by every member-* route to guard against cross-org access
+ * (audit finding B2). Routes return 404 on false to avoid leaking
+ * project existence across orgs.
+ */
+async function projectInOrg(db: Db, projectId: string, orgId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(
+      and(
+        eq(schema.projects.id, projectId),
+        eq(schema.projects.org_id, orgId),
+        isNull(schema.projects.deleted_at),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }
 
 const AddMemberBody = z.object({
@@ -33,6 +54,9 @@ export function memberRoutes(deps: MemberDeps): Hono {
     if (authorize('project.describe', { user, resource: { project_id: projectId } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
+    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+      return jsonError(c, 'project.not_found', 'Project not found.');
+    }
     const rows = await deps.db
       .select({
         user_id: schema.memberships.user_id,
@@ -51,6 +75,9 @@ export function memberRoutes(deps: MemberDeps): Hono {
     const projectId = c.req.param('projectId');
     if (authorize('member.add', { user, resource: { project_id: projectId } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
+    }
+    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+      return jsonError(c, 'project.not_found', 'Project not found.');
     }
     const parsed = AddMemberBody.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid member body.');
@@ -120,6 +147,9 @@ export function memberRoutes(deps: MemberDeps): Hono {
     if (authorize('member.role_change', { user, resource: { project_id: projectId } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
+    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+      return jsonError(c, 'project.not_found', 'Project not found.');
+    }
     const targetUserId = c.req.param('userId');
     const parsed = PatchMemberBody.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid member body.');
@@ -151,6 +181,9 @@ export function memberRoutes(deps: MemberDeps): Hono {
     const projectId = c.req.param('projectId');
     if (authorize('member.remove', { user, resource: { project_id: projectId } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
+    }
+    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+      return jsonError(c, 'project.not_found', 'Project not found.');
     }
     const targetUserId = c.req.param('userId');
     const result = await deps.db
