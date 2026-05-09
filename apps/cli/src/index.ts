@@ -2,6 +2,7 @@ import { Builtins, Cli } from 'clipanion';
 import { AuditListCommand, AuditVerifyCommand } from './commands/audit.js';
 import { ExecCommand } from './commands/exec.js';
 import { LoginCommand, LogoutCommand, WhoamiCommand } from './commands/login.js';
+import { RedactCommand, RedactStreamCommand } from './commands/redact.js';
 import { MemberAddCommand, MemberListCommand, MemberRemoveCommand } from './commands/member.js';
 import {
   ProjectCreateCommand,
@@ -52,6 +53,8 @@ cli.register(AuditListCommand);
 cli.register(AuditVerifyCommand);
 
 cli.register(ExecCommand);
+cli.register(RedactCommand);
+cli.register(RedactStreamCommand);
 
 cli
   .runExit(process.argv.slice(2))
