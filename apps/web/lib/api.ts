@@ -3,8 +3,9 @@
  * Server Components and Server Actions only; the browser never sees
  * the access token directly.
  */
+import { redirect } from 'next/navigation';
 import { env } from './env';
-import { type Session, getSession } from './session';
+import { type Session, clearSession, getSession } from './session';
 
 const AGENT = 'keynv-web/0.0.0';
 
@@ -81,6 +82,25 @@ export async function api<T = unknown>(path: string, opts: RequestOpts = {}): Pr
     const errPayload = (
       parsed as { error?: { code?: string; message?: string; details?: unknown } }
     )?.error;
+
+    // If we presented a session token and the server rejected it, the
+    // session is dead (expired access token, JWT secret rotated on a
+    // server restart, refresh token revoked, password changed). Wipe
+    // the cookie and bounce to /login so the user re-authenticates
+    // instead of seeing an error boundary on every authed page.
+    //
+    // Login + refresh flows pass authed: false, so they never hit this
+    // branch — wrong-password errors still surface to the form.
+    if (
+      res.status === 401 &&
+      session &&
+      typeof errPayload?.code === 'string' &&
+      errPayload.code.startsWith('auth.')
+    ) {
+      await clearSession();
+      redirect('/login');
+    }
+
     throw apiError(
       res.status,
       errPayload?.code,
