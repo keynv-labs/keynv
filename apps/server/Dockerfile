@@ -23,6 +23,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/core/package.json packages/core/tsconfig.json ./packages/core/
 COPY packages/rbac/package.json packages/rbac/tsconfig.json ./packages/rbac/
 COPY packages/redactor/package.json packages/redactor/tsconfig.json ./packages/redactor/
+COPY packages/testers/package.json packages/testers/tsconfig.json ./packages/testers/
 COPY apps/server/package.json apps/server/tsconfig.json ./apps/server/
 
 RUN pnpm install --frozen-lockfile --filter '@keynv/server...'
@@ -30,11 +31,13 @@ RUN pnpm install --frozen-lockfile --filter '@keynv/server...'
 COPY packages/core/src ./packages/core/src
 COPY packages/rbac/src ./packages/rbac/src
 COPY packages/redactor/src ./packages/redactor/src
+COPY packages/testers/src ./packages/testers/src
 COPY apps/server/src ./apps/server/src
 
 RUN pnpm --filter @keynv/core build \
   && pnpm --filter @keynv/rbac build \
   && pnpm --filter @keynv/redactor build \
+  && pnpm --filter @keynv/testers build \
   && pnpm --filter @keynv/server build
 
 # Trim devDependencies for the runtime stage.

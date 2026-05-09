@@ -98,9 +98,19 @@ jobs:
           set -euo pipefail
           mkdir -p dist-release
           cd apps/cli
+          # ssh2 + cpu-features are native modules that ship via
+          # node-gyp at install time and have no pre-built artifact
+          # `cpu-features/build/Release/cpufeatures.node` for Bun's
+          # static analysis to embed. Mark them external so Bun skips
+          # them; the SSH tester already uses `await import('ssh2')`
+          # and falls back to a clean error result if the module is
+          # not resolvable at runtime. Other testers (postgres,
+          # mysql, redis, http) are pure JS and bundle fine.
           bun build src/index.ts \
             --compile \
             --target ${{ matrix.target }} \
+            --external ssh2 \
+            --external cpu-features \
             --outfile "../../dist-release/${{ matrix.artifact }}"
       - uses: actions/upload-artifact@v4
         with:
