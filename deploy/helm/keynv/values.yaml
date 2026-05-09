@@ -1,0 +1,99 @@
+# keynv Helm chart default values. Override with --set or -f values.yaml.
+
+image:
+  repository: ghcr.io/keynv-org/keynv-server
+  # Defaults to chart appVersion when empty.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+server:
+  # 32+ char random string. REQUIRED. Generate with `openssl rand -base64 32`.
+  # Stored as a Kubernetes Secret; pass via --set server.jwtSecret=...
+  # or by referencing an existing Secret via existingJwtSecret.
+  jwtSecret: ""
+  existingJwtSecret: ""
+
+  port: 8080
+  logLevel: info
+  accessTokenTtlSeconds: 900
+  refreshTokenTtlSeconds: 604800
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # SQLite file lives in a PVC.
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+
+  # Master KEK is mounted from a Secret. The Secret must contain a
+  # binary `master.key` field (32 random bytes). To generate:
+  #   kubectl -n keynv create secret generic keynv-master-key \
+  #     --from-file=master.key=<(openssl rand 32)
+  masterKey:
+    existingSecret: keynv-master-key
+    secretKey: master.key
+
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+  containerSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+
+# Optional Litestream sidecar. When enabled, replicates the SQLite WAL
+# to S3/B2 in real time.
+litestream:
+  enabled: false
+  image:
+    repository: litestream/litestream
+    tag: "0.3.13"
+  bucket: ""
+  endpoint: https://s3.us-east-1.amazonaws.com
+  region: us-east-1
+  # Reference an existing Secret containing AWS_ACCESS_KEY_ID +
+  # AWS_SECRET_ACCESS_KEY, OR set inline (less secure).
+  existingCredentialsSecret: ""
+  accessKeyId: ""
+  secretAccessKey: ""
+  retention: 24h
+  snapshotInterval: 10m
+  syncInterval: 1s
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  host: keynv.example.com
+  path: /
+  tls:
+    enabled: true
+    secretName: keynv-tls
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

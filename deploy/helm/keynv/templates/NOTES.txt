@@ -1,0 +1,39 @@
+Thanks for installing keynv {{ .Chart.AppVersion }}.
+
+Server is starting up. Watch with:
+
+  kubectl --namespace {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }} -w
+
+{{- if .Values.ingress.enabled }}
+
+Public endpoint: https://{{ .Values.ingress.host }}
+{{- else }}
+
+Port-forward to verify locally:
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "keynv.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/v1/health
+{{- end }}
+
+Bootstrap the org + owner (one-time, AFTER the pod is Ready):
+
+  kubectl --namespace {{ .Release.Namespace }} exec -it {{ include "keynv.fullname" . }}-0 -- \
+    env KEYNV_BOOTSTRAP_PASSWORD='your-12-plus-char-password' \
+    node /app/dist/bootstrap.js \
+    --owner-email lead@team.test \
+    --org-name {{ .Release.Name }}
+
+Master KEK file is mounted from Secret '{{ .Values.server.masterKey.existingSecret }}'.
+You MUST keep an off-host copy of this Secret. Loss of the master key
+file means every wrapped DEK becomes unrecoverable.
+
+{{- if not .Values.litestream.enabled }}
+
+Litestream backup is DISABLED. To enable:
+
+  helm upgrade {{ .Release.Name }} keynv/keynv -n {{ .Release.Namespace }} \
+    --set litestream.enabled=true \
+    --set litestream.bucket=your-bucket \
+    --set litestream.accessKeyId=… \
+    --set litestream.secretAccessKey=…
+{{- end }}

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: keynv
+description: AI-safe secrets management — aliases instead of values; AI agents never see real secrets.
+type: application
+version: 0.0.1
+appVersion: "0.0.0-phase5"
+home: https://keynv.dev
+sources:
+  - https://github.com/keynv-org/keynv
+maintainers:
+  - name: keynv contributors
+    url: https://github.com/keynv-org/keynv
+keywords:
+  - secrets
+  - vault
+  - ai
+  - mcp
+  - agents
+icon: https://keynv.dev/favicon.svg

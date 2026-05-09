@@ -1,0 +1,23 @@
+{{- if .Values.litestream.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "keynv.fullname" . }}-litestream
+  labels:
+    {{- include "keynv.labels" . | nindent 4 }}
+data:
+  litestream.yml: |
+    dbs:
+      - path: /data/keynv.db
+        replicas:
+          - type: s3
+            bucket: ${LITESTREAM_BUCKET}
+            path: keynv.db
+            region: ${LITESTREAM_REGION}
+            endpoint: ${LITESTREAM_ENDPOINT}
+            access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+            secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+            snapshot-interval: {{ .Values.litestream.snapshotInterval }}
+            retention: {{ .Values.litestream.retention }}
+            sync-interval: {{ .Values.litestream.syncInterval }}
+{{- end -}}

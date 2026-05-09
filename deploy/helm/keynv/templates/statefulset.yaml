@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "keynv.fullname" . }}
+  labels:
+    {{- include "keynv.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "keynv.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "keynv.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "keynv.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "keynv.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.server.podSecurityContext | nindent 8 }}
+      containers:
+        - name: keynv-server
+          image: {{ include "keynv.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.server.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+          env:
+            - name: KEYNV_PORT
+              value: {{ .Values.server.port | quote }}
+            - name: KEYNV_LOG_LEVEL
+              value: {{ .Values.server.logLevel | quote }}
+            - name: KEYNV_DB_PATH
+              value: /data/keynv.db
+            - name: KEYNV_MASTER_KEY_FILE
+              value: /master/master.key
+            - name: KEYNV_ACCESS_TOKEN_TTL_S
+              value: {{ .Values.server.accessTokenTtlSeconds | quote }}
+            - name: KEYNV_REFRESH_TOKEN_TTL_S
+              value: {{ .Values.server.refreshTokenTtlSeconds | quote }}
+            - name: KEYNV_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "keynv.jwtSecretName" . }}
+                  key: KEYNV_JWT_SECRET
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: master-key
+              mountPath: /master
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+        {{- if .Values.litestream.enabled }}
+        - name: litestream
+          image: {{ printf "%s:%s" .Values.litestream.image.repository .Values.litestream.image.tag | quote }}
+          args:
+            - replicate
+            - -config
+            - /etc/litestream.yml
+          env:
+            - name: LITESTREAM_BUCKET
+              value: {{ .Values.litestream.bucket | quote }}
+            - name: LITESTREAM_ENDPOINT
+              value: {{ .Values.litestream.endpoint | quote }}
+            - name: LITESTREAM_REGION
+              value: {{ .Values.litestream.region | quote }}
+            - name: LITESTREAM_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-litestream" (include "keynv.fullname" .)) .Values.litestream.existingCredentialsSecret }}
+                  key: AWS_ACCESS_KEY_ID
+            - name: LITESTREAM_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-litestream" (include "keynv.fullname" .)) .Values.litestream.existingCredentialsSecret }}
+                  key: AWS_SECRET_ACCESS_KEY
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+            - name: litestream-config
+              mountPath: /etc/litestream.yml
+              subPath: litestream.yml
+              readOnly: true
+        {{- end }}
+      volumes:
+        - name: master-key
+          secret:
+            secretName: {{ .Values.server.masterKey.existingSecret }}
+            items:
+              - key: {{ .Values.server.masterKey.secretKey }}
+                path: master.key
+                mode: 0400
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.litestream.enabled }}
+        - name: litestream-config
+          configMap:
+            name: {{ include "keynv.fullname" . }}-litestream
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          {{- toYaml .Values.server.persistence.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.server.persistence.size }}
+        {{- with .Values.server.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
