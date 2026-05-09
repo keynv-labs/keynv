@@ -6,10 +6,10 @@ version: 0.0.1
 appVersion: "0.0.0-phase5"
 home: https://keynv.dev
 sources:
-  - https://github.com/keynv-org/keynv
+  - https://github.com/keynv-labs/keynv
 maintainers:
   - name: keynv contributors
-    url: https://github.com/keynv-org/keynv
+    url: https://github.com/keynv-labs/keynv
 keywords:
   - secrets
   - vault

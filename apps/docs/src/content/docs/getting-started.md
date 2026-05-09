@@ -24,7 +24,7 @@ Total time: ~5 minutes.
 ## 1. Bootstrap the server
 
 ```bash
-git clone https://github.com/keynv-org/keynv.git
+git clone https://github.com/keynv-labs/keynv.git
 cd keynv
 
 cp deploy/.env.example deploy/.env

@@ -15,7 +15,7 @@ sidebar:
 ## Bring-up
 
 ```bash
-git clone https://github.com/keynv-org/keynv.git
+git clone https://github.com/keynv-labs/keynv.git
 cd keynv
 
 cp deploy/.env.example deploy/.env

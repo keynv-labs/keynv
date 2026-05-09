@@ -7,9 +7,9 @@ sidebar:
 
 ## Open-source core: MIT
 
-Everything in this repository — apps/cli, apps/server, apps/mcp, apps/web, apps/docs, packages/* — is licensed under the [MIT License](https://github.com/keynv-org/keynv/blob/main/LICENSE).
+Everything in this repository — apps/cli, apps/server, apps/mcp, apps/web, apps/docs, packages/* — is licensed under the [MIT License](https://github.com/keynv-labs/keynv/blob/main/LICENSE).
 
-The choice was made provisionally for Phase 0 ([ADR 0001](https://github.com/keynv-org/keynv/blob/main/docs/decisions/0001-license-choice.md)). A Phase 5 review confirmed MIT for the open-source core; a possible dual MIT/Apache-2.0 future is on the table for explicit patent-grant clarity but isn't currently planned.
+The choice was made provisionally for Phase 0 ([ADR 0001](https://github.com/keynv-labs/keynv/blob/main/docs/decisions/0001-license-choice.md)). A Phase 5 review confirmed MIT for the open-source core; a possible dual MIT/Apache-2.0 future is on the table for explicit patent-grant clarity but isn't currently planned.
 
 ## Commercial modules
 

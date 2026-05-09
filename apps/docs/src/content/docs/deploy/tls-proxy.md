@@ -17,7 +17,7 @@ Forcing keynv to manage certs in-process duplicates work that Caddy / nginx / Tr
 
 ## Caddy
 
-Drop in [`deploy/caddy.example.Caddyfile`](https://github.com/keynv-org/keynv/blob/main/deploy/caddy.example.Caddyfile). Replace the hostname:
+Drop in [`deploy/caddy.example.Caddyfile`](https://github.com/keynv-labs/keynv/blob/main/deploy/caddy.example.Caddyfile). Replace the hostname:
 
 ```Caddyfile
 keynv.your-domain.com {

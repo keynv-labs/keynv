@@ -5,12 +5,12 @@ sidebar:
   order: 2
 ---
 
-The full contributing guide lives at [CONTRIBUTING.md](https://github.com/keynv-org/keynv/blob/main/CONTRIBUTING.md). The short version:
+The full contributing guide lives at [CONTRIBUTING.md](https://github.com/keynv-labs/keynv/blob/main/CONTRIBUTING.md). The short version:
 
 ## Setup
 
 ```bash
-git clone https://github.com/keynv-org/keynv.git
+git clone https://github.com/keynv-labs/keynv.git
 cd keynv
 pnpm install
 pnpm dlx lefthook install      # git hooks: gitleaks + biome + typecheck

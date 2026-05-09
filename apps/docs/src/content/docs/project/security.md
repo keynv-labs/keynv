@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-The full policy lives at [SECURITY.md](https://github.com/keynv-org/keynv/blob/main/SECURITY.md).
+The full policy lives at [SECURITY.md](https://github.com/keynv-labs/keynv/blob/main/SECURITY.md).
 
 ## Reporting
 
@@ -49,4 +49,4 @@ For critical issues we may pre-notify confidential operators (large self-hosted 
 
 ## Audit findings
 
-The repository tracks audit findings publicly in [AUDIT-FINDINGS.md](https://github.com/keynv-org/keynv/blob/main/AUDIT-FINDINGS.md). Each finding lists severity, status, closing commit, and rationale for any deferral.
+The repository tracks audit findings publicly in [AUDIT-FINDINGS.md](https://github.com/keynv-labs/keynv/blob/main/AUDIT-FINDINGS.md). Each finding lists severity, status, closing commit, and rationale for any deferral.

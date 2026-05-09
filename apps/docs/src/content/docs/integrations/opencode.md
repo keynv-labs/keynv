@@ -33,4 +33,4 @@ keynv uninstall opencode
 
 ## Track the integration
 
-Watch [GitHub issue #TBD](https://github.com/keynv-org/keynv) for OpenCode hook/MCP integration progress.
+Watch [GitHub issue #TBD](https://github.com/keynv-labs/keynv) for OpenCode hook/MCP integration progress.

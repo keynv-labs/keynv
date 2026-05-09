@@ -41,7 +41,7 @@ kubectl exec -n keynv deploy/keynv-server -- \
 
 ```yaml
 image:
-  repository: ghcr.io/keynv-org/keynv-server
+  repository: ghcr.io/keynv-labs/keynv-server
   tag: ""           # defaults to chart appVersion
   pullPolicy: IfNotPresent
 

@@ -29,7 +29,7 @@
     nginx:        { image: nginx:alpine, ... }   # TLS termination
   ```
 - **Helm chart**: `deploy/helm/keynv/` for k8s users. Single replica still — Postgres/HA is Phase 6.
-- **Homebrew tap**: `brew install keynv-org/tap/keynv` for the CLI.
+- **Homebrew tap**: `brew install keynv-labs/tap/keynv` for the CLI.
 - **APT/RPM repos**: deferred to Phase 6 unless community demand is high.
 
 ### Documentation site
