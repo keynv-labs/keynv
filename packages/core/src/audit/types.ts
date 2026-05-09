@@ -6,6 +6,7 @@
  * here, then update both the server emitter and the audit-list filter.
  */
 export type AuditEventType =
+  | 'auth.register'
   | 'auth.login.allowed'
   | 'auth.login.denied'
   | 'auth.logout'

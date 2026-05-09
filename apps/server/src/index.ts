@@ -21,6 +21,8 @@ async function main(): Promise<void> {
     getKek: () => kek,
     version: VERSION,
     rateLimitPerMinute: env.KEYNV_RATE_LIMIT_PER_MINUTE,
+    publicRegistrationEnabled: env.KEYNV_PUBLIC_REGISTRATION,
+    registerRateLimitPerMinute: env.KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE,
   });
 
   serve({ fetch: app.fetch, port: env.KEYNV_PORT });

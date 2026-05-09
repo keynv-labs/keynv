@@ -12,6 +12,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Public registration endpoint `POST /v1/auth/register` — opt-in via
+  `KEYNV_PUBLIC_REGISTRATION=true`. Creates a fresh org + owner user
+  atomically and returns a JWT pair. Tighter per-IP rate limit
+  (`KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE`, default 5/min) lives on
+  this route alone; authed routes keep the per-user budget. Self-host
+  deployments default to off, so the open-source binary never grows
+  multi-tenant signup unless the operator chooses it. Powers the
+  hosted **keynv Cloud** (keynv.dev) preview.
+- Web `/register` page mirrors the login flow. Falls back to the
+  login page with a `registration_disabled` reason banner when the
+  current instance has the flag off.
+- `/v1/health` exposes a `capabilities.public_registration` boolean
+  so the frontend can hide the signup link on instances that opted
+  out.
+- Audit chain learned an `auth.register` event type (validated payload
+  schema in `@keynv/core`).
+
+### Notes
+- During public beta no usage limits are enforced. Free-tier quotas
+  (3 projects · 3 envs · 5 members) and paid plans live in the
+  closed-source `packages/ee/billing/` path that ships in Phase 6.
+  Early users will be grandfathered onto a generous plan when paid
+  tiers activate; the OSS code path keeps `plan='unlimited'` for
+  every org.
+
 ## [0.1.0-rc.1] — 2026-05-10
 
 First public release candidate. Self-host stack is functional end-to-end:

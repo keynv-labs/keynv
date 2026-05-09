@@ -9,7 +9,9 @@ import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
+import { newOrgId, newUserId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { ipRateLimitMiddleware } from '../lib/rate-limit.js';
 
 interface AuthDeps {
   db: Db;
@@ -17,6 +19,19 @@ interface AuthDeps {
   rateLimitPerMinute?: number | undefined;
   accessTtlS: number;
   refreshTtlS: number;
+  /**
+   * Whether POST /v1/auth/register is open. False by default — the
+   * route still exists but returns rbac.denied so the frontend can
+   * surface a clear "this instance doesn't allow public signup"
+   * message without a 404 ambiguity.
+   */
+  publicRegistrationEnabled?: boolean;
+  /**
+   * Per-IP budget for POST /v1/auth/register. Defaults to 5/min via
+   * loadEnv. Independent from rateLimitPerMinute (which is the
+   * per-user authed-route budget).
+   */
+  registerRateLimitPerMinute?: number;
 }
 
 const LoginBody = z.object({
@@ -37,8 +52,102 @@ const ChangePasswordBody = z.object({
   new_password: z.string().min(12).max(256),
 });
 
+const RegisterBody = z.object({
+  email: z.string().email().max(254),
+  password: z.string().min(12).max(256),
+  // Display name only — uniqueness is on user.email, not org.name.
+  // Two orgs may share a display name without trouble.
+  org_name: z.string().min(1).max(64),
+});
+
 export function authRoutes(deps: AuthDeps): Hono {
   const r = new Hono();
+
+  // Public signup. Aggressive per-IP rate limit lives on this route
+  // alone — the rest of /v1/auth (login/refresh/logout) follows the
+  // existing pattern of being unrate-limited because failed attempts
+  // are already mitigated by argon2id constant-time and audit-log
+  // visibility. Register, by contrast, mutates state on every call,
+  // so a flood would inflate the orgs table and burn KEK derivation
+  // cycles.
+  r.post(
+    '/register',
+    ipRateLimitMiddleware({ perMinute: deps.registerRateLimitPerMinute ?? 5 }),
+    async (c) => {
+      if (!deps.publicRegistrationEnabled) {
+        return jsonError(c, 'rbac.denied', 'Public registration is not enabled on this instance.');
+      }
+      const parsed = RegisterBody.safeParse(await c.req.json().catch(() => ({})));
+      if (!parsed.success) {
+        return jsonError(
+          c,
+          'validation.failed',
+          'Email, 12+ char password, and org name are required.',
+        );
+      }
+
+      const existing = await deps.db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.email, parsed.data.email))
+        .limit(1);
+      if (existing[0]) {
+        return jsonError(c, 'user.already_exists', 'Email already registered.');
+      }
+
+      const orgId = newOrgId();
+      const userId = newUserId();
+      const password_hash = await hashPassword(parsed.data.password);
+
+      // Atomic: if the user insert fails (rare race on the email
+      // unique check), the org row still rolls back. better-sqlite3's
+      // transaction wrapper is synchronous — see audit/append.ts and
+      // routes/projects.ts for the same pattern.
+      deps.db.transaction((tx) => {
+        tx.insert(schema.orgs).values({ id: orgId, name: parsed.data.org_name }).run();
+        tx.insert(schema.users)
+          .values({
+            id: userId,
+            org_id: orgId,
+            email: parsed.data.email,
+            password_hash,
+            org_role: 'owner',
+          })
+          .run();
+      });
+
+      const access = await signAccessToken(
+        { sub: userId, email: parsed.data.email, org_id: orgId, org_role: 'owner' },
+        { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
+      );
+      const refresh = await issueRefreshToken(deps.db, {
+        user_id: userId,
+        ttlSeconds: deps.refreshTtlS,
+      });
+
+      await appendAudit(deps.db, {
+        actor_user_id: userId,
+        actor_agent: readAgent(c),
+        event_type: 'auth.register',
+        payload: { email: parsed.data.email, org_id: orgId, org_name: parsed.data.org_name },
+      });
+
+      return c.json(
+        {
+          access_token: access,
+          refresh_token: refresh.rawToken,
+          expires_in: deps.accessTtlS,
+          user: {
+            id: userId,
+            email: parsed.data.email,
+            org_id: orgId,
+            org_role: 'owner',
+          },
+        },
+        201,
+      );
+    },
+  );
 
   r.post('/login', async (c) => {
     const parsed = LoginBody.safeParse(await c.req.json().catch(() => ({})));

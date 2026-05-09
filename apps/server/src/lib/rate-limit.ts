@@ -1,17 +1,23 @@
 /**
- * Per-user, fixed-window-of-1-minute rate limit. In-memory; sufficient
+ * Per-key fixed-window-of-1-minute rate limit. In-memory; sufficient
  * for single-instance self-host deployments (the only supported topology
  * until Phase 6 keynv Cloud). Multi-instance deployments need a shared
  * store (Redis); the existing token-bucket interface lets us swap in
  * a different backend later without touching route handlers.
  *
- * Closes Phase 5 audit Finding A1 — the threat model called out
- * "spam keynv exec to exhaust subprocess slots" with no enforcement
- * shipped through Phase 4. The 'rate_limited' error code was already
- * declared in lib/errors.ts.
+ * Two flavours:
+ *   - rateLimitMiddleware → keys on c.var.user.id (authenticated routes,
+ *     closes Phase 5 audit Finding A1).
+ *   - ipRateLimitMiddleware → keys on the client IP via the X-Forwarded-For
+ *     chain or the socket fallback. Used for unauthenticated routes
+ *     (POST /v1/auth/register today) so abuse is throttled before it
+ *     reaches the password-hashing path.
+ *
+ * The 'rate_limited' error code is declared in lib/errors.ts.
  */
 import type { Context, MiddlewareHandler } from 'hono';
 import { jsonError } from './errors.js';
+import { clientIp } from './ip.js';
 
 interface Bucket {
   count: number;
@@ -26,14 +32,52 @@ const WINDOW_MS = 60_000;
  * window has expired. Cheap (Map iteration over at most N entries).
  */
 const CLEANUP_EVERY_N = 1024;
-let requestsSinceCleanup = 0;
 
-function cleanup(buckets: Map<string, Bucket>, now: number): void {
-  for (const [key, bucket] of buckets) {
-    if (now - bucket.windowStartMs > WINDOW_MS) {
-      buckets.delete(key);
-    }
-  }
+interface Limiter {
+  /** Returns true if the request is allowed; false → caller responds 429. */
+  consume(c: Context, key: string): boolean;
+}
+
+function makeLimiter(limit: number): Limiter {
+  const buckets = new Map<string, Bucket>();
+  let requestsSinceCleanup = 0;
+
+  return {
+    consume(c, key) {
+      if (limit <= 0) return true;
+      const now = Date.now();
+      requestsSinceCleanup += 1;
+      if (requestsSinceCleanup >= CLEANUP_EVERY_N) {
+        for (const [k, b] of buckets) {
+          if (now - b.windowStartMs > WINDOW_MS) buckets.delete(k);
+        }
+        requestsSinceCleanup = 0;
+      }
+
+      let bucket = buckets.get(key);
+      if (!bucket || now - bucket.windowStartMs > WINDOW_MS) {
+        bucket = { count: 0, windowStartMs: now };
+        buckets.set(key, bucket);
+      }
+      bucket.count += 1;
+
+      if (bucket.count > limit) {
+        const resetSeconds = Math.max(
+          1,
+          Math.ceil((bucket.windowStartMs + WINDOW_MS - now) / 1000),
+        );
+        c.header('Retry-After', String(resetSeconds));
+        c.header('X-RateLimit-Limit', String(limit));
+        c.header('X-RateLimit-Remaining', '0');
+        c.header('X-RateLimit-Reset', String(Math.ceil((bucket.windowStartMs + WINDOW_MS) / 1000)));
+        return false;
+      }
+
+      c.header('X-RateLimit-Limit', String(limit));
+      c.header('X-RateLimit-Remaining', String(Math.max(0, limit - bucket.count)));
+      return true;
+    },
+  };
 }
 
 interface RateLimitDeps {
@@ -48,39 +92,34 @@ interface RateLimitDeps {
  * practice, but the guard makes the helper safe to chain anywhere).
  */
 export function rateLimitMiddleware(deps: RateLimitDeps): MiddlewareHandler {
-  const buckets = new Map<string, Bucket>();
-  const limit = deps.perMinute;
-
-  return async (c: Context, next) => {
-    if (limit <= 0) return next();
+  const limiter = makeLimiter(deps.perMinute);
+  return async (c, next) => {
+    if (deps.perMinute <= 0) return next();
     const user = c.var.user;
     if (!user) return next();
-
-    const now = Date.now();
-    requestsSinceCleanup += 1;
-    if (requestsSinceCleanup >= CLEANUP_EVERY_N) {
-      cleanup(buckets, now);
-      requestsSinceCleanup = 0;
+    if (!limiter.consume(c, user.id)) {
+      const reset = c.res.headers.get('Retry-After') ?? '60';
+      return jsonError(c, 'rate_limited', `Too many requests. Retry in ${reset}s.`);
     }
+    return next();
+  };
+}
 
-    let bucket = buckets.get(user.id);
-    if (!bucket || now - bucket.windowStartMs > WINDOW_MS) {
-      bucket = { count: 0, windowStartMs: now };
-      buckets.set(user.id, bucket);
+/**
+ * IP-keyed Hono middleware for unauthenticated routes. Tighter budget
+ * than the user-keyed variant — register/login flows don't have a
+ * legitimate burst pattern. Keys on the X-Forwarded-For chain when
+ * behind a reverse proxy (Coolify/Traefik), socket-address otherwise.
+ */
+export function ipRateLimitMiddleware(deps: RateLimitDeps): MiddlewareHandler {
+  const limiter = makeLimiter(deps.perMinute);
+  return async (c, next) => {
+    if (deps.perMinute <= 0) return next();
+    const ip = clientIp(c);
+    if (!limiter.consume(c, ip)) {
+      const reset = c.res.headers.get('Retry-After') ?? '60';
+      return jsonError(c, 'rate_limited', `Too many requests. Retry in ${reset}s.`);
     }
-    bucket.count += 1;
-
-    if (bucket.count > limit) {
-      const resetSeconds = Math.max(1, Math.ceil((bucket.windowStartMs + WINDOW_MS - now) / 1000));
-      c.header('Retry-After', String(resetSeconds));
-      c.header('X-RateLimit-Limit', String(limit));
-      c.header('X-RateLimit-Remaining', '0');
-      c.header('X-RateLimit-Reset', String(Math.ceil((bucket.windowStartMs + WINDOW_MS) / 1000)));
-      return jsonError(c, 'rate_limited', `Too many requests. Retry in ${resetSeconds}s.`);
-    }
-
-    c.header('X-RateLimit-Limit', String(limit));
-    c.header('X-RateLimit-Remaining', String(Math.max(0, limit - bucket.count)));
     return next();
   };
 }

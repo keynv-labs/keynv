@@ -29,6 +29,17 @@ export interface AppDeps {
    */
   rateLimitPerMinute?: number;
   /**
+   * Whether POST /v1/auth/register is open. Forwarded to authRoutes;
+   * also surfaced on /v1/health so the web client can render the
+   * /register page conditionally.
+   */
+  publicRegistrationEnabled?: boolean;
+  /**
+   * Per-IP budget for POST /v1/auth/register. Independent from
+   * rateLimitPerMinute (the per-user authed-route budget).
+   */
+  registerRateLimitPerMinute?: number;
+  /**
    * Optional pino logger. Defaults to a fresh instance with the same
    * redaction paths configured in lib/logger.ts. Tests pass a silent
    * logger to keep their output clean.
@@ -40,7 +51,14 @@ export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
   const logger = deps.logger ?? makeLogger(process.env['KEYNV_LOG_LEVEL'] ?? 'info');
 
-  app.route('/v1/health', healthRoute({ db: deps.db, version: deps.version }));
+  app.route(
+    '/v1/health',
+    healthRoute({
+      db: deps.db,
+      version: deps.version,
+      publicRegistrationEnabled: deps.publicRegistrationEnabled ?? false,
+    }),
+  );
   app.route('/v1/auth', authRoutes(deps));
   app.route('/v1/whoami', whoamiRoute(deps));
   app.route('/v1/users', userRoutes(deps));

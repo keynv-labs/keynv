@@ -2,7 +2,18 @@ import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import type { Db } from '../db/index.js';
 
-export function healthRoute(deps: { db: Db; version: string }): Hono {
+interface HealthDeps {
+  db: Db;
+  version: string;
+  /**
+   * Surface the public-registration flag so the web client can decide
+   * whether to render /register or redirect to /login. Frontend reads
+   * this on the /register page mount.
+   */
+  publicRegistrationEnabled: boolean;
+}
+
+export function healthRoute(deps: HealthDeps): Hono {
   const r = new Hono();
   r.get('/', async (c) => {
     let dbOk = false;
@@ -12,7 +23,14 @@ export function healthRoute(deps: { db: Db; version: string }): Hono {
     } catch {
       dbOk = false;
     }
-    return c.json({ ok: dbOk, version: deps.version, db: dbOk ? 'ok' : 'fail' });
+    return c.json({
+      ok: dbOk,
+      version: deps.version,
+      db: dbOk ? 'ok' : 'fail',
+      capabilities: {
+        public_registration: deps.publicRegistrationEnabled,
+      },
+    });
   });
   return r;
 }

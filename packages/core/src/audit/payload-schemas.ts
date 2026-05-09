@@ -22,8 +22,16 @@ const email = z.string().email();
 const version = z.number().int().positive();
 
 const empty = z.object({}).strict();
+const orgId = z.string().min(1);
 
 export const PAYLOAD_SCHEMAS = {
+  'auth.register': z
+    .object({
+      email,
+      org_id: orgId,
+      org_name: z.string().min(1),
+    })
+    .strict(),
   'auth.login.allowed': z.object({ email }).strict(),
   'auth.login.denied': z.object({ email }).strict(),
   'auth.logout': empty,

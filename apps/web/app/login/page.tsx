@@ -1,12 +1,31 @@
+import { api } from '@/lib/api';
+import Link from 'next/link';
 import { LoginForm } from './form';
+
+interface HealthResponse {
+  ok: boolean;
+  capabilities?: { public_registration?: boolean };
+}
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; reason?: string }>;
 }) {
   const params = await searchParams;
   const nextParam = params.next ?? '/projects';
+
+  // Hide the "Sign up" link on self-host instances that didn't enable
+  // public registration. The /v1/health probe is cheap and unauthed.
+  let publicSignup = false;
+  try {
+    const health = await api<HealthResponse>('/v1/health', { authed: false });
+    publicSignup = health.capabilities?.public_registration === true;
+  } catch {
+    // Health probe failed — keep the link hidden so we don't send a
+    // user to a /register that will redirect them right back here.
+    publicSignup = false;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
@@ -22,8 +41,22 @@ export default async function LoginPage({
         <div className="rounded-xl border border-border bg-bg-elevated p-5">
           <h1 className="text-base font-semibold text-fg">Sign in</h1>
           <p className="text-sm text-fg-muted mt-1">Enter your team credentials to continue.</p>
+          {params.reason === 'registration_disabled' ? (
+            <p className="mt-3 rounded-md border border-border bg-bg-overlay px-3 py-2 text-[11px] text-fg-muted">
+              Public signup is disabled on this instance. Ask an admin to invite you.
+            </p>
+          ) : null}
           <LoginForm next={nextParam} />
         </div>
+
+        {publicSignup ? (
+          <p className="text-center text-xs text-fg-muted mt-4">
+            New to keynv?{' '}
+            <Link className="text-fg hover:underline" href="/register">
+              Create an account
+            </Link>
+          </p>
+        ) : null}
       </div>
     </div>
   );

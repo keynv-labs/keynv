@@ -20,7 +20,13 @@ interface Harness {
 
 const JWT_SECRET = 'test-test-test-test-test-test-test-test-12345';
 
-async function makeHarness(opts: { rateLimitPerMinute?: number } = {}): Promise<Harness> {
+async function makeHarness(
+  opts: {
+    rateLimitPerMinute?: number;
+    publicRegistrationEnabled?: boolean;
+    registerRateLimitPerMinute?: number;
+  } = {},
+): Promise<Harness> {
   const { db, raw } = openDb({ path: ':memory:', migrate: true });
   const kek = await crypto.generateKey();
   const orgId = newOrgId();
@@ -59,6 +65,10 @@ async function makeHarness(opts: { rateLimitPerMinute?: number } = {}): Promise<
     // rate-limit-specific suite below pins a small budget on its own
     // harness instance.
     rateLimitPerMinute: opts.rateLimitPerMinute ?? 0,
+    // Default off so existing tests don't accidentally exercise the
+    // signup path; the registration suite turns it on.
+    publicRegistrationEnabled: opts.publicRegistrationEnabled ?? false,
+    registerRateLimitPerMinute: opts.registerRateLimitPerMinute ?? 0,
   });
 
   return {
@@ -1058,6 +1068,190 @@ describe('Rate limit — closes Phase 5 audit Finding A1', () => {
       expect(devOk.status).toBe(200);
     } finally {
       local.cleanup();
+    }
+  });
+});
+
+describe('Public registration — POST /v1/auth/register', () => {
+  it('creates a new org + owner user and returns a usable JWT pair', async () => {
+    const local = await makeHarness({ publicRegistrationEnabled: true });
+    try {
+      const res = await local.app.request('http://localhost/v1/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: 'tenant@example.test',
+          password: 'tenant-password-12345',
+          org_name: 'Tenant Inc',
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as {
+        access_token: string;
+        refresh_token: string;
+        user: { id: string; email: string; org_id: string; org_role: string };
+      };
+      expect(body.user.email).toBe('tenant@example.test');
+      expect(body.user.org_role).toBe('owner');
+      expect(body.user.org_id).toMatch(/^org_/);
+      expect(body.user.id).toMatch(/^u_/);
+
+      // Returned access token resolves to the new tenant's identity.
+      const me = await local.app.request('http://localhost/v1/whoami', {
+        headers: { authorization: `Bearer ${body.access_token}` },
+      });
+      expect(me.status).toBe(200);
+      const meBody = (await me.json()) as { email: string; org_id: string };
+      expect(meBody.email).toBe('tenant@example.test');
+      expect(meBody.org_id).toBe(body.user.org_id);
+    } finally {
+      local.cleanup();
+    }
+  });
+
+  it('returns 403 rbac.denied when public registration is disabled', async () => {
+    // Default harness has publicRegistrationEnabled: false.
+    const res = await harness.app.request('http://localhost/v1/auth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'someone@example.test',
+        password: 'password-12345-ok',
+        org_name: 'Anyone',
+      }),
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('rbac.denied');
+  });
+
+  it('rejects duplicate email with user.already_exists', async () => {
+    const local = await makeHarness({ publicRegistrationEnabled: true });
+    try {
+      // Owner email is already seeded in the harness.
+      const res = await local.app.request('http://localhost/v1/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: local.ownerEmail,
+          password: 'a-different-password-12345',
+          org_name: 'Doppelganger',
+        }),
+      });
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('user.already_exists');
+    } finally {
+      local.cleanup();
+    }
+  });
+
+  it('rejects passwords shorter than 12 characters', async () => {
+    const local = await makeHarness({ publicRegistrationEnabled: true });
+    try {
+      const res = await local.app.request('http://localhost/v1/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: 'short@example.test',
+          password: 'tooshort',
+          org_name: 'Short',
+        }),
+      });
+      expect(res.status).toBe(400);
+    } finally {
+      local.cleanup();
+    }
+  });
+
+  it('per-IP rate limit returns 429 once the budget is exhausted', async () => {
+    const local = await makeHarness({
+      publicRegistrationEnabled: true,
+      registerRateLimitPerMinute: 2,
+    });
+    try {
+      const tries = [
+        { email: 'a1@example.test', org_name: 'A1' },
+        { email: 'a2@example.test', org_name: 'A2' },
+        // 3rd call exceeds the per-IP budget of 2/min.
+        { email: 'a3@example.test', org_name: 'A3' },
+      ];
+      const responses: Response[] = [];
+      for (const t of tries) {
+        responses.push(
+          await local.app.request('http://localhost/v1/auth/register', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              email: t.email,
+              password: 'password-12345-ok',
+              org_name: t.org_name,
+            }),
+          }),
+        );
+      }
+      expect(responses[0]?.status).toBe(201);
+      expect(responses[1]?.status).toBe(201);
+      expect(responses[2]?.status).toBe(429);
+      const body = (await responses[2]?.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('rate_limited');
+    } finally {
+      local.cleanup();
+    }
+  });
+
+  it('emits an auth.register audit entry', async () => {
+    const local = await makeHarness({ publicRegistrationEnabled: true });
+    try {
+      const reg = await local.app.request('http://localhost/v1/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: 'audited@example.test',
+          password: 'audited-password-12345',
+          org_name: 'Audited',
+        }),
+      });
+      const regBody = (await reg.json()) as { access_token: string };
+
+      const list = await local.app.request('http://localhost/v1/audit?event_type=auth.register', {
+        headers: { authorization: `Bearer ${regBody.access_token}` },
+      });
+      expect(list.status).toBe(200);
+      const body = (await list.json()) as {
+        entries: Array<{ event_type: string; payload: { email: string } }>;
+      };
+      expect(body.entries.length).toBeGreaterThan(0);
+      expect(body.entries[0]?.event_type).toBe('auth.register');
+      expect(body.entries[0]?.payload.email).toBe('audited@example.test');
+    } finally {
+      local.cleanup();
+    }
+  });
+});
+
+describe('Health — capabilities', () => {
+  it('exposes public_registration capability flag', async () => {
+    const off = await makeHarness();
+    try {
+      const res = await off.app.request('http://localhost/v1/health');
+      const body = (await res.json()) as {
+        capabilities: { public_registration: boolean };
+      };
+      expect(body.capabilities.public_registration).toBe(false);
+    } finally {
+      off.cleanup();
+    }
+
+    const on = await makeHarness({ publicRegistrationEnabled: true });
+    try {
+      const res = await on.app.request('http://localhost/v1/health');
+      const body = (await res.json()) as {
+        capabilities: { public_registration: boolean };
+      };
+      expect(body.capabilities.public_registration).toBe(true);
+    } finally {
+      on.cleanup();
     }
   });
 });
