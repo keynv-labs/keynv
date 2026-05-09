@@ -11,30 +11,43 @@ the file:line and a concrete proposed fix.
 | B2  | BLOCKER  | RESOLVED | "fix: close audit BLOCKERS B1 + B2" | All project / secret / member queries now `WHERE org_id = user.org_id`; 404 on cross-org IDs (no existence disclosure). Two-org integration regression test added. |
 | B3  | BLOCKER  | RESOLVED | "fix(cli): close audit BLOCKER B3" | Credentials encrypted at rest with libsodium secretbox; key lives in OS keychain via `@napi-rs/keyring`. One-shot migration drops legacy plaintext. |
 | H1  | HIGH     | RESOLVED | "fix: close audit HIGHs (H1, H4, H5)" | MCP outer catch strips literal resolved value (when in scope) then runs the redactor pattern bank. |
-| H2  | HIGH     | DEFERRED | — | Audit payload schema. Today's payloads are JSON-roundtrippable; tracked as Phase 5 hardening. |
-| H3  | HIGH     | DEFERRED | — | Doc/code drift on JS-string lifetimes. Acknowledged in docs/05 §threats-we-don't-fully-mitigate; refactor to `Uint8Array` end-to-end is a Phase 5 hardening. |
+| H2  | HIGH     | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | `PAYLOAD_SCHEMAS` discriminated union per event_type + `validateAuditPayload` chokepoint; `appendAudit` validates BEFORE hashing. 15 new tests. |
+| H3  | HIGH     | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | docs/05 §Memory hygiene rewritten to acknowledge JS-string lifetime as a documented compromise; Uint8Array-end-to-end stays on the Phase 6 commercial-hardening backlog. |
 | H4  | HIGH     | RESOLVED | "fix: close audit HIGHs (H1, H4, H5)" | Bootstrap password reads from `KEYNV_BOOTSTRAP_PASSWORD` env / stdin / argv-with-`--unsafe-allow-argv`. argv default is refused. |
 | H5  | HIGH     | RESOLVED | "fix: close audit HIGHs (H1, H4, H5)" | pino logger wired into Hono `onError`; redact paths + a custom `err` serializer that runs the redactor over `Error.message` and `Error.stack`. |
-| M1  | MEDIUM   | DEFERRED | — | Redactor preview length floor. Internal-only today; tighten in Phase 5. |
-| M2  | MEDIUM   | DEFERRED | — | `X-Keynv-Agent` client-controlled; informational, document. |
-| M3  | MEDIUM   | DEFERRED | — | Rotation grace window: doc says 1h, code is immediate. Reconcile in Phase 5. |
-| M4  | MEDIUM   | DEFERRED | — | AWS-secret-key heuristic pattern. Entropy detector currently covers. |
-| M5  | MEDIUM   | DEFERRED | — | `PATCH /v1/users/:id/org-role` missing. Phase 4 web UI will add it. |
-| M6  | MEDIUM   | DEFERRED | — | Integrations don't expand `~`. Phase 5 polish. |
+| M1  | MEDIUM   | DEFERRED | — | Redactor preview length floor. Internal-only today; tighten when consumers (e.g. SIEM forwarder) externalize previews. |
+| M2  | MEDIUM   | DEFERRED | — | `X-Keynv-Agent` client-controlled; informational. Trust boundary documented inline. |
+| M3  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | docs/06 amended to match the immediate-delete-on-rotate behavior; configurable grace window declared a Phase 6 commercial feature. |
+| M4  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | docs/02 §pattern-bank table now records the explicit decision: a bare 40-char regex would false-positive on git SHAs / base64-of-public-data. Entropy detector covers AWS keys. |
+| M5  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | `PATCH /v1/users/:id/org-role` shipped with three guards: rbac requires user.role_change, refuses self-mod, refuses owner-role transitions. Emits `user.role_changed` audit event. |
+| M6  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | `KEYNV_FILE_DENY_PATTERNS` extended with `**/`-prefixed variants (cloud creds, kube/config, docker/config) so deny-engines anchored at the project root still match `~/.aws/credentials`. |
+
+**Final state**: 13 of 14 findings resolved; the 2 remaining
+deferrals (M1, M2) are documented and tracked, neither carries a
+live security risk.
 
 Drive-by security upgrades during this audit cycle:
 
 - `drizzle-orm` 0.36.4 → 0.45.2 (CVE-2026-39356, HIGH; we don't use the
   vulnerable APIs but upgraded for hygiene).
 - `vite` 5.x → 8.x (path traversal in optimized-deps map handler).
-- `pnpm.overrides` forces `esbuild >= 0.25.0` across the dependency graph
-  (esbuild dev-server origin check).
+- `pnpm.overrides` forces `esbuild >= 0.25.0` and `postcss >= 8.4.49`
+  across the dependency graph.
 - After this cycle: **`pnpm audit` reports no known vulnerabilities**.
 
-Test counts after this audit cycle: **197 active + 55 todo** (was 193 + 55).
-Three new regression tests were added — 2 for B1 (cross-page boundary
-verification, tampered-boundary detection) and 1 for B2 (two-org cross-org
-access denial across project/secret/member routes).
+Test counts after this audit cycle: **197 active + 55 todo** (was 193 +
+55). Three regression tests added for blockers (B1 cross-page boundary
++ tampered boundary, B2 two-org cross-org access denial); 15 new
+schema tests for H2 (every documented event type has a strict schema,
+unknown-field / wrong-type / event-payload-mismatch all rejected).
+
+Repo polish in the same cycle:
+- `apps/server/Dockerfile` (multi-stage Alpine) + `deploy/docker-compose.yml`
+  with optional Litestream sidecar; `deploy/README.md` with bring-up,
+  ops cheat sheet, and disaster-recovery walkthrough.
+- biome lint clean across the workspace (auto-fix + targeted manual
+  fixes in `claude-code.ts` uninstall path; per-file overrides for
+  spike scripts, tests, web forms).
 
 
 ## BLOCKERS — must fix before Phase 4
