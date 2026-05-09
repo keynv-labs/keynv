@@ -37,20 +37,31 @@ const navGroups: { title: string; items: NavItem[] }[] = [
   },
 ];
 
-interface SidebarProps {
+interface SidebarContentProps {
   email: string;
   role: string;
+  /** Called after a nav link click — used by the mobile drawer to close itself. */
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ email, role }: SidebarProps) {
+/**
+ * The actual sidebar content. Renders a vertical column with a brand
+ * block, nav groups, audit chain pill, and user block. No outer wrapper;
+ * callers decide how to position it (desktop aside vs. mobile sheet).
+ */
+const NOOP = () => {};
+
+export function SidebarContent({ email, role, onNavigate }: SidebarContentProps) {
   const pathname = usePathname() ?? '';
   const initials = email.slice(0, 2).toUpperCase();
+  const handleNavigate = onNavigate ?? NOOP;
 
   return (
-    <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-bg-elevated">
-      <div className="h-14 px-4 flex items-center border-b border-border">
+    <div className="flex h-full flex-col">
+      <div className="h-14 px-4 flex items-center border-b border-border shrink-0">
         <Link
           href={{ pathname: '/projects' }}
+          onClick={handleNavigate}
           className="flex items-center gap-2 font-semibold tracking-tight text-fg"
         >
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[11px] font-bold">
@@ -74,6 +85,7 @@ export function Sidebar({ email, role }: SidebarProps) {
                   <li key={item.href}>
                     <Link
                       href={{ pathname: item.href }}
+                      onClick={handleNavigate}
                       className={cn(
                         'group flex items-center gap-2.5 rounded-md px-2 py-1.5',
                         'text-sm transition-colors duration-fast ease-snap',
@@ -85,7 +97,7 @@ export function Sidebar({ email, role }: SidebarProps) {
                       <Icon size={15} strokeWidth={2} className="shrink-0" />
                       <span className="flex-1">{item.label}</span>
                       {item.shortcut ? (
-                        <kbd className="hidden group-hover:inline-flex font-mono text-[10px] text-fg-subtle">
+                        <kbd className="hidden md:group-hover:inline-flex font-mono text-[10px] text-fg-subtle">
                           {item.shortcut}
                         </kbd>
                       ) : null}
@@ -100,6 +112,7 @@ export function Sidebar({ email, role }: SidebarProps) {
 
       <Link
         href={{ pathname: '/audit' }}
+        onClick={handleNavigate}
         className="mx-3 mb-3 flex items-center gap-2.5 rounded-md border border-border bg-bg px-2.5 py-2 text-xs hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
       >
         <ShieldCheck size={14} className="shrink-0 text-success" />
@@ -131,6 +144,18 @@ export function Sidebar({ email, role }: SidebarProps) {
           Sign out
         </button>
       </form>
+    </div>
+  );
+}
+
+/**
+ * Desktop sidebar — fixed-width column to the left of main content.
+ * Hidden below md (mobile uses MobileTopBar + Sheet).
+ */
+export function Sidebar(props: SidebarContentProps) {
+  return (
+    <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-bg-elevated">
+      <SidebarContent {...props} />
     </aside>
   );
 }
