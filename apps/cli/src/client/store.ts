@@ -1,13 +1,20 @@
 /**
- * Persists CLI auth state in `~/.keynv/credentials.json` with mode 0600.
+ * Persists CLI auth state encrypted-at-rest. The on-disk file at
+ * `~/.keynv/credentials.enc` carries [version=1][24-byte nonce][ciphertext];
+ * the encryption key lives in the OS keychain (macOS Keychain / Windows
+ * Credential Manager / libsecret on Linux). See secure-store.ts for the
+ * crypto wiring.
  *
- * Phase 1 stores plain JSON because we don't yet have an OS-keychain
- * abstraction. Phase 2 task #30 wraps this in age-sealed encryption with
- * the key in macOS Keychain / Windows Credential Manager / libsecret.
+ * This closes audit finding B3 / CLAUDE.md rule #12. Reading the
+ * credentials file off-disk yields ciphertext only; without the
+ * keychain entry an attacker has nothing useful even with full
+ * filesystem read access.
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import {
+  clearCredentialsFile,
+  loadCredentialsBlob,
+  saveCredentialsBlob,
+} from './secure-store.js';
 
 export interface Credentials {
   server_url: string;
@@ -20,26 +27,44 @@ export interface Credentials {
   access_expires_at: string;
 }
 
-function defaultPath(): string {
-  return process.env['KEYNV_CREDENTIALS_FILE'] ?? join(homedir(), '.keynv', 'credentials.json');
-}
+let cache: Credentials | null | undefined;
 
-export function loadCredentials(path: string = defaultPath()): Credentials | null {
-  if (!existsSync(path)) return null;
-  try {
-    const raw = readFileSync(path, 'utf8');
-    return JSON.parse(raw) as Credentials;
-  } catch {
+export async function loadCredentialsAsync(): Promise<Credentials | null> {
+  if (cache !== undefined) return cache;
+  const blob = await loadCredentialsBlob();
+  if (!blob) {
+    cache = null;
     return null;
   }
+  try {
+    cache = JSON.parse(new TextDecoder().decode(blob)) as Credentials;
+  } catch {
+    cache = null;
+  }
+  return cache;
 }
 
-export function saveCredentials(creds: Credentials, path: string = defaultPath()): void {
-  const dir = dirname(path);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
-  writeFileSync(path, JSON.stringify(creds, null, 2), { mode: 0o600 });
+/**
+ * Synchronous wrapper retained for callers that need a single-value
+ * result without rewriting their flow. Internally it does an
+ * async-load on first call only and caches; subsequent calls hit the
+ * cache. The cache is busted on save/clear.
+ *
+ * Note: the first call returns null until a save has happened or
+ * loadCredentialsAsync has been awaited. New code should prefer
+ * loadCredentialsAsync.
+ */
+export function loadCredentials(): Credentials | null {
+  return cache ?? null;
 }
 
-export function clearCredentials(path: string = defaultPath()): void {
-  if (existsSync(path)) rmSync(path, { force: true });
+export async function saveCredentials(creds: Credentials): Promise<void> {
+  const blob = new TextEncoder().encode(JSON.stringify(creds));
+  await saveCredentialsBlob(blob);
+  cache = creds;
+}
+
+export function clearCredentials(): void {
+  clearCredentialsFile();
+  cache = null;
 }

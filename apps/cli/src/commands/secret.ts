@@ -21,7 +21,7 @@ export class SecretCreateCommand extends Command {
   static override usage = Command.Usage({
     description: 'Create a new secret.',
     examples: [
-      ['Inline value', '$0 secret create @billing.dev.db_password --value supersecret123'],
+      ['Inline value (avoid in shell history; prefer --stdin)', '$0 secret create @billing.dev.db_password --value example-fake-pass-do-not-use'],
       ['From stdin', 'echo -n "..." | $0 secret create @billing.dev.db_password --stdin'],
     ],
   });

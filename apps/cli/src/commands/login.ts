@@ -59,18 +59,24 @@ export class LoginCommand extends Command {
     }
 
     const data = (await res.json()) as LoginResponse;
-    saveCredentials({
-      server_url: finalServerUrl,
-      user_id: data.user.id,
-      email: data.user.email,
-      org_id: data.user.org_id,
-      org_role: data.user.org_role,
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      access_expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-    });
+    try {
+      await saveCredentials({
+        server_url: finalServerUrl,
+        user_id: data.user.id,
+        email: data.user.email,
+        org_id: data.user.org_id,
+        org_role: data.user.org_role,
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        access_expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+      });
+    } catch (err) {
+      this.context.stderr.write(
+        `keynv: failed to persist credentials: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+      return 1;
+    }
     this.context.stdout.write(`logged in as ${data.user.email} (${data.user.org_role})\n`);
-    new ApiClient(); // warms cache; harmless
     return 0;
   }
 }
@@ -81,6 +87,7 @@ export class LogoutCommand extends Command {
 
   async execute(): Promise<number> {
     const client = new ApiClient();
+    await client.ensureHydrated();
     if (!client.isLoggedIn) {
       this.context.stdout.write('not logged in\n');
       return 0;
@@ -108,6 +115,7 @@ export class WhoamiCommand extends Command {
 
   async execute(): Promise<number> {
     const client = new ApiClient();
+    await client.ensureHydrated();
     if (!client.isLoggedIn) {
       this.context.stderr.write('keynv: not logged in. Run `keynv login`.\n');
       return 1;
