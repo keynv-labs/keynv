@@ -8,7 +8,7 @@
     "keynv": "./dist/keynv"
   },
   "scripts": {
-    "dev": "bun run src/index.ts",
+    "dev": "tsx src/index.ts",
     "build": "bun build src/index.ts --compile --outfile dist/keynv",
     "build:js": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -19,6 +19,11 @@
   "dependencies": {
     "@keynv/core": "workspace:*",
     "@keynv/rbac": "workspace:*",
-    "@keynv/redactor": "workspace:*"
+    "@keynv/redactor": "workspace:*",
+    "clipanion": "^4.0.0-rc.4",
+    "typanion": "^3.14.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
   }
 }
