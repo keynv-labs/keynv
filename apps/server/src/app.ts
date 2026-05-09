@@ -9,6 +9,7 @@ import { secretRoutes } from './routes/secrets.js';
 import { userRoutes } from './routes/users.js';
 import { whoamiRoute } from './routes/whoami.js';
 import { jsonError } from './lib/errors.js';
+import { makeLogger, type Logger } from './lib/logger.js';
 
 export interface AppDeps {
   db: Db;
@@ -17,10 +18,17 @@ export interface AppDeps {
   refreshTtlS: number;
   getKek: () => Uint8Array;
   version: string;
+  /**
+   * Optional pino logger. Defaults to a fresh instance with the same
+   * redaction paths configured in lib/logger.ts. Tests pass a silent
+   * logger to keep their output clean.
+   */
+  logger?: Logger;
 }
 
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
+  const logger = deps.logger ?? makeLogger(process.env['KEYNV_LOG_LEVEL'] ?? 'info');
 
   app.route('/v1/health', healthRoute({ db: deps.db, version: deps.version }));
   app.route('/v1/auth', authRoutes(deps));
@@ -34,9 +42,19 @@ export function createApp(deps: AppDeps): Hono {
 
   app.notFound((c) => jsonError(c, 'validation.failed', 'Not found.'));
   app.onError((err, c) => {
-    // Avoid leaking internals — log server-side, surface request id only.
-    // biome-ignore lint/suspicious/noConsoleLog: temporary until pino wiring (Phase 5)
-    console.error('[keynv-server] unhandled error', err);
+    // Pino's `redact` config (apps/server/src/lib/logger.ts) scrubs
+    // common credential-shaped fields from the serialized error so a
+    // pg/mysql/etc driver error containing a connection-string
+    // fragment doesn't make it into the stdout log (audit finding H5).
+    logger.error(
+      {
+        err,
+        request_id: c.req.header('x-request-id'),
+        path: c.req.path,
+        method: c.req.method,
+      },
+      'unhandled error',
+    );
     return jsonError(c, 'internal_error', 'Internal error.');
   });
 

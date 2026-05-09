@@ -19,9 +19,10 @@
     "@hono/node-server": "^1.13.7",
     "@keynv/core": "workspace:*",
     "@keynv/rbac": "workspace:*",
+    "@keynv/redactor": "workspace:*",
     "argon2": "^0.41.1",
     "better-sqlite3": "^11.10.0",
-    "drizzle-orm": "^0.36.4",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.6.10",
     "jose": "^5.9.6",
     "nanoid": "^5.0.9",
@@ -30,7 +31,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
-    "drizzle-kit": "^0.28.1",
+    "drizzle-kit": "^0.31.10",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2"
   }

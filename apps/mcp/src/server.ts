@@ -113,6 +113,11 @@ export function buildServer(deps: ServerDeps): Server {
     const name = req.params.name;
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
 
+    // Carry the resolved value (if any) into the outer catch so even
+    // exceptions thrown OUTSIDE runTest get scrubbed before the message
+    // hits the agent (audit finding H1).
+    let resolvedValue: string | null = null;
+
     try {
       switch (name) {
         case 'keynv.who_am_i': {
@@ -182,6 +187,7 @@ export function buildServer(deps: ServerDeps): Server {
           const data = await api.request<{ value: string }>(
             `/v1/projects/${found.id}/secrets/${parsed.environment}/${parsed.key}`,
           );
+          resolvedValue = data.value;
 
           const result = await runTest({
             tester,
@@ -217,7 +223,15 @@ export function buildServer(deps: ServerDeps): Server {
           return jsonError(`unknown tool: ${name}`);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      let message = err instanceof Error ? err.message : String(err);
+      // Defense-in-depth: if a value was resolved before the throw,
+      // strip it literally; then run the redactor pattern bank over
+      // whatever's left. Driver-level exceptions sometimes carry
+      // connection-string fragments in their messages.
+      if (resolvedValue && resolvedValue.length > 0) {
+        message = message.split(resolvedValue).join('<redacted>');
+      }
+      message = redact(message).text;
       return jsonError(message);
     }
   });
