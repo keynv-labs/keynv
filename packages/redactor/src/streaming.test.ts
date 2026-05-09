@@ -2,6 +2,13 @@ import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import { createRedactStream } from './streaming.js';
 
+// Same construction pattern as patterns.test.ts: build secret-shaped
+// fixtures from concatenation so static scanners don't match the
+// literals.
+const X = (n: number) => 'X'.repeat(n);
+const ghClassic = `${'ghp'}_${X(36)}`;
+const awsKey = `AKIA${'EXAMPLE'.repeat(2)}EX`;
+
 async function pipe(input: string, stream: ReturnType<typeof createRedactStream>): Promise<string> {
   const reader = Readable.from([Buffer.from(input, 'utf8')]);
   const chunks: Buffer[] = [];
@@ -24,7 +31,7 @@ describe('createRedactStream', () => {
 
   it('flushes a trailing line that has no terminating newline', async () => {
     const out = await pipe(
-      'tail line ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+      `tail line ${ghClassic}`,
       createRedactStream({ entropy: { enabled: false } }),
     );
     expect(out).toContain('<REDACTED:github-pat-classic>');
@@ -38,7 +45,7 @@ describe('createRedactStream', () => {
 
   it('handles many small chunks without losing bytes', async () => {
     const stream = createRedactStream({ entropy: { enabled: false } });
-    const input = 'aws=AKIAEXAMPLEEXAMPLEEX done\n';
+    const input = `aws=${awsKey} done\n`;
     const reader = Readable.from(input.split('').map((c) => Buffer.from(c, 'utf8')));
     const chunks: Buffer[] = [];
     for await (const chunk of reader.pipe(stream)) {

@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { redact } from './batch.js';
 
+// Vendor-prefixed fixtures are constructed at runtime from
+// concatenated pieces so the LITERAL secret-shape never appears
+// verbatim in source. Static scanners (GitHub Push Protection,
+// trufflehog, gitleaks) match against contiguous source bytes;
+// concatenation keeps our regex tests honest while preventing
+// false positives at commit time.
+const X = (n: number) => 'X'.repeat(n);
+const fix = {
+  awsKey: `AKIA${'EXAMPLE'.repeat(2)}EX`,
+  awsTemp: `ASIA${'EXAMPLE'.repeat(2)}DD`,
+  gcp: `${'AIza'}${X(35)}`,
+  ghClassic: `${'ghp'}_${X(36)}`,
+  ghFine: `${'github'}_pat_${X(60)}`,
+  slackBot: `${'xoxb'}-${X(10)}-${X(13)}-${X(24)}`,
+  slackHook: `https://hooks.slack.com/services/${X(10).replace(/X/g, 'T')}/${X(10).replace(/X/g, 'B')}/${X(26)}`,
+  stripe: `${'sk'}_${'live'}_${X(26)}`,
+  openai: `${'sk'}-proj-${X(24)}`,
+  anthropic: `${'sk'}-ant-api03-${X(24)}`,
+  jwt: `${'eyJ'}${X(20)}.${'eyJ'}${X(20)}.${X(20)}`,
+};
+
 describe('pattern bank — true positives', () => {
   it.each([
     [
@@ -15,45 +36,17 @@ describe('pattern bank — true positives', () => {
       'rediss://default:abc123@redis.example.com:6379/0',
       'redis-uri-with-password',
     ],
-    [
-      'Slack webhook',
-      'POST https://hooks.slack.com/services/T01ABCDEFGH/B02IJKLMNOP/abcdefGHijklMNOP1234567890',
-      'slack-webhook',
-    ],
-    ['AWS AKIA', 'AWS_ACCESS_KEY_ID=AKIAEXAMPLEEXAMPLEEX', 'aws-access-key-id'],
-    ['AWS ASIA temp', 'token=ASIAEXAMPLEEXAMPLEDD', 'aws-access-key-id'],
-    ['GCP API key', 'key: AIzaXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 'gcp-api-key'],
-    [
-      'GitHub PAT classic',
-      'gh auth login --token ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-      'github-pat-classic',
-    ],
-    [
-      'GitHub fine-grained PAT',
-      'PAT=github_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-      'github-pat-fine-grained',
-    ],
-    [
-      'Slack bot token',
-      'export SLACK_BOT=xoxb-XXXXXXXXXX-XXXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX',
-      'slack-bot-token',
-    ],
-    ['Stripe live key', 'STRIPE_KEY=sk_live_XXXXXXXXXXXXXXXXXXXXXXXXXX', 'stripe-live-secret-key'],
-    [
-      'OpenAI API key',
-      'OPENAI_API_KEY=sk-proj-XXXXXXXXXXXXXXXXXXXXXXXX',
-      'openai-api-key',
-    ],
-    [
-      'Anthropic API key',
-      'ANTHROPIC_API_KEY=sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXX',
-      'anthropic-api-key',
-    ],
-    [
-      'JWT',
-      'Authorization: Bearer eyJXXXXXXXXXXXXXXXXXXXX.eyJXXXXXXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXX',
-      'jwt',
-    ],
+    ['Slack webhook', `POST ${fix.slackHook}`, 'slack-webhook'],
+    ['AWS AKIA', `AWS_ACCESS_KEY_ID=${fix.awsKey}`, 'aws-access-key-id'],
+    ['AWS ASIA temp', `token=${fix.awsTemp}`, 'aws-access-key-id'],
+    ['GCP API key', `key: ${fix.gcp}`, 'gcp-api-key'],
+    ['GitHub PAT classic', `gh auth login --token ${fix.ghClassic}`, 'github-pat-classic'],
+    ['GitHub fine-grained PAT', `PAT=${fix.ghFine}`, 'github-pat-fine-grained'],
+    ['Slack bot token', `export SLACK_BOT=${fix.slackBot}`, 'slack-bot-token'],
+    ['Stripe live key', `STRIPE_KEY=${fix.stripe}`, 'stripe-live-secret-key'],
+    ['OpenAI API key', `OPENAI_API_KEY=${fix.openai}`, 'openai-api-key'],
+    ['Anthropic API key', `ANTHROPIC_API_KEY=${fix.anthropic}`, 'anthropic-api-key'],
+    ['JWT', `Authorization: Bearer ${fix.jwt}`, 'jwt'],
   ])('redacts %s', (_label, input, expectedPattern) => {
     const { text, matches } = redact(input);
     expect(matches.length).toBeGreaterThan(0);
@@ -115,15 +108,14 @@ describe('pattern bank — false positives (innocent fixtures must NOT be redact
 
 describe('redact — overlap and ordering', () => {
   it('renders matches in order without index drift', () => {
-    const input = 'a=ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX b=AKIAEXAMPLEEXAMPLEEX';
+    const input = `a=${fix.ghClassic} b=${fix.awsKey}`;
     const { text } = redact(input, { entropy: { enabled: false } });
     expect(text).toBe('a=<REDACTED:github-pat-classic> b=<REDACTED:aws-access-key-id>');
   });
 
   it('does not double-redact overlapping pattern hits', () => {
     // jwt + entropy could both match; the wider pattern (jwt) wins.
-    const jwt =
-      'eyJXXXXXXXXXXXXXXXXXXXX.eyJXXXXXXXXXXXXXXXXXXXX.XXXXXXXXXXXXXXXXXXXX';
+    const jwt = fix.jwt;
     const input = `token: ${jwt}`;
     const { text, matches } = redact(input);
     expect(text).toContain('<REDACTED:jwt>');
