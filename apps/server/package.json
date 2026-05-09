@@ -20,6 +20,7 @@
     "@keynv/core": "workspace:*",
     "@keynv/rbac": "workspace:*",
     "@keynv/redactor": "workspace:*",
+    "@keynv/testers": "workspace:*",
     "argon2": "^0.41.1",
     "better-sqlite3": "^11.10.0",
     "drizzle-orm": "^0.45.2",

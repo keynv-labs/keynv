@@ -1,5 +1,6 @@
 import { crypto } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
+import { findTester, runTest } from '@keynv/testers';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -463,6 +464,118 @@ export function secretRoutes(deps: SecretDeps): Hono {
       payload: { project_id: projectId, env: envName, key: keyName },
     });
     return c.body(null, 204);
+  });
+
+  // POST /v1/projects/:projectId/secrets/:env/:key/test
+  // Decrypts the secret value, hands it to the requested tester
+  // alongside the caller-supplied target shape, and returns the
+  // sanitised TestResult. The plaintext value never leaves the
+  // server process — it lives in memory only for the duration of
+  // the test() call inside @keynv/testers.
+  const TestBody = z.object({
+    tester: z.enum(['postgres', 'mysql', 'redis', 'ssh', 'http']),
+    target: z.record(z.string(), z.unknown()),
+  });
+
+  r.post('/:projectId/secrets/:env/:key/test', async (c) => {
+    const user = c.var.user;
+    const projectId = c.req.param('projectId');
+    const envName = c.req.param('env');
+    const keyName = c.req.param('key');
+
+    const parsed = TestBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return jsonError(c, 'validation.failed', 'Invalid test body.', {
+        issues: parsed.error.issues,
+      });
+    }
+
+    const projectRows = await deps.db
+      .select({ name: schema.projects.name })
+      .from(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
+      .limit(1);
+    const projectRow = projectRows[0];
+    if (!projectRow) return jsonError(c, 'project.not_found', 'Project not found.');
+
+    const envRows = await deps.db
+      .select()
+      .from(schema.environments)
+      .where(
+        and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)),
+      )
+      .limit(1);
+    const env = envRows[0];
+    if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');
+
+    const decision = authorize('secret.test', {
+      user,
+      resource: {
+        project_id: projectId,
+        environment_tier: env.tier,
+        require_approval: env.require_approval,
+      },
+    });
+    if (decision !== 'allow') return jsonError(c, 'rbac.denied', 'Permission denied.');
+
+    const secretRows = await deps.db
+      .select()
+      .from(schema.secrets)
+      .where(
+        and(
+          eq(schema.secrets.project_id, projectId),
+          eq(schema.secrets.environment_id, env.id),
+          eq(schema.secrets.key, keyName),
+          isNull(schema.secrets.deleted_at),
+        ),
+      )
+      .orderBy(desc(schema.secrets.version))
+      .limit(1);
+    const secret = secretRows[0];
+    if (!secret) return jsonError(c, 'secret.not_found', 'Secret not found.');
+
+    const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
+    if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
+
+    const value = await crypto.decryptSecret(
+      {
+        ciphertext: new Uint8Array(secret.ciphertext),
+        nonce: new Uint8Array(secret.nonce),
+      },
+      loaded.dek,
+    );
+
+    const alias = `@${projectRow.name}.${envName}.${keyName}`;
+    const tester = findTester(parsed.data.tester);
+    if (!tester) {
+      return jsonError(c, 'validation.failed', `Unknown tester type: ${parsed.data.tester}`);
+    }
+
+    const result = await runTest({
+      tester,
+      secret: { alias, value },
+      target: parsed.data.target,
+    });
+
+    await appendAudit(deps.db, {
+      actor_user_id: user.id,
+      actor_agent: readAgent(c),
+      event_type: 'secret.test.invoked',
+      payload: {
+        alias,
+        tester: parsed.data.tester,
+        ok: result.ok,
+        latency_ms: result.latency_ms,
+      },
+    });
+
+    return c.json(result);
   });
 
   return r;
