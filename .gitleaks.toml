@@ -7,13 +7,44 @@ useDefault = true
 [allowlist]
 description = "keynv allowlist for documentation examples and clearly-fake fixtures"
 paths = [
+  # All Markdown docs (engineering + public-facing) carry example tokens
+  # in their pattern-bank tables; these are illustrations, not secrets.
   '''docs/.*\.md$''',
+  '''apps/docs/src/content/docs/.*\.md$''',
+
+  # The redactor's own test fixtures intentionally contain every
+  # supported secret-shape so the pattern bank can be regression-tested.
+  # Allowlisting the entire packages/redactor/src/*.test.ts surface is
+  # safe because real values never live here — see the inline negative
+  # corpus assertions in patterns.test.ts.
+  '''packages/redactor/src/.*\.test\.ts$''',
+
+  # Test fixtures explicitly named "innocent" or "*.example.*"
   '''.*test/fixtures/innocent.*$''',
   '''.*\.example\..*$''',
+
+  # Server integration tests use throwaway in-memory fixtures.
+  '''apps/server/src/test/.*\.test\.ts$''',
+
+  # Spike/benchmark scripts deliberately allocate fake secrets to
+  # measure encrypt/decrypt throughput.
+  '''scripts/spikes/src/.*\.ts$''',
 ]
 regexes = [
-  '''example-fake-(?:token|key|password|secret)''',
+  # Clearly-fake placeholders we ship in docs and CLI examples.
+  '''example-fake-(?:token|key|password|secret|pass)''',
   '''supersecret123''',
+  '''super-secret-value''',
   '''sk-(?:proj-)?example''',
   '''AKIAEXAMPLE''',
+
+  # Helm-lint stub jwtSecret that just needs to be ≥32 chars long.
+  '''test-jwt-secret-must-be-at-least-32-chars''',
+
+  # Owner password printed in the docs walkthrough — clearly a
+  # placeholder, instructing the reader to choose their own.
+  '''choose-a-strong-12-plus-char-password''',
+  '''your-12-plus-char-password''',
+  '''owner-password-12345''',
+  '''developer-password-12345''',
 ]
