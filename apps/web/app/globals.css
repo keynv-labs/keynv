@@ -128,6 +128,29 @@ pre,
   animation: list-item-enter var(--duration-base) var(--ease-snap) both;
 }
 
+/* cmdk palette: align with semantic tokens */
+[cmdk-input] {
+  background: transparent;
+  outline: none;
+}
+[cmdk-group-heading] {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-fg-subtle);
+}
+[cmdk-item] {
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+[cmdk-item][data-selected='true'] {
+  background: var(--color-bg-elevated-hover);
+  color: var(--color-fg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
