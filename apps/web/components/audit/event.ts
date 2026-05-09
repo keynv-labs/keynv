@@ -2,14 +2,7 @@
  * Helpers shared by the org-level and project-level audit pages.
  */
 
-export type Category =
-  | 'project'
-  | 'secret'
-  | 'member'
-  | 'user'
-  | 'auth'
-  | 'approval'
-  | 'other';
+export type Category = 'project' | 'secret' | 'member' | 'user' | 'auth' | 'approval' | 'other';
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   project: 'Project',
@@ -46,7 +39,10 @@ interface Description {
   tone?: Tone;
 }
 
-function pickString(payload: Record<string, unknown> | null | undefined, ...keys: string[]): string {
+function pickString(
+  payload: Record<string, unknown> | null | undefined,
+  ...keys: string[]
+): string {
   if (!payload) return '';
   for (const k of keys) {
     const v = payload[k];

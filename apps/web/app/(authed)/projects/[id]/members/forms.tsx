@@ -1,8 +1,5 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useActionState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,14 +19,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useActionState } from 'react';
 import { type MemberActionState, addMemberAction, removeMemberAction } from './actions';
 
 export function AddMemberDialog({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState<MemberActionState, FormData>(
-    addMemberAction,
-    {},
-  );
+  const [state, action, pending] = useActionState<MemberActionState, FormData>(addMemberAction, {});
 
   useEffect(() => {
     if (state.ok) setOpen(false);
@@ -46,8 +43,9 @@ export function AddMemberDialog({ projectId }: { projectId: string }) {
       <DialogContent>
         <DialogTitle>Add member</DialogTitle>
         <DialogDescription>
-          The user must already exist in the org. Roles: <span className="font-mono text-fg">lead</span> can
-          rotate &amp; share, <span className="font-mono text-fg">developer</span> can read &amp; write,{' '}
+          The user must already exist in the org. Roles:{' '}
+          <span className="font-mono text-fg">lead</span> can rotate &amp; share,{' '}
+          <span className="font-mono text-fg">developer</span> can read &amp; write,{' '}
           <span className="font-mono text-fg">reader</span> can list metadata only.
         </DialogDescription>
 
@@ -127,8 +125,8 @@ export function RemoveMemberAction({
             <div className="flex-1 min-w-0">
               <AlertDialogTitle>Remove this member?</AlertDialogTitle>
               <AlertDialogDescription>
-                <span className="font-mono text-fg">{email}</span> will lose access to this
-                project. Their CLI tokens scoped to this project will fail on next read.
+                <span className="font-mono text-fg">{email}</span> will lose access to this project.
+                Their CLI tokens scoped to this project will fail on next read.
               </AlertDialogDescription>
             </div>
           </div>

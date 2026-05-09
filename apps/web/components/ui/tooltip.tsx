@@ -1,8 +1,8 @@
 'use client';
 
+import { cn } from '@/lib/cn';
 import * as RadixTooltip from '@radix-ui/react-tooltip';
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/cn';
 
 interface Props {
   content: ReactNode;

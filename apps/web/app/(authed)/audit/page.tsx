@@ -1,6 +1,6 @@
-import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { type AuditEntry, AuditTimeline } from '@/components/audit/audit-timeline';
 import { ChainBanner } from '@/components/audit/chain-banner';
+import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { api } from '@/lib/api';
 
 export default async function GlobalAuditPage({

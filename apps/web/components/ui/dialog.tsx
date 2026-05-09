@@ -1,9 +1,9 @@
 'use client';
 
+import { cn } from '@/lib/cn';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { cn } from '@/lib/cn';
 
 export const Dialog = RadixDialog.Root;
 export const DialogTrigger = RadixDialog.Trigger;
@@ -48,10 +48,7 @@ export function DialogTitle({
   ...rest
 }: ComponentPropsWithoutRef<typeof RadixDialog.Title> & { children: ReactNode }) {
   return (
-    <RadixDialog.Title
-      className={cn('text-base font-semibold text-fg pr-8', className)}
-      {...rest}
-    >
+    <RadixDialog.Title className={cn('text-base font-semibold text-fg pr-8', className)} {...rest}>
       {children}
     </RadixDialog.Title>
   );
@@ -63,10 +60,7 @@ export function DialogDescription({
   ...rest
 }: ComponentPropsWithoutRef<typeof RadixDialog.Description> & { children: ReactNode }) {
   return (
-    <RadixDialog.Description
-      className={cn('mt-1 text-sm text-fg-muted', className)}
-      {...rest}
-    >
+    <RadixDialog.Description className={cn('mt-1 text-sm text-fg-muted', className)} {...rest}>
       {children}
     </RadixDialog.Description>
   );

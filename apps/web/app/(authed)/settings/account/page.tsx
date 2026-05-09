@@ -1,7 +1,7 @@
-import { CheckCircle2 } from 'lucide-react';
-import { redirect } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getSession } from '@/lib/session';
+import { CheckCircle2 } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { ChangePasswordForm } from './password-form';
 
 export default async function AccountProfilePage() {
@@ -68,8 +68,8 @@ export default async function AccountProfilePage() {
         </div>
         <p className="text-sm text-fg-muted mt-2 flex items-start gap-2">
           <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-fg-subtle" />
-          TOTP enrollment ships in Phase 5 hardening. For now your account is protected by the
-          owner password and rate-limited login.
+          TOTP enrollment ships in Phase 5 hardening. For now your account is protected by the owner
+          password and rate-limited login.
         </p>
       </section>
     </div>

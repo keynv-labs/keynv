@@ -1,8 +1,5 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useActionState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +19,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
+import { Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useActionState } from 'react';
 import {
   type SecretActionState,
   createSecretAction,
@@ -55,8 +55,7 @@ export function CreateSecretDialog({
         <DialogTitle>New secret</DialogTitle>
         <DialogDescription>
           The value is sent to the keynv server over TLS, encrypted at rest, and never displayed
-          back. Resolve it with{' '}
-          <code className="font-mono text-fg">keynv exec</code> from the CLI.
+          back. Resolve it with <code className="font-mono text-fg">keynv exec</code> from the CLI.
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
@@ -96,9 +95,7 @@ export function CreateSecretDialog({
             />
           </Field>
 
-          {state.error ? (
-            <p className="text-xs text-danger">{state.error}</p>
-          ) : null}
+          {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
@@ -141,8 +138,8 @@ export function RotateSecretDialog({
       <DialogContent>
         <DialogTitle>Rotate secret</DialogTitle>
         <DialogDescription>
-          Replaces the value behind <span className="font-mono text-fg">{alias}</span> and bumps
-          its version. Existing CLI sessions resolve the new value on next read.
+          Replaces the value behind <span className="font-mono text-fg">{alias}</span> and bumps its
+          version. Existing CLI sessions resolve the new value on next read.
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
@@ -161,9 +158,7 @@ export function RotateSecretDialog({
             />
           </Field>
 
-          {state.error ? (
-            <p className="text-xs text-danger">{state.error}</p>
-          ) : null}
+          {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

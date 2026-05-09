@@ -1,5 +1,5 @@
-import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import type { HTMLAttributes, ReactNode } from 'react';
 
 export function Card({
   children,
@@ -7,10 +7,7 @@ export function Card({
   ...rest
 }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
   return (
-    <div
-      className={cn('rounded-lg border border-border bg-bg-elevated p-5', className)}
-      {...rest}
-    >
+    <div className={cn('rounded-lg border border-border bg-bg-elevated p-5', className)} {...rest}>
       {children}
     </div>
   );
@@ -23,7 +20,5 @@ export function CardTitle({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <h2 className={cn('text-base font-semibold mb-3', className)}>{children}</h2>
-  );
+  return <h2 className={cn('text-base font-semibold mb-3', className)}>{children}</h2>;
 }

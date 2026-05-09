@@ -1,8 +1,8 @@
 'use client';
 
+import { cn } from '@/lib/cn';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { cn } from '@/lib/cn';
 
 export const Sheet = RadixDialog.Root;
 export const SheetTrigger = RadixDialog.Trigger;
@@ -19,12 +19,7 @@ interface SheetContentProps extends ComponentPropsWithoutRef<typeof RadixDialog.
   children: ReactNode;
 }
 
-export function SheetContent({
-  className,
-  side = 'left',
-  children,
-  ...rest
-}: SheetContentProps) {
+export function SheetContent({ className, side = 'left', children, ...rest }: SheetContentProps) {
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay

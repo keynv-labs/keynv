@@ -1,8 +1,8 @@
 'use client';
 
+import { cn } from '@/lib/cn';
 import * as RadixMenu from '@radix-ui/react-dropdown-menu';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { cn } from '@/lib/cn';
 
 export const DropdownMenu = RadixMenu.Root;
 export const DropdownMenuTrigger = RadixMenu.Trigger;

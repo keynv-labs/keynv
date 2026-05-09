@@ -9,9 +9,9 @@
  */
 
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const REQUESTS = 1000;
 const TARGET_MS = 20;

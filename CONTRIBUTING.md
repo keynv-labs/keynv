@@ -86,4 +86,4 @@ Project participation is governed by [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md
 
 ## License
 
-By contributing, you agree your contributions are licensed under the project's license (see [`LICENSE`](./LICENSE)). The license is provisionally MIT; finalization is a Phase 5 deliverable. If we change to Apache-2.0, contributor consent will be sought before the change lands.
+By contributing, you agree your contributions are licensed under the project's license (see [`LICENSE`](./LICENSE)). Open core is **MIT**, finalized in Phase 5 — see [`docs/decisions/0001-license-choice.md`](./docs/decisions/0001-license-choice.md). Future Phase 6 `packages/ee/*` modules will ship under a separate commercial license in their own subdirectory; contributions to those will require an explicit CLA when that path opens.

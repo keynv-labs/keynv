@@ -1,11 +1,11 @@
 'use client';
 
-import { Plus, Search, Terminal } from 'lucide-react';
-import { useMemo, useState } from 'react';
 import { Badge, envTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
+import { Plus, Search, Terminal } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { RowActions } from './row-actions';
 import { CreateSecretDialog } from './secret-dialogs';
 
@@ -117,9 +117,7 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
                   aria-hidden
                   className={cn(
                     'inline-block h-1.5 w-1.5 rounded-full',
-                    env.tier === 'production'
-                      ? 'bg-env-prod-fg'
-                      : 'bg-env-dev-fg',
+                    env.tier === 'production' ? 'bg-env-prod-fg' : 'bg-env-dev-fg',
                   )}
                 />
                 {env.name}
@@ -170,11 +168,7 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
           }}
         />
       ) : (
-        <SecretsTable
-          rows={filtered}
-          environments={environments}
-          projectId={projectId}
-        />
+        <SecretsTable rows={filtered} environments={environments} projectId={projectId} />
       )}
 
       <CreateSecretDialog
@@ -224,12 +218,7 @@ function SecretsTable({
               <td className="px-4 py-3 text-fg-muted tabular-nums">v{s.version}</td>
               <td className="px-4 py-3 text-fg-muted">{formatRelative(s.created_at)}</td>
               <td className="px-2 py-3 text-right">
-                <RowActions
-                  projectId={projectId}
-                  env={s.env}
-                  keyName={s.keyName}
-                  alias={s.alias}
-                />
+                <RowActions projectId={projectId} env={s.env} keyName={s.keyName} alias={s.alias} />
               </td>
             </tr>
           ))}
@@ -274,7 +263,8 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <div className="mx-auto max-w-md text-center">
         <h2 className="text-base font-semibold text-fg">No secrets in this project yet</h2>
         <p className="text-sm text-fg-muted mt-2">
-          Add one to start using <code className="font-mono text-fg">@&lt;project&gt;.&lt;env&gt;.&lt;key&gt;</code>{' '}
+          Add one to start using{' '}
+          <code className="font-mono text-fg">@&lt;project&gt;.&lt;env&gt;.&lt;key&gt;</code>{' '}
           references in your code. The keynv CLI resolves them inside a privileged subprocess your
           AI agent never sees.
         </p>
@@ -287,7 +277,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
           <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
             <span className="text-fg-subtle">$ </span>
             <span className="text-fg">keynv exec</span> -- pnpm dev{'\n'}
-            <span className="text-fg-subtle">  </span>resolves{' '}
+            <span className="text-fg-subtle"> </span>resolves{' '}
             <span className="text-fg">@&lt;this-project&gt;.dev.&lt;alias&gt;</span> into the
             subprocess
           </pre>

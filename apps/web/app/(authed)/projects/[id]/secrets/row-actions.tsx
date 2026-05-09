@@ -1,8 +1,5 @@
 'use client';
 
-import { FileText, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
-import Link from 'next/link';
-import { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +7,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { FileText, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 import { DeleteSecretDialog, RotateSecretDialog } from './secret-dialogs';
 
 interface Props {

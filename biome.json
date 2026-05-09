@@ -7,14 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "ignore": [
-      "dist",
-      "build",
-      ".next",
-      "node_modules",
-      "coverage",
-      "*.db*"
-    ]
+    "ignore": ["dist", "build", ".next", "node_modules", "coverage", "*.db*"]
   },
   "formatter": {
     "enabled": true,
@@ -109,6 +102,7 @@
       "include": [
         "apps/server/src/db/connection.ts",
         "apps/server/src/bootstrap.ts",
+        "apps/server/src/auto-bootstrap.ts",
         "apps/server/src/index.ts",
         "apps/cli/src/index.ts"
       ],

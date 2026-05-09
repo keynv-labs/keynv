@@ -75,12 +75,7 @@ export async function validateCliToken(
       expires_at: schema.cli_tokens.expires_at,
     })
     .from(schema.cli_tokens)
-    .where(
-      and(
-        eq(schema.cli_tokens.token_hash, tokenHash),
-        isNull(schema.cli_tokens.revoked_at),
-      ),
-    )
+    .where(and(eq(schema.cli_tokens.token_hash, tokenHash), isNull(schema.cli_tokens.revoked_at)))
     .limit(1);
   const row = rows[0];
   if (!row) return null;

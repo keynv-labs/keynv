@@ -196,11 +196,7 @@ export const approvals = sqliteTable(
   },
   (t) => ({
     by_project_status: index('approvals_by_project_status').on(t.project_id, t.status),
-    by_alias_user: index('approvals_by_alias_user').on(
-      t.alias,
-      t.requester_user_id,
-      t.status,
-    ),
+    by_alias_user: index('approvals_by_alias_user').on(t.alias, t.requester_user_id, t.status),
   }),
 );
 

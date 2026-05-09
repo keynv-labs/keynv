@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { type RouteTab, RouteTabs } from '@/components/ui/route-tabs';
+import type { ReactNode } from 'react';
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const tabs: RouteTab[] = [

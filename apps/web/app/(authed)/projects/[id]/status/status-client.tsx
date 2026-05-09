@@ -1,10 +1,10 @@
 'use client';
 
-import { Activity, ChevronRight, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
 import { Badge, envTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Activity, ChevronRight, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { TestSecretDialog } from './test-dialog';
 
 interface Environment {
@@ -70,10 +70,9 @@ export function StatusClient({
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-fg">Connection tester</div>
             <div className="text-xs text-fg-muted mt-0.5">
-              Run a live test against any secret to confirm it still authenticates.
-              Postgres / MySQL / Redis / SSH / HTTP. The plaintext value never leaves
-              the server process — it lives in memory only for the duration of the
-              test call.
+              Run a live test against any secret to confirm it still authenticates. Postgres / MySQL
+              / Redis / SSH / HTTP. The plaintext value never leaves the server process — it lives
+              in memory only for the duration of the test call.
             </div>
           </div>
         </div>
@@ -115,9 +114,7 @@ export function StatusClient({
 
               <div className="flex-1 min-w-0">
                 <div className="font-mono text-[13px] text-fg truncate">{s.alias}</div>
-                <div className="text-[11px] text-fg-subtle mt-0.5 tabular-nums">
-                  v{s.version}
-                </div>
+                <div className="text-[11px] text-fg-subtle mt-0.5 tabular-nums">v{s.version}</div>
               </div>
 
               <TestSecretDialog

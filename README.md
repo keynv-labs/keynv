@@ -175,8 +175,10 @@ SQLite + Drizzle + libsodium. Full lock-list in [`CLAUDE.md`](./CLAUDE.md).
 
 ## License
 
-Provisional **MIT** for the open core; the LICENSE file lands as a Phase 5
-deliverable. Commercial modules (SSO, HSM, SIEM, multi-step approvals) and the
-keynv Cloud service ship under separate terms in Phase 6. Until LICENSE
-lands, treat the repo as "source-available, not yet OSI-licensed" — fine to
-read, fork, and self-host; please don't redistribute as a product yet.
+Open core ships under **MIT** — see [`LICENSE`](./LICENSE). Decision rationale
+in [`docs/decisions/0001-license-choice.md`](./docs/decisions/0001-license-choice.md).
+
+The Phase 6 commercial modules (`packages/ee/*` — SSO, HSM, SIEM, multi-step
+approvals) and the keynv Cloud service will ship under a separate commercial
+license inside that subdirectory. The boundary is real: nothing under `ee/*`
+imports into the open-core packages, and CI enforces it.

@@ -1,8 +1,8 @@
 'use server';
 
+import { type ApiError, api } from '@/lib/api';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { type ApiError, api } from '@/lib/api';
 
 export interface CreateTokenState {
   /** Validation / API failure. */

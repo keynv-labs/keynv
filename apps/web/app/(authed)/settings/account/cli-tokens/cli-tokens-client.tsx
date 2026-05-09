@@ -1,8 +1,5 @@
 'use client';
 
-import { Check, Copy, KeyRound, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useActionState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,11 +20,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
-import {
-  type CreateTokenState,
-  createCliTokenAction,
-  revokeCliTokenAction,
-} from './actions';
+import { Check, Copy, KeyRound, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useActionState } from 'react';
+import { type CreateTokenState, createCliTokenAction, revokeCliTokenAction } from './actions';
 
 export interface CliTokenRow {
   id: string;
@@ -175,9 +171,8 @@ function CreateTokenDialog() {
           <>
             <DialogTitle>Copy your new token</DialogTitle>
             <DialogDescription>
-              This is the only time the value will be shown. Paste it into your password manager
-              or `keynv login --token` now. If you lose it, revoke this token and create a new
-              one.
+              This is the only time the value will be shown. Paste it into your password manager or
+              `keynv login --token` now. If you lose it, revoke this token and create a new one.
             </DialogDescription>
             <RawTokenReveal token={issued.token} name={issued.name} />
             <DialogFooter>
@@ -189,7 +184,8 @@ function CreateTokenDialog() {
             <DialogTitle>New CLI token</DialogTitle>
             <DialogDescription>
               The token has the same authority as your user account. Use a label that lets you
-              recognise where it&rsquo;s installed (e.g. <span className="font-mono text-fg">laptop-1</span>,{' '}
+              recognise where it&rsquo;s installed (e.g.{' '}
+              <span className="font-mono text-fg">laptop-1</span>,{' '}
               <span className="font-mono text-fg">ci-runner</span>).
             </DialogDescription>
 
@@ -271,9 +267,7 @@ function RawTokenReveal({ token, name }: { token: string; name: string }) {
           )}
         </button>
       </div>
-      <p className="text-[11px] text-warn">
-        Copy this now. You will not see it again.
-      </p>
+      <p className="text-[11px] text-warn">Copy this now. You will not see it again.</p>
     </div>
   );
 }
@@ -303,9 +297,9 @@ function RevokeAction({ id, name }: { id: string; name: string }) {
             <div className="flex-1 min-w-0">
               <AlertDialogTitle>Revoke this token?</AlertDialogTitle>
               <AlertDialogDescription>
-                <span className="font-mono text-fg">{name}</span> will stop working immediately.
-                Any agent using it (CI runner, headless service) will need to be re-issued. This
-                is irreversible.
+                <span className="font-mono text-fg">{name}</span> will stop working immediately. Any
+                agent using it (CI runner, headless service) will need to be re-issued. This is
+                irreversible.
               </AlertDialogDescription>
             </div>
           </div>

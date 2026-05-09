@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useActionState } from 'react';
 import { type CreateProjectState, createProjectAction } from './actions';
 
 export function CreateProjectForm() {
@@ -37,11 +37,12 @@ export function CreateProjectForm() {
         label="Environments"
         hint={
           <>
-            Comma-separated. Format: <code className="font-mono text-fg-muted">name[:tier[:approval]]</code>.
-            Tier is <code className="font-mono text-fg-muted">production</code> or{' '}
+            Comma-separated. Format:{' '}
+            <code className="font-mono text-fg-muted">name[:tier[:approval]]</code>. Tier is{' '}
+            <code className="font-mono text-fg-muted">production</code> or{' '}
             <code className="font-mono text-fg-muted">non-production</code> (default). Append{' '}
-            <code className="font-mono text-fg-muted">:approval</code> to require lead sign-off
-            for developer reads.
+            <code className="font-mono text-fg-muted">:approval</code> to require lead sign-off for
+            developer reads.
           </>
         }
       >

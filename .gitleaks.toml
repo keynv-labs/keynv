@@ -47,4 +47,13 @@ regexes = [
   '''your-12-plus-char-password''',
   '''owner-password-12345''',
   '''developer-password-12345''',
+
+  # Web's local-dev autofill default for the login form. NODE_ENV is
+  # inlined at build time; the constant is null in production builds.
+  '''bir-uzun-12-plus-parola''',
+
+  # Alphabet used by the temp-password generator in /admin/users
+  # InviteUserDialog — the no-look-alike charset (I/l/0/O/1 omitted).
+  # Not a secret; just a constant character set.
+  '''ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789''',
 ]

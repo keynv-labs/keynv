@@ -19,9 +19,17 @@ const CreateBody = z.object({
     .string()
     .min(1)
     .max(64)
-    .regex(/^[A-Za-z0-9][A-Za-z0-9 _.-]*$/, 'Name may only contain letters, digits, _ . - and spaces'),
+    .regex(
+      /^[A-Za-z0-9][A-Za-z0-9 _.-]*$/,
+      'Name may only contain letters, digits, _ . - and spaces',
+    ),
   /** Optional expiry in seconds. Omit for non-expiring tokens. */
-  expires_in_seconds: z.coerce.number().int().positive().max(5 * 365 * 24 * 3600).optional(),
+  expires_in_seconds: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(5 * 365 * 24 * 3600)
+    .optional(),
 });
 
 export function cliTokenRoutes(deps: CliTokenDeps): Hono {

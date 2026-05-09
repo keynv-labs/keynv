@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useEffect, useRef } from 'react';
+import { useActionState } from 'react';
 import { type PasswordState, changePasswordAction } from './actions';
 
 export function ChangePasswordForm() {

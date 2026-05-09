@@ -1,11 +1,11 @@
 'use client';
 
+import { logoutAction } from '@/app/(authed)/actions';
+import { cn } from '@/lib/cn';
 import { FolderKanban, ScrollText, Settings, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
-import { logoutAction } from '@/app/(authed)/actions';
-import { cn } from '@/lib/cn';
 
 interface NavItem {
   href: string;

@@ -1,5 +1,7 @@
 'use client';
 
+import { logoutAction } from '@/app/(authed)/actions';
+import { cn } from '@/lib/cn';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Command } from 'cmdk';
 import {
@@ -21,8 +23,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { logoutAction } from '@/app/(authed)/actions';
-import { cn } from '@/lib/cn';
 
 /**
  * App-wide command palette + global keyboard shortcuts.
@@ -271,8 +271,7 @@ function Kbd({ children, ...rest }: ComponentProps<'kbd'>) {
 
 function GPrefixHint() {
   return (
-    <div
-      role="status"
+    <output
       aria-live="polite"
       className={cn(
         'fixed bottom-4 right-4 z-30',
@@ -293,6 +292,6 @@ function GPrefixHint() {
       <span className="mx-2 text-fg-subtle">·</span>
       <span className="font-mono text-fg">u</span>
       <span className="text-fg-muted"> users</span>
-    </div>
+    </output>
   );
 }

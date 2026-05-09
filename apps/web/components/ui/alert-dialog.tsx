@@ -1,8 +1,8 @@
 'use client';
 
+import { cn } from '@/lib/cn';
 import * as RadixAlertDialog from '@radix-ui/react-alert-dialog';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { cn } from '@/lib/cn';
 
 export const AlertDialog = RadixAlertDialog.Root;
 export const AlertDialogTrigger = RadixAlertDialog.Trigger;
@@ -42,10 +42,7 @@ export function AlertDialogTitle({
   ...rest
 }: ComponentPropsWithoutRef<typeof RadixAlertDialog.Title> & { children: ReactNode }) {
   return (
-    <RadixAlertDialog.Title
-      className={cn('text-base font-semibold text-fg', className)}
-      {...rest}
-    >
+    <RadixAlertDialog.Title className={cn('text-base font-semibold text-fg', className)} {...rest}>
       {children}
     </RadixAlertDialog.Title>
   );
@@ -57,10 +54,7 @@ export function AlertDialogDescription({
   ...rest
 }: ComponentPropsWithoutRef<typeof RadixAlertDialog.Description> & { children: ReactNode }) {
   return (
-    <RadixAlertDialog.Description
-      className={cn('mt-1 text-sm text-fg-muted', className)}
-      {...rest}
-    >
+    <RadixAlertDialog.Description className={cn('mt-1 text-sm text-fg-muted', className)} {...rest}>
       {children}
     </RadixAlertDialog.Description>
   );

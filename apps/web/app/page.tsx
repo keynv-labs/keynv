@@ -1,3 +1,6 @@
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { getSession } from '@/lib/session';
 import {
   ArrowRight,
   CheckCircle2,
@@ -10,9 +13,6 @@ import {
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { getSession } from '@/lib/session';
 
 export const metadata: Metadata = {
   title: 'keynv — secrets your AI agent can’t leak',
@@ -56,7 +56,10 @@ function TopNav({ isAuthed }: { isAuthed: boolean }) {
         </Link>
 
         <nav className="hidden md:flex items-center gap-5 text-sm text-fg-muted ml-4">
-          <a href="#how-it-works" className="hover:text-fg transition-colors duration-fast ease-snap">
+          <a
+            href="#how-it-works"
+            className="hover:text-fg transition-colors duration-fast ease-snap"
+          >
             How it works
           </a>
           <a href="#pillars" className="hover:text-fg transition-colors duration-fast ease-snap">
@@ -109,8 +112,8 @@ function Hero({ isAuthed }: { isAuthed: boolean }) {
 
         <p className="mt-5 text-base md:text-lg text-fg-muted max-w-2xl mx-auto leading-relaxed">
           Self-hosted vault for your team&rsquo;s API keys, database passwords, and SSH credentials.
-          Reference them everywhere by alias — your AI coding agent sees the alias literal,
-          never the value.
+          Reference them everywhere by alias — your AI coding agent sees the alias literal, never
+          the value.
         </p>
 
         <div className="mt-8 flex items-center justify-center gap-3">
@@ -152,8 +155,7 @@ function GridBackdrop() {
         backgroundImage:
           'linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)',
         backgroundSize: '32px 32px',
-        maskImage:
-          'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,0,0,0.6), transparent 70%)',
+        maskImage: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,0,0,0.6), transparent 70%)',
         WebkitMaskImage:
           'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,0,0,0.6), transparent 70%)',
         opacity: 0.5,
@@ -172,19 +174,27 @@ function CodeFrame() {
         <span className="ml-2 text-[11px] font-mono text-fg-subtle">~/billing-app</span>
       </div>
       <pre className="px-4 py-4 font-mono text-[12px] sm:text-[13px] leading-relaxed overflow-x-auto whitespace-pre">
-        <span className="text-fg-subtle">$</span>{' '}
-        <span className="text-fg">keynv</span> exec --{'\n'}
-        <span className="text-fg-subtle">    </span>
+        <span className="text-fg-subtle">$</span> <span className="text-fg">keynv</span> exec --
+        {'\n'}
+        <span className="text-fg-subtle"> </span>
         <span className="text-fg">mysql</span> -p
-        <span className="text-accent">@billing.prod.db_password</span>{'\n'}
-        <span className="text-fg-subtle">       \\</span> <span className="text-fg-muted">// what your AI agent sees in tool input + output</span>
+        <span className="text-accent">@billing.prod.db_password</span>
+        {'\n'}
+        <span className="text-fg-subtle"> \\</span>{' '}
+        <span className="text-fg-muted">
+          comment: what your AI agent sees in tool input + output
+        </span>
         {'\n\n'}
         <span className="text-fg-subtle">$</span> ps aux | grep mysql{'\n'}
-        <span className="text-fg-muted">  mysql -p</span>
+        <span className="text-fg-muted"> mysql -p</span>
         <span className="text-success">******</span>
         <span className="text-fg-muted"> -h</span>
-        <span className="text-success">******</span>{'\n'}
-        <span className="text-fg-subtle">       \\</span> <span className="text-fg-muted">// argv redacted; subprocess holds the real values</span>
+        <span className="text-success">******</span>
+        {'\n'}
+        <span className="text-fg-subtle"> \\</span>{' '}
+        <span className="text-fg-muted">
+          comment: argv redacted; subprocess holds the real values
+        </span>
       </pre>
     </div>
   );
@@ -206,9 +216,9 @@ function Problem() {
         <p className="mt-5 text-base text-fg-muted leading-relaxed">
           Developers leak credentials constantly — <code className="font-mono text-fg">.env</code>{' '}
           files committed to repos, keys left in shell history, tokens in tool outputs. AI agents
-          permanently residing in your terminal made it worse: every command, every file, every
-          diff is shipped to a vendor&rsquo;s logs. Existing vaults (HashiCorp, Doppler, 1Password)
-          are mature but none were designed around AI agents being there.
+          permanently residing in your terminal made it worse: every command, every file, every diff
+          is shipped to a vendor&rsquo;s logs. Existing vaults (HashiCorp, Doppler, 1Password) are
+          mature but none were designed around AI agents being there.
         </p>
 
         <ul className="mt-8 grid gap-3 sm:grid-cols-3 text-sm">
@@ -260,13 +270,13 @@ function Pillars() {
             title="AI-safety layer"
             tone="warn"
             bullets={[
-              <>
+              <span key="alias">
                 <code className="font-mono text-fg">@project.env.key</code> aliases everywhere
-              </>,
-              <>
-                <code className="font-mono text-fg">keynv exec</code> spawns a privileged
-                subprocess your agent can&rsquo;t see
-              </>,
+              </span>,
+              <span key="exec">
+                <code className="font-mono text-fg">keynv exec</code> spawns a privileged subprocess
+                your agent can&rsquo;t see
+              </span>,
               'MCP server returns single-use refs, never values',
               'Output redactor (regex + entropy) on every tool result',
             ]}
@@ -300,14 +310,12 @@ function Pillar({
   bullets: React.ReactNode[];
 }) {
   const ringClass =
-    tone === 'success'
-      ? 'text-success'
-      : tone === 'warn'
-        ? 'text-warn'
-        : 'text-fg-muted';
+    tone === 'success' ? 'text-success' : tone === 'warn' ? 'text-warn' : 'text-fg-muted';
   return (
     <article className="rounded-lg border border-border bg-bg-elevated p-5">
-      <div className={`inline-flex h-9 w-9 items-center justify-center rounded-md bg-bg ${ringClass}`}>
+      <div
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-md bg-bg ${ringClass}`}
+      >
         {icon}
       </div>
       <h3 className="mt-4 text-base font-semibold text-fg">{title}</h3>
@@ -353,8 +361,8 @@ function HowItWorks() {
             body={
               <>
                 Your team adds secrets to the keynv server with the CLI or web UI. Values are
-                encrypted at rest with a per-project DEK; the master KEK lives in the OS
-                keychain or HSM.
+                encrypted at rest with a per-project DEK; the master KEK lives in the OS keychain or
+                HSM.
               </>
             }
           />
@@ -376,9 +384,9 @@ function HowItWorks() {
             title="Resolve safely"
             body={
               <>
-                <code className="font-mono text-fg">keynv exec</code> spawns a subprocess with
-                the real value injected via stdin or a temp file. The agent&rsquo;s process
-                tree, env vars, and tool output are scrubbed.
+                <code className="font-mono text-fg">keynv exec</code> spawns a subprocess with the
+                real value injected via stdin or a temp file. The agent&rsquo;s process tree, env
+                vars, and tool output are scrubbed.
               </>
             }
           />

@@ -4,9 +4,7 @@ import { CreateProjectForm } from './form';
 export default function NewProjectPage() {
   return (
     <div className="space-y-6 max-w-xl">
-      <Breadcrumb
-        segments={[{ label: 'Projects', href: '/projects' }, { label: 'New project' }]}
-      />
+      <Breadcrumb segments={[{ label: 'Projects', href: '/projects' }, { label: 'New project' }]} />
 
       <header>
         <h1 className="text-[22px] font-semibold tracking-tight">New project</h1>

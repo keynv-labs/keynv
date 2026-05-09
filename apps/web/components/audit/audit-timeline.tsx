@@ -1,9 +1,9 @@
 'use client';
 
-import { ChevronDown, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
+import { ChevronDown, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import {
   CATEGORY_LABELS,
   type Category,
@@ -154,9 +154,7 @@ export function AuditTimeline({ entries }: Props) {
 
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-border bg-bg-elevated p-10 text-center text-sm text-fg-muted">
-          {entries.length === 0
-            ? 'No audit entries yet.'
-            : 'No audit entries match those filters.'}
+          {entries.length === 0 ? 'No audit entries yet.' : 'No audit entries match those filters.'}
         </div>
       ) : (
         <div className="space-y-5">
@@ -209,9 +207,7 @@ function TimelineRow({
           aria-hidden
           className={cn(
             'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
-            isSystem
-              ? 'bg-bg text-fg-muted'
-              : 'bg-bg-elevated-hover text-fg',
+            isSystem ? 'bg-bg text-fg-muted' : 'bg-bg-elevated-hover text-fg',
           )}
         >
           {initials}
@@ -263,9 +259,7 @@ function TimelineRow({
             <span className="font-mono text-[12px] text-fg-muted">{entry.actor_agent}</span>
           </DetailRow>
           <DetailRow label="Timestamp">
-            <span className="text-[12px] text-fg-muted">
-              {new Date(entry.ts).toLocaleString()}
-            </span>
+            <span className="text-[12px] text-fg-muted">{new Date(entry.ts).toLocaleString()}</span>
           </DetailRow>
           <DetailRow label="Payload">
             <pre className="font-mono text-[11px] text-fg-muted leading-relaxed whitespace-pre-wrap break-all">
@@ -294,4 +288,3 @@ function DetailRow({
     </div>
   );
 }
-

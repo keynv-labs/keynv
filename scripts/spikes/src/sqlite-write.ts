@@ -11,11 +11,11 @@
  *  - Batched (1000/tx):  > 50K rows/s sustained
  */
 
-import Database from 'better-sqlite3';
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import Database from 'better-sqlite3';
 
 const ROWS = 100_000;
 const BATCH = 1000;

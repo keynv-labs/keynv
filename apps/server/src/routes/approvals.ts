@@ -122,9 +122,7 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
     const project = await loadProject(deps.db, projectId, user.org_id);
     if (!project) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    if (
-      authorize('approval.grant', { user, resource: { project_id: projectId } }) !== 'allow'
-    ) {
+    if (authorize('approval.grant', { user, resource: { project_id: projectId } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
 
@@ -182,9 +180,7 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
     const project = await loadProject(deps.db, projectId, user.org_id);
     if (!project) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    if (
-      authorize('approval.grant', { user, resource: { project_id: projectId } }) !== 'allow'
-    ) {
+    if (authorize('approval.grant', { user, resource: { project_id: projectId } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
 

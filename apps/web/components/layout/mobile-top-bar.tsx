@@ -1,10 +1,10 @@
 'use client';
 
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { SidebarContent } from './sidebar';
 
 interface Props {
@@ -16,7 +16,11 @@ export function MobileTopBar({ email, role }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close drawer on navigation (path change).
+  // Close the drawer whenever the path changes. The effect body
+  // doesn't read `pathname` directly — we list it as a dep purely to
+  // re-run the close on each navigation. Biome's exhaustive-deps rule
+  // doesn't have a way to express that intent, so it's ignored here.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run on path change is the intent
   useEffect(() => {
     setOpen(false);
   }, [pathname]);

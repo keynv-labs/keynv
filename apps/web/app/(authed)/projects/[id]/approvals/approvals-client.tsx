@@ -1,8 +1,5 @@
 'use client';
 
-import { Check, ShieldAlert, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useActionState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +20,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
+import { Check, ShieldAlert, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useActionState } from 'react';
 import { type GrantState, denyApprovalAction, grantApprovalAction } from './actions';
 
 export interface ApprovalRow {
@@ -118,8 +118,8 @@ export function ApprovalsClient({
             <div className="text-sm font-medium text-fg">Production-access approvals</div>
             <div className="text-xs text-fg-muted mt-0.5">
               When a developer hits a secret in an environment marked{' '}
-              <span className="font-mono text-fg">require_approval</span>, a pending row
-              appears here. Lead / admin / owner grant or deny.
+              <span className="font-mono text-fg">require_approval</span>, a pending row appears
+              here. Lead / admin / owner grant or deny.
               {canDecide ? null : (
                 <>
                   {' '}
@@ -173,9 +173,7 @@ export function ApprovalsClient({
                 <div className="font-mono text-[13px] text-fg break-all">{a.alias}</div>
                 <div className="text-[11px] text-fg-subtle mt-0.5">
                   Requested by{' '}
-                  <span className="text-fg-muted">
-                    {a.requester_email ?? a.requester_user_id}
-                  </span>
+                  <span className="text-fg-muted">{a.requester_email ?? a.requester_user_id}</span>
                   {' · '}
                   {relative(a.created_at)}
                   {a.status === 'granted' && a.expires_at ? (
@@ -233,8 +231,8 @@ function GrantDialog({
         <DialogContent>
           <DialogTitle>Grant access</DialogTitle>
           <DialogDescription>
-            Approving <span className="font-mono text-fg">{alias}</span>. The requester gains
-            read access for the window below; after expiry they re-request.
+            Approving <span className="font-mono text-fg">{alias}</span>. The requester gains read
+            access for the window below; after expiry they re-request.
           </DialogDescription>
 
           <form action={action} className="mt-4 space-y-3">
@@ -331,7 +329,13 @@ function DenyDialog({
             <input type="hidden" name="project_id" value={projectId} />
             <input type="hidden" name="approval_id" value={approvalId} />
 
-            <Field label={<>Reason for denying <span className="font-mono text-fg">{alias}</span></>}>
+            <Field
+              label={
+                <>
+                  Reason for denying <span className="font-mono text-fg">{alias}</span>
+                </>
+              }
+            >
               <Input
                 name="reason"
                 value={reason}

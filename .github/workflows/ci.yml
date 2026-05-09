@@ -21,7 +21,7 @@ jobs:
           version: 9.12.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -36,9 +36,14 @@ jobs:
           version: 9.12.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Build workspace deps so cross-package types resolve (e.g.
+      # @keynv/redactor's dist/ types are needed by apps/server).
+      # CLI is excluded because it relies on Bun's --compile; web is
+      # excluded because Next.js handles its own typecheck pass.
+      - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
       - run: pnpm typecheck
 
   test:
@@ -62,10 +67,6 @@ jobs:
         with:
           bun-version: latest
       - run: pnpm install --frozen-lockfile
-      # Build workspace deps first so testers (etc.) can resolve
-      # `@keynv/redactor` via dist/ at test time. CLI binary is
-      # excluded — it requires Bun's --compile, which the dedicated
-      # release workflow handles.
       - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
       - run: pnpm test
 
@@ -76,6 +77,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The gitleaks-action wrapper requires a paid license for org
+      # accounts; the underlying gitleaks binary is OSS and works
+      # fine. Install via the official tarball + run with the
+      # committed config.
+      - name: Install gitleaks
+        run: |
+          set -e
+          GL_VERSION=8.21.2
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/gitleaks_${GL_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Scan committed history
+        run: gitleaks git -v --redact

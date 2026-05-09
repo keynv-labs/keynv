@@ -13,9 +13,9 @@ describe('privileged-subprocess: value never enters the agent process tree', () 
   it.todo(
     'keynv exec strips secret-shaped env vars from the subprocess env unless explicitly via --via-env',
   );
+  it.todo('--via-stdin alias path delivers the value through stdin and never appears in argv');
   it.todo(
-    '--via-stdin alias path delivers the value through stdin and never appears in argv',
+    'subprocess stdout/stderr is line-buffered through the redactor before the agent reads it',
   );
-  it.todo('subprocess stdout/stderr is line-buffered through the redactor before the agent reads it');
   it.todo('--no-redact requires explicit flag and emits an audit warning');
 });

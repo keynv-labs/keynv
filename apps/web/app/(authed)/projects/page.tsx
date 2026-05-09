@@ -1,12 +1,12 @@
-import { ArrowUpRight, Plus, Terminal } from 'lucide-react';
-import Link from 'next/link';
-import { Suspense } from 'react';
-import { Badge, envTone } from '@/components/ui/badge';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { Badge, envTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { ArrowUpRight, Plus, Terminal } from 'lucide-react';
+import Link from 'next/link';
+import { Suspense } from 'react';
 
 interface ProjectListItem {
   id: string;
@@ -73,9 +73,7 @@ export default async function ProjectsPage() {
       <header className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-[22px] font-semibold tracking-tight leading-tight">Projects</h1>
-          <p className="text-sm text-fg-muted mt-1">
-            Operational state across your organization.
-          </p>
+          <p className="text-sm text-fg-muted mt-1">Operational state across your organization.</p>
         </div>
         {canCreate ? (
           <Link href={{ pathname: '/projects/new' }}>
@@ -226,7 +224,7 @@ function EmptyState({ canCreate }: { canCreate: boolean }) {
           </div>
           <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
             <span className="text-fg-subtle">$ </span>keynv exec -- pnpm dev{'\n'}
-            <span className="text-fg-subtle">  </span>resolves{' '}
+            <span className="text-fg-subtle"> </span>resolves{' '}
             <span className="text-fg">@billing.dev.STRIPE_KEY</span> into the subprocess
           </pre>
         </div>

@@ -1,6 +1,6 @@
-import { Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
+import { Users } from 'lucide-react';
 import { AddMemberDialog, RemoveMemberAction } from './forms';
 
 interface Member {
@@ -42,12 +42,7 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
 
       {members.length === 0 ? (
         <div className="rounded-lg border border-border bg-bg-elevated p-10 text-center">
-          <Users
-            size={20}
-            className="mx-auto mb-3 text-fg-subtle"
-            strokeWidth={1.75}
-            aria-hidden
-          />
+          <Users size={20} className="mx-auto mb-3 text-fg-subtle" strokeWidth={1.75} aria-hidden />
           <p className="text-sm text-fg-muted">No members on this project yet.</p>
           <p className="text-xs text-fg-subtle mt-1">
             Add a teammate to grant them access. Roles control what they can read or write.

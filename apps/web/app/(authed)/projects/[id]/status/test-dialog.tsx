@@ -1,8 +1,5 @@
 'use client';
 
-import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
-import { type ReactNode, useEffect, useState } from 'react';
-import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +11,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
+import { type ReactNode, useEffect, useState } from 'react';
+import { useActionState } from 'react';
 import { type TestActionState, runTestAction } from './actions';
 
 type TesterType = 'postgres' | 'mysql' | 'redis' | 'ssh' | 'http';
@@ -54,9 +54,8 @@ export function TestSecretDialog({ projectId, env, keyName, alias, trigger }: Pr
           Test <span className="font-mono text-fg">{alias}</span>
         </DialogTitle>
         <DialogDescription>
-          Pick a tester type and target. The secret value is decrypted server-side
-          only for the duration of this call. Result is sanitised before it returns —
-          no value will appear here.
+          Pick a tester type and target. The secret value is decrypted server-side only for the
+          duration of this call. Result is sanitised before it returns — no value will appear here.
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
@@ -295,7 +294,11 @@ function BuildJson({ fields }: { fields: FieldDef[] }) {
   );
 }
 
-function ResultBlock({ result }: { result: { ok: boolean; latency_ms: number; error?: string; info?: Record<string, unknown> } }) {
+function ResultBlock({
+  result,
+}: {
+  result: { ok: boolean; latency_ms: number; error?: string; info?: Record<string, unknown> };
+}) {
   return (
     <div
       className={cn(
@@ -311,12 +314,8 @@ function ResultBlock({ result }: { result: { ok: boolean; latency_ms: number; er
         ) : (
           <XCircle size={14} className="text-danger shrink-0" strokeWidth={2.25} />
         )}
-        <span className="font-medium">
-          {result.ok ? 'Connected' : 'Failed'}
-        </span>
-        <span className="ml-auto text-xs text-fg-muted tabular-nums">
-          {result.latency_ms}ms
-        </span>
+        <span className="font-medium">{result.ok ? 'Connected' : 'Failed'}</span>
+        <span className="ml-auto text-xs text-fg-muted tabular-nums">{result.latency_ms}ms</span>
       </div>
       {result.error ? (
         <div className="mt-2 font-mono text-[12px] text-danger break-all">{result.error}</div>

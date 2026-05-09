@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useActionState } from 'react';
 import { type LoginState, loginAction } from './actions';
 
 /**
@@ -56,8 +56,7 @@ export function LoginForm({ next }: { next: string }) {
 
       {DEV_AUTOFILL ? (
         <p className="text-[11px] text-fg-subtle text-center pt-1">
-          Dev autofill is on. Press{' '}
-          <kbd className="font-mono text-fg-muted">Enter</kbd> to sign in.
+          Dev autofill is on. Press <kbd className="font-mono text-fg-muted">Enter</kbd> to sign in.
         </p>
       ) : null}
     </form>

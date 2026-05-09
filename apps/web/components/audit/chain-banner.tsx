@@ -1,9 +1,9 @@
 'use client';
 
+import { type VerifyState, verifyChainAction } from '@/app/(authed)/projects/[id]/audit/actions';
+import { Button } from '@/components/ui/button';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useActionState } from 'react';
-import { Button } from '@/components/ui/button';
-import { type VerifyState, verifyChainAction } from '@/app/(authed)/projects/[id]/audit/actions';
 
 export function ChainBanner() {
   const [state, action, pending] = useActionState<VerifyState, FormData>(verifyChainAction, {});
@@ -49,14 +49,12 @@ export function ChainBanner() {
           <div className="text-xs text-fg-muted mt-0.5">
             {tone === 'verified' ? (
               <>
-                Verified{' '}
-                <span className="tabular-nums text-fg">{state.checked}</span>{' '}
+                Verified <span className="tabular-nums text-fg">{state.checked}</span>{' '}
                 {state.checked === 1 ? 'entry' : 'entries'}. Hash chain is intact.
               </>
             ) : tone === 'broken' ? (
               <>
-                First mismatch at id{' '}
-                <span className="font-mono text-fg">{state.broken_at_id}</span>
+                First mismatch at id <span className="font-mono text-fg">{state.broken_at_id}</span>
                 {state.reason ? (
                   <>
                     {' · '}
@@ -68,7 +66,9 @@ export function ChainBanner() {
             ) : tone === 'error' ? (
               <span className="text-danger">{state.error}</span>
             ) : (
-              <>Tamper-evident log. Recompute the hash chain to confirm no entry has been altered.</>
+              <>
+                Tamper-evident log. Recompute the hash chain to confirm no entry has been altered.
+              </>
             )}
           </div>
         </div>

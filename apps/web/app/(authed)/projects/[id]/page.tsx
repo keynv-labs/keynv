@@ -1,8 +1,8 @@
+import { Badge, envTone } from '@/components/ui/badge';
+import { type ApiError, api } from '@/lib/api';
 import { ArrowUpRight, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Badge, envTone } from '@/components/ui/badge';
-import { type ApiError, api } from '@/lib/api';
 
 interface ProjectDetail {
   id: string;
@@ -176,9 +176,7 @@ function SectionHeader({
 }) {
   return (
     <div className="px-1 mb-2 flex items-center justify-between">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-        {title}
-      </h2>
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{title}</h2>
       {children}
     </div>
   );

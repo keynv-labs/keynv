@@ -1,7 +1,7 @@
+import { cn } from '@/lib/cn';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment } from 'react';
-import { cn } from '@/lib/cn';
 
 export interface BreadcrumbSegment {
   label: string;
@@ -18,10 +18,7 @@ interface Props {
 
 export function Breadcrumb({ segments, className }: Props) {
   return (
-    <nav
-      aria-label="Breadcrumb"
-      className={cn('flex items-center gap-1.5 text-sm', className)}
-    >
+    <nav aria-label="Breadcrumb" className={cn('flex items-center gap-1.5 text-sm', className)}>
       {segments.map((segment, i) => {
         const isLast = i === segments.length - 1;
         const labelClass = cn(

@@ -1,8 +1,5 @@
 'use client';
 
-import { Check, Copy, MoreHorizontal, Plus, RefreshCw, Search, Trash2, UserCog } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useActionState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +29,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
+import {
+  Check,
+  Copy,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  UserCog,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useActionState } from 'react';
 import {
   type UserActionState,
   changeUserRoleAction,
@@ -168,9 +177,9 @@ function UserRowMenu({ user, disabled }: { user: OrgUser; disabled: boolean }) {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuLabel>Role</DropdownMenuLabel>
-          <RoleItem user={user} role="admin" />
-          <RoleItem user={user} role="developer" />
-          <RoleItem user={user} role="reader" />
+          <RoleItem user={user} targetRole="admin" />
+          <RoleItem user={user} targetRole="developer" />
+          <RoleItem user={user} targetRole="reader" />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={() => setRemoveOpen(true)}
@@ -202,12 +211,12 @@ function UserRowMenu({ user, disabled }: { user: OrgUser; disabled: boolean }) {
 
 function RoleItem({
   user,
-  role,
+  targetRole,
 }: {
   user: OrgUser;
-  role: 'admin' | 'developer' | 'reader';
+  targetRole: 'admin' | 'developer' | 'reader';
 }) {
-  const isCurrent = user.org_role === role;
+  const isCurrent = user.org_role === targetRole;
   return (
     <DropdownMenuItem
       onSelect={(e) => {
@@ -215,7 +224,7 @@ function RoleItem({
         if (isCurrent) return;
         const fd = new FormData();
         fd.set('user_id', user.id);
-        fd.set('org_role', role);
+        fd.set('org_role', targetRole);
         void changeUserRoleAction(fd);
       }}
       className={cn(
@@ -224,7 +233,7 @@ function RoleItem({
       )}
     >
       <UserCog size={13} className="text-fg-muted" />
-      {role}
+      {targetRole}
       {isCurrent ? <span className="ml-auto text-[11px] text-fg-subtle">current</span> : null}
     </DropdownMenuItem>
   );
@@ -232,8 +241,7 @@ function RoleItem({
 
 // Avoids ambiguous-looking glyphs (I/l/0/O/1) so the temp password is
 // transcribable when the admin shares it with the new user.
-const PASSWORD_ALPHABET =
-  'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
 
 function generateTempPassword(length = 16): string {
   const buf = new Uint8Array(length);
@@ -254,10 +262,7 @@ function InviteUserDialog() {
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [copied, setCopied] = useState(false);
-  const [state, action, pending] = useActionState<UserActionState, FormData>(
-    inviteUserAction,
-    {},
-  );
+  const [state, action, pending] = useActionState<UserActionState, FormData>(inviteUserAction, {});
 
   useEffect(() => {
     if (state.ok) setOpen(false);
@@ -309,7 +314,10 @@ function InviteUserDialog() {
             />
           </Field>
 
-          <Field label="Temporary password" hint="Auto-generated, 16 chars. Click ↻ to roll a new one.">
+          <Field
+            label="Temporary password"
+            hint="Auto-generated, 16 chars. Click ↻ to roll a new one."
+          >
             <div className="flex items-stretch gap-1.5">
               <Input
                 type="text"

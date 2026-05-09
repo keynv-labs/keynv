@@ -1,9 +1,9 @@
-import { redirect } from 'next/navigation';
-import type { ReactNode } from 'react';
 import { AppPalette } from '@/components/command-palette/app-palette';
 import { MobileTopBar } from '@/components/layout/mobile-top-bar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 export default async function AuthedLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
