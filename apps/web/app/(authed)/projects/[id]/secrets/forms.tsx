@@ -29,7 +29,7 @@ export function CreateSecretForm({
         <select
           name="env"
           required
-          className="block w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-fg)]"
+          className="block w-full rounded-md border border-border bg-bg-elevated px-3 py-2 text-sm text-fg"
         >
           {environments.map((e) => (
             <option key={e} value={e}>

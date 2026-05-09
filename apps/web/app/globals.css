@@ -1,18 +1,60 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --color-bg: #0b0d10;
-  --color-bg-card: #14171c;
-  --color-bg-card-hover: #1a1d23;
-  --color-border: #262a31;
-  --color-fg: #e7eaef;
-  --color-fg-muted: #8a93a0;
+  /* Surfaces */
+  --color-bg: #0a0c0f;
+  --color-bg-elevated: #13161b;
+  --color-bg-elevated-hover: #181c22;
+  --color-bg-overlay: #1c2028;
+
+  /* Borders */
+  --color-border: #23272f;
+  --color-border-strong: #2f343d;
+
+  /* Foreground */
+  --color-fg: #e9ecf2;
+  --color-fg-muted: #9098a4;
+  --color-fg-subtle: #5d6470;
+  --color-fg-on-accent: #ffffff;
+
+  /* Accent — single primary, used for primary action only (one per view) */
   --color-accent: #5b8def;
-  --color-accent-hover: #4a7ad6;
-  --color-danger: #e57373;
-  --color-success: #79c98a;
-  --color-warn: #d9b34a;
-  --font-mono: "ui-monospace", "SFMono-Regular", "Menlo", "monospace";
+  --color-accent-hover: #7099f3;
+  --color-accent-pressed: #4677d6;
+
+  /* Semantic */
+  --color-success: #3ec98a;
+  --color-warn: #e0a93a;
+  --color-danger: #e25555;
+
+  /* Environment tier — semantic coloring for dev / staging / prod badges */
+  --color-env-dev-fg: #9098a4;
+  --color-env-dev-bg: #21242b;
+  --color-env-dev-border: #2f343d;
+  --color-env-stg-fg: #e0a93a;
+  --color-env-stg-bg: #3a2f15;
+  --color-env-stg-border: #5a4520;
+  --color-env-prod-fg: #e57373;
+  --color-env-prod-bg: #3a1f1f;
+  --color-env-prod-border: #6b3030;
+
+  /* Typography */
+  --font-sans: 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto',
+    sans-serif;
+  --font-mono: 'JetBrains Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Motion */
+  --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-snap: cubic-bezier(0.45, 0, 0.55, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
 }
 
 * {
@@ -23,16 +65,15 @@ html,
 body {
   background: var(--color-bg);
   color: var(--color-fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
   margin: 0;
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--color-fg);
   text-decoration: none;
-}
-a:hover {
-  color: var(--color-accent-hover);
 }
 
 code,
@@ -40,4 +81,60 @@ pre,
 .mono {
   font-family: var(--font-mono);
   font-size: 0.92em;
+}
+
+/* Subtle scrollbar styling — native scrollbars look broken on dark surfaces */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border: 2px solid var(--color-bg);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fg-subtle);
+}
+
+/* Focus ring — used by interactive primitives via .focus-ring or focus-visible utilities */
+:where(button, a, input, textarea, select, [role='button'], [role='option']):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px color-mix(in oklab, var(--color-accent) 50%, transparent);
+  border-radius: var(--radius-md);
+}
+
+/* List-item enter animation — opacity + 4px translate, 180ms */
+@keyframes list-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-list-enter {
+  animation: list-item-enter var(--duration-base) var(--ease-snap) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

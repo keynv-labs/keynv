@@ -1,26 +1,40 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes } from 'react';
+import { cn } from '@/lib/cn';
 
-type Variant = 'primary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Size = 'sm' | 'md';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
-  children: ReactNode;
+  size?: Size;
 }
 
-const styles: Record<Variant, string> = {
-  primary: 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)]',
-  ghost:
-    'border border-[var(--color-border)] text-[var(--color-fg)] hover:bg-[var(--color-bg-card-hover)]',
-  danger: 'bg-[var(--color-danger)] text-white hover:opacity-90',
+const variantStyles: Record<Variant, string> = {
+  primary: 'bg-accent text-fg-on-accent hover:bg-accent-hover active:bg-accent-pressed',
+  secondary:
+    'bg-bg-elevated border border-border text-fg hover:bg-bg-elevated-hover hover:border-border-strong',
+  ghost: 'text-fg-muted hover:text-fg hover:bg-bg-elevated-hover',
+  danger: 'bg-danger text-white hover:opacity-90',
 };
 
-export function Button({ variant = 'primary', className = '', children, ...rest }: Props) {
+const sizeStyles: Record<Size, string> = {
+  sm: 'h-7 px-2.5 text-xs gap-1.5',
+  md: 'h-8 px-3 text-sm gap-2',
+};
+
+export function Button({ variant = 'primary', size = 'md', className, ...rest }: Props) {
   return (
     <button
+      type={rest.type ?? 'button'}
+      className={cn(
+        'inline-flex items-center justify-center rounded-md font-medium whitespace-nowrap',
+        'transition-colors duration-fast ease-snap',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        variantStyles[variant],
+        sizeStyles[size],
+        className,
+      )}
       {...rest}
-      className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]} ${className}`}
-    >
-      {children}
-    </button>
+    />
   );
 }
