@@ -17,8 +17,8 @@ to dig.
 | **1** | Core vault & CLI | ✓ done |
 | **2** | Universal AI-safety layer | ✓ done |
 | **3** | Connection testers | ✓ done |
-| **4** | Web UI for team leads | ◐ in progress (slice 9 of ~11) |
-| **5** | Hardening & public OSS release | ○ not started |
+| **4** | Web UI for team leads | ✓ done (11 slices shipped) |
+| **5** | Hardening & public OSS release | ◐ in progress (`v0.1.0-rc.1` cut 2026-05-10) |
 | **6** | Commercial tier + keynv Cloud | ○ not started |
 
 ---
@@ -79,20 +79,34 @@ Shipped slices:
 | 7 | Project sub-route tabs + remaining redesigns | ✓ |
 | 8 | `/admin/users` + `/settings/account` + password change | ✓ |
 | 9 | CLI tokens (long-lived bearer tokens for headless auth) | ✓ |
-| 10 | Connection tester + `/projects/[id]/status` board | ○ |
-| 11 | Approvals state machine + `/projects/[id]/approvals` | ○ |
+| 10 | Connection tester + `/projects/[id]/status` board | ✓ |
+| 11 | Approvals state machine + `/projects/[id]/approvals` | ✓ |
 
 UX direction is locked in [`apps/web/REDESIGN.md`](../apps/web/REDESIGN.md)
 (Linear / Raycast / Arc dark-first density).
 
-## Phase 5 — Hardening & public OSS release · NOT STARTED
+## Phase 5 — Hardening & public OSS release · IN PROGRESS
 
-Pre-public-launch: third-party security audit (semgrep + snyk + custom
-recipes), Astro Starlight docs site (separate repo), single-binary
-release pipeline (Bun-compiled CLI, multi-arch Docker, Helm chart),
-licensing finalization (currently provisional MIT — see
-[`docs/decisions/0001-license-choice.md`](./decisions/0001-license-choice.md)),
-self-hosted onboarding wizard.
+Pre-public-launch hardening. Active streams in priority order:
+
+| Stream | Scope | Status |
+|---|---|---|
+| **B** | CI re-activation (`ci.yml`, `security.yml`) | ✓ done |
+| **D** | License finalize (MIT) + dep license audit | ✓ done |
+| **A** | Security audit + remediation (semgrep / threat-model walkthrough) | ◐ in progress — A1 closed (rate limiter), AF-1..5/AF-7 deferred to `0.1.x` |
+| **G** | Versioning (`v0.1.0-rc.1` cut), CHANGELOG, deprecation policy | ✓ done (2026-05-10) |
+| **C** | Release pipeline — Bun binaries × 5 platforms + multi-arch Docker | ○ next |
+| **E** | Public docs polish (`getting-started.md`, integration guides) | ○ pending |
+| **F** | `keynv server init` onboarding wizard | ○ pending |
+
+Decision points (locked):
+
+1. First public release: **`v0.1.0`** (pre-1.0 signal, breaking changes possible at minor).
+2. Signed binaries (cosign): **deferred to `v0.2.0`**. Ship `0.1.0` with checksums.
+3. Helm chart: **drop from automated release**; keep `deploy/helm/keynv` in tree.
+4. External pentest: **deferred** (default = no). Rely on semgrep + snyk + codeql + manual walkthrough.
+5. Docs: **GitHub MD only** for `0.1.0`. No standalone docs site.
+6. OpenAPI: **`docs/06-api-spec.md` stays as source of truth.** No `zod-to-openapi` dep.
 
 ## Phase 6 — Commercial tier + keynv Cloud · NOT STARTED
 

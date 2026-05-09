@@ -1,6 +1,6 @@
 {
   "name": "@keynv/mcp",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "keynv-mcp Model Context Protocol server (stdio + http transports).",
   "type": "module",

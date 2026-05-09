@@ -80,6 +80,38 @@ If you find a vulnerability, see [`SECURITY.md`](./SECURITY.md). Do not file a p
 
 Resist the urge to design for Phase N+2 features today. The threat model is full of "future" risks; we mitigate the ones in the active phase and leave the others as documented gaps. Speculative abstractions slow everyone down and rarely fit when the future arrives.
 
+## Deprecation policy
+
+keynv follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), with a pre-1.0 carve-out:
+
+- **Pre-1.0 (`0.x.y`)**: minor versions (`0.x.0`) may include breaking schema or API changes. Patch versions (`0.x.y`) are backwards-compatible.
+- **1.0 onward**: no breaking changes within a major version. Minor versions add features, patch versions fix bugs.
+
+**Public surface** under the SemVer guarantee:
+
+- CLI command names, flags, and exit codes (`keynv <subcommand>`).
+- REST API routes and their request/response shapes (`docs/06-api-spec.md`).
+- MCP tool names and their input/output schemas (`apps/mcp/src/server.ts`).
+- Database schema migrations — once shipped, never edited; downgrades require a new migration with a documented path.
+- Cookie names, header names, and error codes (`packages/core/src/errors.ts`).
+
+**Internal surface** can change between any two commits without notice:
+
+- Anything inside `packages/*/src/` not re-exported from the package root.
+- Test helpers, fixtures, and the `tests/security/` harness.
+- biome / vitest / typescript / drizzle config files.
+- The shape of `apps/server/src/db/schema.ts` rows accessed via Drizzle (only the migration is the contract).
+
+**Removing a public-surface feature** requires a deprecation period of at least one minor version after `1.0`:
+
+1. The feature continues to work but emits a runtime warning + a `Deprecation:` HTTP header (REST/MCP) or `keynv ... [DEPRECATED]` stderr line (CLI).
+2. The next minor version may remove it. Document the removal in `CHANGELOG.md` under `### Removed`.
+3. Pre-1.0, deprecation periods are best-effort. Removals land in the next `0.x.0` with a `### Removed` entry; we will not silently drop a public-surface feature in a patch release even pre-1.0.
+
+**Adding fields** is always backwards-compatible: optional fields default to omitted; required fields require a major version bump (post-1.0) or a minor version bump (pre-1.0).
+
+When in doubt, file an issue before the PR — naming a thing publicly is the single hardest decision to undo.
+
 ## Code of Conduct
 
 Project participation is governed by [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).

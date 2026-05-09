@@ -1,6 +1,6 @@
 {
   "name": "@keynv/cli",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "keynv command-line interface — Bun-compiled single binary.",
   "type": "module",

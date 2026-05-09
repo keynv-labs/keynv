@@ -1,6 +1,6 @@
 {
   "name": "@keynv/integrations",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "keynv per-agent integration installers (Claude Code, Cursor, OpenCode, Codex CLI, Aider).",
   "type": "module",
