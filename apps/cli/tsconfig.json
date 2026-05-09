@@ -8,7 +8,8 @@
   "references": [
     { "path": "../../packages/core" },
     { "path": "../../packages/rbac" },
-    { "path": "../../packages/redactor" }
+    { "path": "../../packages/redactor" },
+    { "path": "../../packages/integrations" }
   ],
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]

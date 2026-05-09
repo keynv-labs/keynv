@@ -26,6 +26,9 @@ importers:
       '@keynv/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@keynv/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@keynv/rbac':
         specifier: workspace:*
         version: link:../../packages/rbac

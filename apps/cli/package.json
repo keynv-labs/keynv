@@ -18,12 +18,12 @@
   },
   "dependencies": {
     "@keynv/core": "workspace:*",
+    "@keynv/integrations": "workspace:*",
     "@keynv/rbac": "workspace:*",
     "@keynv/redactor": "workspace:*",
     "clipanion": "^4.0.0-rc.4",
     "typanion": "^3.14.0"
   },
-  "//": "redactor is a workspace dep imported by exec/spawn",
   "devDependencies": {
     "tsx": "^4.19.2"
   }
