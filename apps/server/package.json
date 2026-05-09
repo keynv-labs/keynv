@@ -9,13 +9,29 @@
     "dev": "node --watch --import tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "bootstrap": "tsx src/bootstrap.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.7",
     "@keynv/core": "workspace:*",
-    "@keynv/rbac": "workspace:*"
+    "@keynv/rbac": "workspace:*",
+    "argon2": "^0.41.1",
+    "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.10",
+    "jose": "^5.9.6",
+    "nanoid": "^5.0.9",
+    "pino": "^9.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "drizzle-kit": "^0.28.1",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2"
   }
 }
