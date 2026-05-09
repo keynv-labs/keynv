@@ -62,6 +62,11 @@ jobs:
         with:
           bun-version: latest
       - run: pnpm install --frozen-lockfile
+      # Build workspace deps first so testers (etc.) can resolve
+      # `@keynv/redactor` via dist/ at test time. CLI binary is
+      # excluded — it requires Bun's --compile, which the dedicated
+      # release workflow handles.
+      - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/docs' --filter '!@keynv/web' build
       - run: pnpm test
 
   gitleaks:
