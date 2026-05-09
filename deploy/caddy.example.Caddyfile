@@ -1,0 +1,33 @@
+# Example Caddyfile for terminating TLS in front of keynv-server.
+# Replace `keynv.your-domain.com` with your actual hostname; Caddy
+# will obtain a Let's Encrypt cert automatically.
+#
+# Run Caddy on the same host (not inside this docker-compose) and let
+# it forward to localhost:8080 — or add a "caddy" service to the
+# compose file and reference the keynv-server hostname.
+
+keynv.your-domain.com {
+    encode gzip
+    reverse_proxy localhost:8080 {
+        # Long-running requests for /v1/audit/verify on big chains
+        transport http {
+            read_timeout 60s
+            write_timeout 60s
+        }
+    }
+
+    # Defense-in-depth headers (the Hono server already sets some).
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remove server fingerprinting
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/keynv.log
+        format json
+    }
+}

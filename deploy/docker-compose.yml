@@ -1,0 +1,64 @@
+# keynv self-host stack. One server + a Litestream sidecar that
+# replicates the SQLite WAL to S3/B2 in real time. Bring up with:
+#
+#   cp deploy/.env.example deploy/.env
+#   # edit deploy/.env (set KEYNV_JWT_SECRET, S3 creds, owner email)
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
+#   docker compose -f deploy/docker-compose.yml exec keynv-server \
+#     node dist/bootstrap.js --owner-email lead@team.com --org-name acme
+#
+# After bootstrap, restart the server so the master key file is read
+# fresh:
+#
+#   docker compose -f deploy/docker-compose.yml restart keynv-server
+#
+# Litestream is OPTIONAL. Comment the litestream service out if you
+# don't have S3 yet — keynv works fine without backup, you just lose
+# the disaster-recovery story.
+
+name: keynv
+
+services:
+  keynv-server:
+    image: keynv-server:local
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      KEYNV_DB_PATH: /data/keynv.db
+      KEYNV_MASTER_KEY_FILE: /data/master.key
+      KEYNV_JWT_SECRET: ${KEYNV_JWT_SECRET:?set in deploy/.env}
+      KEYNV_LOG_LEVEL: ${KEYNV_LOG_LEVEL:-info}
+      KEYNV_PORT: 8080
+    ports:
+      - "${KEYNV_PORT:-8080}:8080"
+    volumes:
+      - keynv-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Real-time SQLite WAL replication. Comment out to disable.
+  litestream:
+    image: litestream/litestream:0.3.13
+    restart: unless-stopped
+    depends_on:
+      - keynv-server
+    environment:
+      LITESTREAM_ACCESS_KEY_ID: ${LITESTREAM_ACCESS_KEY_ID:?}
+      LITESTREAM_SECRET_ACCESS_KEY: ${LITESTREAM_SECRET_ACCESS_KEY:?}
+      LITESTREAM_BUCKET: ${LITESTREAM_BUCKET:?}
+      LITESTREAM_ENDPOINT: ${LITESTREAM_ENDPOINT:-https://s3.amazonaws.com}
+      LITESTREAM_REGION: ${LITESTREAM_REGION:-us-east-1}
+    volumes:
+      - keynv-data:/data:ro
+      - ./litestream.yml:/etc/litestream.yml:ro
+    command: replicate -config /etc/litestream.yml
+
+volumes:
+  keynv-data:
+    driver: local

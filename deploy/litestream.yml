@@ -1,0 +1,19 @@
+# Litestream config (deploy/litestream.yml). Mounted into the
+# litestream sidecar container at /etc/litestream.yml.
+#
+# Replicates /data/keynv.db to S3/B2/etc with a 10-minute snapshot
+# interval and 24-hour retention. Tune for your RPO requirements.
+
+dbs:
+  - path: /data/keynv.db
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_BUCKET}
+        path: keynv.db
+        region: ${LITESTREAM_REGION}
+        endpoint: ${LITESTREAM_ENDPOINT}
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        snapshot-interval: 10m
+        retention: 24h
+        sync-interval: 1s
