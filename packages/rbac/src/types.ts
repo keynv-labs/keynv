@@ -66,13 +66,15 @@ export interface AuthorizeContext {
     readonly memberships: ReadonlyArray<Membership>;
   };
   readonly resource?: {
-    readonly project_id?: string;
-    readonly environment_tier?: EnvironmentTier;
-    readonly require_approval?: boolean;
+    readonly project_id?: string | undefined;
+    readonly environment_tier?: EnvironmentTier | undefined;
+    readonly require_approval?: boolean | undefined;
   };
-  readonly approval?: {
-    readonly granted: boolean;
-  };
+  readonly approval?:
+    | {
+        readonly granted: boolean;
+      }
+    | undefined;
 }
 
 /**
