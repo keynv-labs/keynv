@@ -1,0 +1,45 @@
+# Coolify-friendly compose for keynv-server.
+#
+# In Coolify: New Resource → Docker Compose Empty (or "From Git Repository")
+# → point at this file (`deploy/coolify.yml`). Coolify reads the compose,
+# exposes env-var slots in its UI, and routes its $SERVICE_FQDN_KEYNVSERVER
+# magic domain to the service.
+#
+# This is the SERVER ONLY. Litestream (S3 backup) and the web UI are
+# intentionally separate so day-one deploy stays simple. Add them as
+# additional Coolify resources later when you actually need them.
+
+name: keynv
+
+services:
+  keynv-server:
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      KEYNV_DB_PATH: /data/keynv.db
+      KEYNV_MASTER_KEY_FILE: /data/master.key
+      KEYNV_JWT_SECRET: ${KEYNV_JWT_SECRET}
+      KEYNV_LOG_LEVEL: ${KEYNV_LOG_LEVEL:-info}
+      KEYNV_PORT: 8080
+      # First-deploy auto-bootstrap. Set these in Coolify's env-var UI
+      # for the very first deploy; the server creates master.key + the
+      # owner account on startup. After it succeeds, blank these out
+      # and redeploy — they're no-ops once master.key exists.
+      KEYNV_BOOTSTRAP_OWNER_EMAIL: ${KEYNV_BOOTSTRAP_OWNER_EMAIL:-}
+      KEYNV_BOOTSTRAP_OWNER_PASSWORD: ${KEYNV_BOOTSTRAP_OWNER_PASSWORD:-}
+      KEYNV_BOOTSTRAP_ORG_NAME: ${KEYNV_BOOTSTRAP_ORG_NAME:-default}
+    volumes:
+      - keynv-data:/data
+    expose:
+      - '8080'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:8080/v1/health || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  keynv-data:

@@ -1,6 +1,18 @@
 # Self-host deployment
 
-Single-VM Docker Compose stack: keynv-server + Litestream sidecar replicating the SQLite WAL to S3/B2 for disaster recovery.
+Two supported paths:
+
+- **[Coolify](./COOLIFY.md)** (recommended for personal/team self-hosting) — Coolify
+  pulls the repo, builds the image, handles HTTPS + the persistent volume, and
+  the server auto-bootstraps on first start from env vars. No shell-step
+  required after deploy.
+- **Plain Docker Compose** (this guide, below) — single-VM stack with the
+  keynv-server container plus an optional Litestream sidecar replicating the
+  SQLite WAL to S3/B2 for disaster recovery. Bootstrap is a separate one-shot
+  command.
+
+Pick Coolify if you have a Coolify instance; pick plain compose if you want
+full control over the host.
 
 ## First-time bring-up
 
