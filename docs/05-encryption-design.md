@@ -106,10 +106,9 @@ We do **not** rely on argv hiding for security against root-level adversaries. T
 
 ## Memory hygiene
 
-- Plaintext secrets and unwrapped keys are stored in `Buffer` (Node) and zeroed (`buf.fill(0)`) before being garbage-collected.
-- Where libsodium offers `sodium_memzero`, we use it.
-- We do not keep secrets in JS strings (immutable, can't zero).
-- The privileged subprocess inherits its env at exec-time; once the process exits, the kernel reclaims its memory.
+- **Unwrapped keys** (KEK, DEKs) live in `Uint8Array` / `Buffer` and are zeroed (`buf.fill(0)` or libsodium's `memzero`) before being garbage-collected. Server-side, an unwrapped DEK exists only for the duration of a single secret read/write; it is not pooled.
+- **Plaintext secret values**: today, secret values flow through V8-managed strings inside route handlers and CLI commands. JS strings are immutable; we cannot guarantee zero-on-discard for them. Their lifetime is the request handler (server) or the local variable scope of the resolving function (CLI). This is a documented compromise — see "Threats we don't fully mitigate" — and reflects an explicit trade-off between code clarity and the marginal safety of `Uint8Array`-end-to-end. A future refactor (Phase 6 commercial hardening) may move the value path to `Uint8Array` with explicit zeroing.
+- The privileged subprocess inherits its env at exec-time; once the process exits, the kernel reclaims its memory. Subprocesses are short-lived by design.
 
 ## Backup and restore
 

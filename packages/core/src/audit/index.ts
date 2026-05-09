@@ -7,3 +7,4 @@ export {
   type VerifyOptions,
   type VerifyResult,
 } from './chain.js';
+export { PAYLOAD_SCHEMAS, validateAuditPayload } from './payload-schemas.js';

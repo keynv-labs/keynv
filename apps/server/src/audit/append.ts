@@ -16,6 +16,11 @@ export interface AppendArgs {
  * the connection pragmas keeps contention rare in practice.
  */
 export async function appendAudit(db: Db, args: AppendArgs): Promise<auditCore.AuditEntry> {
+  // Validate the payload shape against the per-event-type schema BEFORE
+  // we hash. Catches non-JSON-roundtrippable values, unknown fields,
+  // and event/payload mismatches at write time (audit finding H2).
+  const payload = auditCore.validateAuditPayload(args.event_type, args.payload);
+
   return db.transaction((tx) => {
     const last = tx
       .select({ hash: schema.audit.hash, id: schema.audit.id })
@@ -38,9 +43,6 @@ export async function appendAudit(db: Db, args: AppendArgs): Promise<auditCore.A
         } satisfies auditCore.AuditEntry)
       : null;
 
-    // Reserve a row id by inserting a placeholder, then update with hash.
-    // Simpler: compute the hash from inputs first (matches @keynv/core
-    // computeHash), insert with the final hash, and use last_insert_rowid.
     const built = auditCore.appendEntry(
       prevEntry,
       {
@@ -48,7 +50,7 @@ export async function appendAudit(db: Db, args: AppendArgs): Promise<auditCore.A
         actor_user_id: args.actor_user_id,
         actor_agent: args.actor_agent,
         event_type: args.event_type,
-        payload: args.payload,
+        payload,
       },
       0, // placeholder; SQLite assigns the real id on insert
     );
@@ -62,7 +64,7 @@ export async function appendAudit(db: Db, args: AppendArgs): Promise<auditCore.A
         actor_user_id: args.actor_user_id,
         actor_agent: args.actor_agent,
         event_type: args.event_type,
-        payload_json: JSON.stringify(args.payload),
+        payload_json: JSON.stringify(payload),
       })
       .returning({ id: schema.audit.id })
       .all()[0];

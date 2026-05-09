@@ -167,7 +167,7 @@ Initial built-in patterns. Each lives in `packages/redactor/src/patterns.ts` wit
 | Redis URI with password | `redis(?:s)?:\/\/[^@]+@[^\s'"]+` |
 | AWS access key id | `\bAKIA[0-9A-Z]{16}\b` |
 | AWS temporary key id | `\bASIA[0-9A-Z]{16}\b` |
-| AWS secret key (heuristic) | `\b[A-Za-z0-9/+=]{40}\b` (entropy gate to reduce false positives) |
+| AWS secret key | covered by the entropy detector; a bare `\b[A-Za-z0-9/+=]{40}\b` regex would false-positive on git SHAs, base64 of public data, and similar 40-char tokens. |
 | GitHub PAT | `\bghp_[A-Za-z0-9]{36}\b` |
 | GitHub OAuth | `\bgho_[A-Za-z0-9]{36}\b` |
 | GitHub fine-grained PAT | `\bgithub_pat_[A-Za-z0-9_]{82}\b` |

@@ -24,7 +24,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "libsodium-wrappers": "^0.7.16"
+    "libsodium-wrappers": "^0.7.16",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/libsodium-wrappers": "^0.7.14",

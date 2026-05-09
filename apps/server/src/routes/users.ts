@@ -22,6 +22,10 @@ const CreateUserBody = z.object({
   org_role: z.enum(['admin', 'developer', 'reader']).default('developer'),
 });
 
+const PatchOrgRoleBody = z.object({
+  org_role: z.enum(['admin', 'developer', 'reader']),
+});
+
 export function userRoutes(deps: UserDeps): Hono {
   const r = new Hono();
   r.use('*', authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })));
@@ -82,6 +86,47 @@ export function userRoutes(deps: UserDeps): Hono {
       payload: { target_user_id: id, email: parsed.data.email, org_role: parsed.data.org_role },
     });
     return c.json({ id, email: parsed.data.email, org_role: parsed.data.org_role }, 201);
+  });
+
+  // PATCH /v1/users/:id/org-role  (audit finding M5; docs/06-api-spec.md §69-72)
+  r.patch('/:id/org-role', async (c) => {
+    const user = c.var.user;
+    if (authorize('user.role_change', { user }) !== 'allow') {
+      return jsonError(c, 'rbac.denied', 'Permission denied.');
+    }
+    const targetId = c.req.param('id');
+    if (targetId === user.id) {
+      // Refuse self-modification — prevents an admin from accidentally
+      // demoting themselves out of admin or promoting to owner.
+      return jsonError(c, 'rbac.denied', 'Cannot change your own org role.');
+    }
+    const parsed = PatchOrgRoleBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid body.');
+
+    const targets = await deps.db
+      .select({ id: schema.users.id, org_role: schema.users.org_role })
+      .from(schema.users)
+      .where(and(eq(schema.users.id, targetId), eq(schema.users.org_id, user.org_id)))
+      .limit(1);
+    const target = targets[0];
+    if (!target) return jsonError(c, 'user.not_found', 'User not found.');
+    if (target.org_role === 'owner') {
+      // Owner role transitions only via /v1/org/transfer (Phase 6).
+      return jsonError(c, 'rbac.denied', 'Owner role cannot be changed via this endpoint.');
+    }
+
+    await deps.db
+      .update(schema.users)
+      .set({ org_role: parsed.data.org_role })
+      .where(eq(schema.users.id, targetId));
+
+    await appendAudit(deps.db, {
+      actor_user_id: user.id,
+      actor_agent: readAgent(c),
+      event_type: 'user.role_changed',
+      payload: { target_user_id: targetId, org_role: parsed.data.org_role },
+    });
+    return c.json({ id: targetId, org_role: parsed.data.org_role });
   });
 
   return r;

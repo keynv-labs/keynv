@@ -192,7 +192,12 @@ The CLI unwraps in-process. The server **never** logs the plaintext branch's val
 { "new_value": "...plaintext..." }
 ```
 
-Creates version N+1; previous version retained for `rotation_grace_s` (default 1h) to allow consumers to refresh.
+Creates version N+1; the previous version is **immediately marked
+deleted** (Phase 1–5 behavior). A configurable `rotation_grace_s`
+window during which both versions resolve in parallel is a Phase 6
+commercial feature so consumers (k8s pods, CI runners) can refresh
+before the old value is invalidated. Until that ships, callers must
+ensure consumers re-fetch synchronously after a rotate.
 
 #### `DELETE /v1/projects/:id/secrets/:env/:key` (secret.delete)
 
