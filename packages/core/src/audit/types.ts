@@ -12,6 +12,8 @@ export type AuditEventType =
   | 'auth.refresh'
   | 'auth.password_change.allowed'
   | 'auth.password_change.denied'
+  | 'cli_token.created'
+  | 'cli_token.revoked'
   | 'user.invited'
   | 'user.removed'
   | 'user.role_changed'

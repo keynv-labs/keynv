@@ -1,25 +1,15 @@
 import { CheckCircle2 } from 'lucide-react';
-import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { redirect } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getSession } from '@/lib/session';
-import { redirect } from 'next/navigation';
 import { ChangePasswordForm } from './password-form';
 
-export default async function AccountPage() {
+export default async function AccountProfilePage() {
   const session = await getSession();
   if (!session) redirect('/login');
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <Breadcrumb segments={[{ label: 'Settings' }, { label: 'Account' }]} />
-
-      <header>
-        <h1 className="text-[22px] font-semibold tracking-tight">Account</h1>
-        <p className="text-sm text-fg-muted mt-1">
-          Your profile and authentication settings.
-        </p>
-      </header>
-
+    <div className="space-y-5 max-w-2xl">
       <section className="rounded-lg border border-border bg-bg-elevated p-5 space-y-4">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">

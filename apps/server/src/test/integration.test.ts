@@ -642,3 +642,150 @@ describe('Password change — POST /v1/auth/password', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('CLI tokens — /v1/cli-tokens', () => {
+  it('issues a token, lists it (without raw), and authenticates with it', async () => {
+    const sessionToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+
+    // Create
+    const create = await harness.app.request('http://localhost/v1/cli-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      body: JSON.stringify({ name: 'laptop-1' }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as {
+      id: string;
+      name: string;
+      token: string;
+      expires_at: string | null;
+    };
+    expect(created.name).toBe('laptop-1');
+    expect(created.token).toMatch(/^kt_/);
+    expect(created.expires_at).toBeNull();
+
+    // List — does NOT include the raw token, just metadata.
+    const list = await harness.app.request('http://localhost/v1/cli-tokens', {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    const listBody = (await list.json()) as {
+      tokens: Array<{ id: string; name: string; revoked_at: string | null }>;
+    };
+    expect(listBody.tokens).toHaveLength(1);
+    expect(listBody.tokens[0]?.name).toBe('laptop-1');
+    expect(listBody.tokens[0]).not.toHaveProperty('token');
+    expect(listBody.tokens[0]).not.toHaveProperty('token_hash');
+    expect(listBody.tokens[0]?.revoked_at).toBeNull();
+
+    // Authenticate using the CLI token to call /v1/whoami.
+    const me = await harness.app.request('http://localhost/v1/whoami', {
+      headers: { authorization: `Bearer ${created.token}` },
+    });
+    expect(me.status).toBe(200);
+    const meBody = (await me.json()) as { email: string; org_role: string };
+    expect(meBody.email).toBe(harness.ownerEmail);
+    expect(meBody.org_role).toBe('owner');
+  });
+
+  it('rejects an invalid CLI token', async () => {
+    const me = await harness.app.request('http://localhost/v1/whoami', {
+      headers: { authorization: 'Bearer kt_invalidtokenvaluedoesnotexist' },
+    });
+    expect(me.status).toBe(401);
+  });
+
+  it('revokes a token and rejects further calls with it', async () => {
+    const sessionToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+
+    const create = await harness.app.request('http://localhost/v1/cli-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      body: JSON.stringify({ name: 'ci' }),
+    });
+    const created = (await create.json()) as { id: string; token: string };
+
+    // Token works once.
+    const before = await harness.app.request('http://localhost/v1/whoami', {
+      headers: { authorization: `Bearer ${created.token}` },
+    });
+    expect(before.status).toBe(200);
+
+    // Revoke.
+    const del = await harness.app.request(`http://localhost/v1/cli-tokens/${created.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    expect(del.status).toBe(204);
+
+    // Token no longer works.
+    const after = await harness.app.request('http://localhost/v1/whoami', {
+      headers: { authorization: `Bearer ${created.token}` },
+    });
+    expect(after.status).toBe(401);
+
+    // Listing shows revoked_at populated.
+    const list = await harness.app.request('http://localhost/v1/cli-tokens', {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    const listBody = (await list.json()) as { tokens: Array<{ revoked_at: string | null }> };
+    expect(listBody.tokens[0]?.revoked_at).not.toBeNull();
+  });
+
+  it('users only see their own tokens', async () => {
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+
+    await harness.app.request('http://localhost/v1/cli-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ name: 'owner-laptop' }),
+    });
+    await harness.app.request('http://localhost/v1/cli-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${devToken}` },
+      body: JSON.stringify({ name: 'dev-laptop' }),
+    });
+
+    const ownerList = await harness.app.request('http://localhost/v1/cli-tokens', {
+      headers: { authorization: `Bearer ${ownerToken}` },
+    });
+    const ownerBody = (await ownerList.json()) as { tokens: Array<{ name: string }> };
+    expect(ownerBody.tokens).toHaveLength(1);
+    expect(ownerBody.tokens[0]?.name).toBe('owner-laptop');
+
+    const devList = await harness.app.request('http://localhost/v1/cli-tokens', {
+      headers: { authorization: `Bearer ${devToken}` },
+    });
+    const devBody = (await devList.json()) as { tokens: Array<{ name: string }> };
+    expect(devBody.tokens).toHaveLength(1);
+    expect(devBody.tokens[0]?.name).toBe('dev-laptop');
+  });
+
+  it('one user cannot revoke another user’s token', async () => {
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+
+    const create = await harness.app.request('http://localhost/v1/cli-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ name: 'owner-laptop' }),
+    });
+    const created = (await create.json()) as { id: string };
+
+    const del = await harness.app.request(`http://localhost/v1/cli-tokens/${created.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${devToken}` },
+    });
+    expect(del.status).toBe(404);
+  });
+
+  it('rejects names with disallowed characters', async () => {
+    const sessionToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const res = await harness.app.request('http://localhost/v1/cli-tokens', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      body: JSON.stringify({ name: 'has;semicolon' }),
+    });
+    expect(res.status).toBe(400);
+  });
+});

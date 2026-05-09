@@ -3,6 +3,7 @@ import type { Context, MiddlewareHandler } from 'hono';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
+import { isCliToken, validateCliToken } from './cli-tokens.js';
 import { verifyAccessToken } from './jwt.js';
 
 export interface AuthedUser {
@@ -33,21 +34,31 @@ export function authMiddleware(deps: DepsFn): MiddlewareHandler {
 
     const { db, jwtSecret } = deps();
 
-    let claims: Awaited<ReturnType<typeof verifyAccessToken>>;
-    try {
-      claims = await verifyAccessToken(token, { secret: jwtSecret });
-    } catch (err) {
-      const code =
-        err instanceof Error && /exp/i.test(err.message)
-          ? 'auth.token_expired'
-          : 'auth.invalid_credentials';
-      return jsonError(c, code, 'Invalid or expired access token.');
+    let userId: string;
+    if (isCliToken(token)) {
+      const validated = await validateCliToken(db, token);
+      if (!validated) {
+        return jsonError(c, 'auth.invalid_credentials', 'Invalid or revoked CLI token.');
+      }
+      userId = validated.user_id;
+    } else {
+      let claims: Awaited<ReturnType<typeof verifyAccessToken>>;
+      try {
+        claims = await verifyAccessToken(token, { secret: jwtSecret });
+      } catch (err) {
+        const code =
+          err instanceof Error && /exp/i.test(err.message)
+            ? 'auth.token_expired'
+            : 'auth.invalid_credentials';
+        return jsonError(c, code, 'Invalid or expired access token.');
+      }
+      userId = claims.sub;
     }
 
     const userRows = await db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.id, claims.sub))
+      .where(eq(schema.users.id, userId))
       .limit(1);
     const userRow = userRows[0];
     if (!userRow) {

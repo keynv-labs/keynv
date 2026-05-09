@@ -167,6 +167,32 @@ export const audit = sqliteTable(
 );
 
 /**
+ * Long-lived CLI tokens. Distinct from auth_refresh_tokens (those back
+ * short-lived web/CLI sessions). CLI tokens are user-managed via
+ * /settings/account/cli-tokens and used for headless agents, CI
+ * runners, and scripts. Authority equals the issuing user.
+ */
+export const cli_tokens = sqliteTable(
+  'cli_tokens',
+  {
+    id: text('id').primaryKey(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    token_hash: text('token_hash').notNull().unique(),
+    created_at: text('created_at').notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    last_used_at: text('last_used_at'),
+    expires_at: text('expires_at'),
+    revoked_at: text('revoked_at'),
+  },
+  (t) => ({
+    by_user: index('cli_tokens_by_user').on(t.user_id),
+    by_hash: index('cli_tokens_by_hash').on(t.token_hash),
+  }),
+);
+
+/**
  * Refresh tokens for the auth flow. Stored as the SHA-256 hash of the
  * raw token; the raw token is sent to the client only once at issue.
  */

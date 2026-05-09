@@ -4,6 +4,7 @@ import { jsonError } from './lib/errors.js';
 import { type Logger, makeLogger } from './lib/logger.js';
 import { auditRoutes } from './routes/audit.js';
 import { authRoutes } from './routes/auth.js';
+import { cliTokenRoutes } from './routes/cli-tokens.js';
 import { healthRoute } from './routes/health.js';
 import { memberRoutes } from './routes/members.js';
 import { projectRoutes } from './routes/projects.js';
@@ -39,6 +40,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route('/v1/projects', memberRoutes(deps));
   app.route('/v1/projects', secretRoutes(deps));
   app.route('/v1/audit', auditRoutes(deps));
+  app.route('/v1/cli-tokens', cliTokenRoutes(deps));
 
   app.notFound((c) => jsonError(c, 'validation.failed', 'Not found.'));
   app.onError((err, c) => {
