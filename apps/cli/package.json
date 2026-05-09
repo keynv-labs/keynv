@@ -12,7 +12,7 @@
     "build": "bun build src/index.ts --compile --outfile dist/keynv",
     "build:js": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "clean": "rm -rf dist"
   },
