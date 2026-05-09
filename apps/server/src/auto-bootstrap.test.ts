@@ -21,6 +21,7 @@ function makeEnv(dir: string): ServerEnvT {
     KEYNV_ACCESS_TOKEN_TTL_S: 900,
     KEYNV_REFRESH_TOKEN_TTL_S: 604800,
     KEYNV_LOG_LEVEL: 'fatal',
+    KEYNV_RATE_LIMIT_PER_MINUTE: 0,
   };
 }
 

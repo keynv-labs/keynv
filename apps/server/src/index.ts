@@ -20,6 +20,7 @@ async function main(): Promise<void> {
     refreshTtlS: env.KEYNV_REFRESH_TOKEN_TTL_S,
     getKek: () => kek,
     version: VERSION,
+    rateLimitPerMinute: env.KEYNV_RATE_LIMIT_PER_MINUTE,
   });
 
   serve({ fetch: app.fetch, port: env.KEYNV_PORT });

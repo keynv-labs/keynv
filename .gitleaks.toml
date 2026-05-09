@@ -26,6 +26,12 @@ paths = [
   # Server integration tests use throwaway in-memory fixtures.
   '''apps/server/src/test/.*\.test\.ts$''',
 
+  # End-to-end security regression suite. Fixtures are vendor-shaped
+  # placeholders + a clearly-fake RSA private-key block (only the
+  # BEGIN/END markers and a few literal-fake bytes); intentional
+  # negative corpus that the redactor must mask.
+  '''tests/security/src/.*\.test\.ts$''',
+
   # Spike/benchmark scripts deliberately allocate fake secrets to
   # measure encrypt/decrypt throughput.
   '''scripts/spikes/src/.*\.ts$''',

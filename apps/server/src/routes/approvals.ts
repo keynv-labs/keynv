@@ -3,16 +3,17 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { appendAudit } from '../audit/append.js';
-import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newApprovalId } from '../lib/id.js';
+import { authedChain } from '../lib/middleware-chain.js';
 
 interface ApprovalDeps {
   db: Db;
   jwtSecret: string;
+  rateLimitPerMinute?: number | undefined;
 }
 
 const ListQuery = z.object({
@@ -38,10 +39,7 @@ const DEFAULT_GRANT_TTL_S = 60 * 60; // 1 hour
 
 export function approvalRoutes(deps: ApprovalDeps): Hono {
   const r = new Hono();
-  r.use(
-    '*',
-    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
-  );
+  r.use('*', ...authedChain(deps));
 
   /**
    * GET /v1/projects/:projectId/approvals?status=pending&limit=100

@@ -1,18 +1,16 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
+import { authedChain } from '../lib/middleware-chain.js';
 
 interface WhoamiDeps {
   db: Db;
   jwtSecret: string;
+  rateLimitPerMinute?: number | undefined;
 }
 
 export function whoamiRoute(deps: WhoamiDeps): Hono {
   const r = new Hono();
-  r.use(
-    '*',
-    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
-  );
+  r.use('*', ...authedChain(deps));
   r.get('/', (c) => {
     const u = c.var.user;
     return c.json({

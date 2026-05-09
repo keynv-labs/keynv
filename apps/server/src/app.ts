@@ -21,6 +21,14 @@ export interface AppDeps {
   getKek: () => Uint8Array;
   version: string;
   /**
+   * Per-user request-budget per minute on authenticated routes. Loaded
+   * from KEYNV_RATE_LIMIT_PER_MINUTE in production; tests pass a high
+   * value (or 0 to disable) when they need to make many calls.
+   * Defaults to 120 in `loadEnv`; explicit here so the test harness
+   * can opt out.
+   */
+  rateLimitPerMinute?: number;
+  /**
    * Optional pino logger. Defaults to a fresh instance with the same
    * redaction paths configured in lib/logger.ts. Tests pass a silent
    * logger to keep their output clean.

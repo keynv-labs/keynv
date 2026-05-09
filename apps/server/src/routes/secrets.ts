@@ -5,17 +5,18 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { appendAudit } from '../audit/append.js';
-import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newSecretId } from '../lib/id.js';
+import { authedChain } from '../lib/middleware-chain.js';
 import { ensurePendingApproval, findActiveGrant } from './approvals.js';
 
 interface SecretDeps {
   db: Db;
   jwtSecret: string;
+  rateLimitPerMinute?: number | undefined;
   getKek: () => Uint8Array;
 }
 
@@ -78,10 +79,7 @@ async function loadProjectDek(
 
 export function secretRoutes(deps: SecretDeps): Hono {
   const r = new Hono();
-  r.use(
-    '*',
-    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
-  );
+  r.use('*', ...authedChain(deps));
 
   // POST /v1/projects/:id/secrets
   r.post('/:projectId/secrets', async (c) => {

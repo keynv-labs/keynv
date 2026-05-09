@@ -16,6 +16,12 @@ const ServerEnv = z.object({
     .positive()
     .default(7 * 24 * 3600),
   KEYNV_LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  /**
+   * Per-user request budget per minute on authenticated routes.
+   * Closes Phase 5 audit Finding A1 (no rate limiter on Hono app).
+   * Set to 0 to disable (not recommended in production).
+   */
+  KEYNV_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).default(120),
 });
 
 export type ServerEnvT = z.infer<typeof ServerEnv>;

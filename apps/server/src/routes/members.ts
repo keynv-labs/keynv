@@ -3,15 +3,16 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { appendAudit } from '../audit/append.js';
-import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
+import { authedChain } from '../lib/middleware-chain.js';
 
 interface MemberDeps {
   db: Db;
   jwtSecret: string;
+  rateLimitPerMinute?: number | undefined;
 }
 
 /**
@@ -46,10 +47,7 @@ const PatchMemberBody = z.object({
 
 export function memberRoutes(deps: MemberDeps): Hono {
   const r = new Hono();
-  r.use(
-    '*',
-    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
-  );
+  r.use('*', ...authedChain(deps));
 
   r.get('/:projectId/members', async (c) => {
     const user = c.var.user;

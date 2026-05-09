@@ -3,13 +3,14 @@ import { authorize } from '@keynv/rbac';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { listAudit } from '../audit/append.js';
-import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
+import { authedChain } from '../lib/middleware-chain.js';
 
 interface AuditDeps {
   db: Db;
   jwtSecret: string;
+  rateLimitPerMinute?: number | undefined;
 }
 
 const ListQuery = z.object({
@@ -20,10 +21,7 @@ const ListQuery = z.object({
 
 export function auditRoutes(deps: AuditDeps): Hono {
   const r = new Hono();
-  r.use(
-    '*',
-    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
-  );
+  r.use('*', ...authedChain(deps));
 
   r.get('/', async (c) => {
     const user = c.var.user;

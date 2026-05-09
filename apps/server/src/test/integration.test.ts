@@ -20,7 +20,7 @@ interface Harness {
 
 const JWT_SECRET = 'test-test-test-test-test-test-test-test-12345';
 
-async function makeHarness(): Promise<Harness> {
+async function makeHarness(opts: { rateLimitPerMinute?: number } = {}): Promise<Harness> {
   const { db, raw } = openDb({ path: ':memory:', migrate: true });
   const kek = await crypto.generateKey();
   const orgId = newOrgId();
@@ -55,6 +55,10 @@ async function makeHarness(): Promise<Harness> {
     getKek: () => kek,
     version: 'test',
     logger: SILENT_LOGGER,
+    // 0 disables the limiter entirely for the existing 40 tests; the
+    // rate-limit-specific suite below pins a small budget on its own
+    // harness instance.
+    rateLimitPerMinute: opts.rateLimitPerMinute ?? 0,
   });
 
   return {
@@ -996,5 +1000,64 @@ describe('Approvals — /v1/projects/:id/approvals', () => {
       },
     );
     expect(grant2.status).toBe(404);
+  });
+});
+
+describe('Rate limit — closes Phase 5 audit Finding A1', () => {
+  it('returns 429 with rate_limited error code after the budget is exhausted', async () => {
+    const local = await makeHarness({ rateLimitPerMinute: 3 });
+    try {
+      const token = await login(local.app, local.ownerEmail, local.ownerPassword);
+
+      // Each /v1/whoami counts toward the bucket. The 4th call exceeds 3.
+      const responses: Response[] = [];
+      for (let i = 0; i < 5; i++) {
+        responses.push(
+          await local.app.request('http://localhost/v1/whoami', {
+            headers: { authorization: `Bearer ${token}` },
+          }),
+        );
+      }
+
+      // First 3 succeed, 4th + 5th are rate-limited.
+      expect(responses.slice(0, 3).every((r) => r.status === 200)).toBe(true);
+      expect(responses[3]?.status).toBe(429);
+      expect(responses[4]?.status).toBe(429);
+
+      const body = (await responses[3]?.json()) as { error?: { code: string } };
+      expect(body.error?.code).toBe('rate_limited');
+      expect(responses[3]?.headers.get('retry-after')).toMatch(/^\d+$/);
+      expect(responses[3]?.headers.get('x-ratelimit-limit')).toBe('3');
+      expect(responses[3]?.headers.get('x-ratelimit-remaining')).toBe('0');
+    } finally {
+      local.cleanup();
+    }
+  });
+
+  it('keys per-user — one user being limited does not affect another', async () => {
+    const local = await makeHarness({ rateLimitPerMinute: 2 });
+    try {
+      const ownerToken = await login(local.app, local.ownerEmail, local.ownerPassword);
+      const devToken = await login(local.app, local.developerEmail, local.developerPassword);
+
+      // Owner exhausts their own budget.
+      for (let i = 0; i < 3; i++) {
+        await local.app.request('http://localhost/v1/whoami', {
+          headers: { authorization: `Bearer ${ownerToken}` },
+        });
+      }
+      const ownerLimited = await local.app.request('http://localhost/v1/whoami', {
+        headers: { authorization: `Bearer ${ownerToken}` },
+      });
+      expect(ownerLimited.status).toBe(429);
+
+      // Developer is unaffected.
+      const devOk = await local.app.request('http://localhost/v1/whoami', {
+        headers: { authorization: `Bearer ${devToken}` },
+      });
+      expect(devOk.status).toBe(200);
+    } finally {
+      local.cleanup();
+    }
   });
 });

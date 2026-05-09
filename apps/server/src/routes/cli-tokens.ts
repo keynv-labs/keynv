@@ -3,15 +3,16 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { appendAudit } from '../audit/append.js';
 import { issueCliToken, revokeCliToken } from '../auth/cli-tokens.js';
-import { authMiddleware } from '../auth/middleware.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
+import { authedChain } from '../lib/middleware-chain.js';
 
 interface CliTokenDeps {
   db: Db;
   jwtSecret: string;
+  rateLimitPerMinute?: number | undefined;
 }
 
 const CreateBody = z.object({
@@ -34,10 +35,7 @@ const CreateBody = z.object({
 
 export function cliTokenRoutes(deps: CliTokenDeps): Hono {
   const r = new Hono();
-  r.use(
-    '*',
-    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
-  );
+  r.use('*', ...authedChain(deps));
 
   r.get('/', async (c) => {
     const me = c.var.user;

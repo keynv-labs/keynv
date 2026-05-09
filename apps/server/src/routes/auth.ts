@@ -3,17 +3,18 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { appendAudit } from '../audit/append.js';
 import { signAccessToken } from '../auth/jwt.js';
-import { authMiddleware } from '../auth/middleware.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
 import { issueRefreshToken, revokeRefreshToken, rotateRefreshToken } from '../auth/tokens.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
+import { authedChain } from '../lib/middleware-chain.js';
 
 interface AuthDeps {
   db: Db;
   jwtSecret: string;
+  rateLimitPerMinute?: number | undefined;
   accessTtlS: number;
   refreshTtlS: number;
 }
@@ -164,10 +165,7 @@ export function authRoutes(deps: AuthDeps): Hono {
   // working until its access token expires; the next refresh will
   // require a fresh login since the rotated token is gone.
   const authedSubrouter = new Hono();
-  authedSubrouter.use(
-    '*',
-    authMiddleware(() => ({ db: deps.db, jwtSecret: deps.jwtSecret })),
-  );
+  authedSubrouter.use('*', ...authedChain(deps));
   authedSubrouter.post('/password', async (c) => {
     const me = c.var.user;
     const parsed = ChangePasswordBody.safeParse(await c.req.json().catch(() => ({})));
