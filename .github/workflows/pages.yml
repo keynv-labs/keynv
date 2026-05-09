@@ -1,0 +1,39 @@
+name: pages
+
+# Publishes apps/landing/ as the GitHub Pages site for this repo.
+# Result URL (project page): https://keynv-labs.github.io/keynv/
+#
+# Enable in repo Settings → Pages → Source: GitHub Actions, then push.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/landing/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: deploy landing
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/landing
+      - id: deployment
+        uses: actions/deploy-pages@v4

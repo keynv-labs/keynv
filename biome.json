@@ -11,12 +11,9 @@
       "dist",
       "build",
       ".next",
-      ".astro",
       "node_modules",
       "coverage",
-      "*.db*",
-      "**/.astro/**",
-      "apps/docs/dist/**"
+      "*.db*"
     ]
   },
   "formatter": {

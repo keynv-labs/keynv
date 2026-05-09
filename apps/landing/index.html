@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>keynv — secrets your AI agent can't leak</title>
+<meta name="description" content="Self-hosted vault for your team's API keys, DB passwords, and SSH credentials. Reference them by alias — your AI coding agent sees the alias literal, never the value.">
+<meta property="og:title" content="keynv — secrets your AI agent can't leak">
+<meta property="og:description" content="Self-hosted secrets manager built around team RBAC and an AI-safety layer. Aliases everywhere; values stay in a process the agent can't see.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<style>
+:root {
+  --bg: #0a0c0f;
+  --bg-elevated: #13161b;
+  --bg-elevated-hover: #181c22;
+  --bg-overlay: #1c2028;
+  --border: #23272f;
+  --border-strong: #2f343d;
+  --fg: #e9ecf2;
+  --fg-muted: #9098a4;
+  --fg-subtle: #5d6470;
+  --fg-on-accent: #ffffff;
+  --accent: #5b8def;
+  --accent-hover: #7099f3;
+  --success: #3ec98a;
+  --warn: #e0a93a;
+  --danger: #e25555;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+}
+
+a { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+button { font: inherit; cursor: pointer; background: none; border: 0; color: inherit; }
+code, pre, .mono { font-family: var(--font-mono); }
+
+::selection { background: color-mix(in oklab, var(--accent) 30%, transparent); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border: 2px solid var(--bg); border-radius: 9999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--fg-subtle); }
+
+/* ─── layout primitives ──────────────────────────────────────── */
+
+.container { max-width: 72rem; margin-inline: auto; padding-inline: 1rem; }
+@media (min-width: 768px) { .container { padding-inline: 1.5rem; } }
+
+.wide { max-width: 64rem; }
+.narrow { max-width: 48rem; }
+
+/* ─── nav ─────────────────────────────────────────────────────── */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in oklab, var(--bg) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.nav-links {
+  display: none;
+  gap: 1.25rem;
+  margin-left: 1rem;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+.nav-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: color var(--duration-fast) var(--ease-snap);
+}
+.nav-links a:hover { color: var(--fg); }
+@media (min-width: 768px) { .nav-links { display: flex; } }
+.nav-cta { margin-left: auto; }
+
+/* ─── buttons ─────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2rem;
+  padding-inline: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease-snap),
+    color var(--duration-fast) var(--ease-snap),
+    border-color var(--duration-fast) var(--ease-snap);
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--fg-on-accent);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  background: var(--bg-elevated-hover);
+  border-color: var(--border-strong);
+}
+
+.icon { width: 13px; height: 13px; flex: none; }
+.icon-lg { width: 16px; height: 16px; flex: none; }
+.icon-xs { width: 12px; height: 12px; flex: none; }
+
+/* ─── hero ────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  padding-block: 5rem;
+}
+@media (min-width: 768px) { .hero { padding-block: 7rem; } }
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,0,0,0.6), transparent 70%);
+          mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,0,0,0.6), transparent 70%);
+  opacity: 0.5;
+}
+.hero-inner { position: relative; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--fg-muted);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.h1 {
+  margin-top: 1.25rem;
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+@media (min-width: 768px) { .h1 { font-size: 3rem; } }
+@media (min-width: 1024px) { .h1 { font-size: 3.75rem; } }
+.h1 .muted { color: var(--fg-muted); }
+
+.lede {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+  color: var(--fg-muted);
+  max-width: 36rem;
+  margin-inline: auto;
+  line-height: 1.625;
+}
+@media (min-width: 768px) { .lede { font-size: 1.125rem; } }
+
+.hero-cta {
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ─── code frame ──────────────────────────────────────────────── */
+
+.frame {
+  margin-top: 3rem;
+  margin-inline: auto;
+  max-width: 42rem;
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.frame-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.frame-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  background: var(--bg-elevated-hover);
+}
+.frame-path {
+  margin-left: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+.frame-pre {
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.625;
+  overflow-x: auto;
+  white-space: pre;
+}
+@media (min-width: 640px) { .frame-pre { font-size: 13px; } }
+.frame-pre .accent { color: var(--accent); }
+.frame-pre .ok { color: var(--success); }
+.frame-pre .muted { color: var(--fg-muted); }
+.frame-pre .subtle { color: var(--fg-subtle); }
+
+/* ─── shared section ──────────────────────────────────────────── */
+
+.section { border-bottom: 1px solid var(--border); padding-block: 4rem; }
+@media (min-width: 768px) { .section { padding-block: 5rem; } }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.h2 {
+  margin-top: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+@media (min-width: 768px) { .h2 { font-size: 1.875rem; } }
+.h2 .muted { color: var(--fg-muted); }
+
+.center { text-align: center; max-width: 36rem; margin-inline: auto; }
+
+.body {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+  color: var(--fg-muted);
+  line-height: 1.625;
+}
+
+/* ─── stats ───────────────────────────────────────────────────── */
+
+.stats {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 640px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+.stat {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.stat-value { color: var(--fg); font-weight: 600; letter-spacing: -0.01em; }
+.stat-label { color: var(--fg-muted); font-size: 0.75rem; line-height: 1.625; margin-top: 0.25rem; }
+
+/* ─── pillars ─────────────────────────────────────────────────── */
+
+.pillars {
+  margin-top: 2.5rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) { .pillars { grid-template-columns: repeat(3, 1fr); } }
+.pillar {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+.pillar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: var(--bg);
+  border-radius: 6px;
+}
+.pillar-icon.success { color: var(--success); }
+.pillar-icon.warn { color: var(--warn); }
+.pillar-icon.neutral { color: var(--fg-muted); }
+.pillar-title { margin-top: 1rem; font-size: 1rem; font-weight: 600; color: var(--fg); }
+.pillar-list { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem; color: var(--fg-muted); }
+.pillar-list li { display: flex; align-items: flex-start; gap: 0.5rem; }
+.pillar-list .check { margin-top: 2px; flex: none; }
+.pillar-list .check.success { color: var(--success); }
+.pillar-list .check.warn { color: var(--warn); }
+.pillar-list .check.neutral { color: var(--fg-muted); }
+
+/* ─── how it works ────────────────────────────────────────────── */
+
+.steps {
+  margin-top: 2.5rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) { .steps { grid-template-columns: repeat(3, 1fr); } }
+.step {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+.step-head { display: flex; align-items: center; gap: 0.625rem; }
+.step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--fg-muted);
+  border-radius: 6px;
+}
+.step-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+.step-title { margin-top: 0.75rem; font-size: 1rem; font-weight: 600; color: var(--fg); }
+.step-body { margin-top: 0.5rem; font-size: 0.875rem; color: var(--fg-muted); line-height: 1.625; }
+.step-body code { color: var(--fg); }
+
+/* ─── footer ──────────────────────────────────────────────────── */
+
+.footer-section { padding-block: 4rem; text-align: center; max-width: 32rem; margin-inline: auto; padding-inline: 1rem; }
+.footer {
+  border-top: 1px solid var(--border);
+}
+.footer-inner {
+  padding-block: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+}
+.footer-blurb { line-height: 1.625; max-width: 28rem; }
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-left: auto;
+}
+.footer-links a { display: inline-flex; align-items: center; gap: 0.375rem; transition: color var(--duration-fast) var(--ease-snap); }
+.footer-links a:hover { color: var(--fg); }
+@media (min-width: 768px) {
+  .footer-inner { flex-direction: row; align-items: center; gap: 2rem; }
+}
+
+/* utilities */
+.mt-3 { margin-top: 0.75rem; }
+.mt-5 { margin-top: 1.25rem; }
+.mt-7 { margin-top: 1.75rem; }
+.cta-row { display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.75rem; }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a href="/" class="brand">
+      <span class="brand-mark">k</span>
+      <span>keynv</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#how-it-works">How it works</a>
+      <a href="#pillars">Features</a>
+      <a href="https://github.com/keynv-labs/keynv" target="_blank" rel="noreferrer">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+        </svg>
+        GitHub
+      </a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-primary" href="https://github.com/keynv-labs/keynv">Get started</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ─── HERO ───────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="container hero-inner">
+      <span class="badge">Phases 1–3 shipping · Phase 4 in progress</span>
+      <h1 class="h1">Secrets your AI agent <span class="muted">can&rsquo;t leak.</span></h1>
+      <p class="lede">
+        Self-hosted vault for your team&rsquo;s API keys, database passwords, and SSH credentials.
+        Reference them everywhere by alias — your AI coding agent sees the alias literal,
+        never the value.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md">
+          Deploy in 15 minutes
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14M13 5l7 7-7 7"/>
+          </svg>
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/keynv-labs/keynv" target="_blank" rel="noreferrer">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+          View on GitHub
+        </a>
+      </div>
+
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="frame-dot"></span>
+          <span class="frame-dot"></span>
+          <span class="frame-dot"></span>
+          <span class="frame-path">~/billing-app</span>
+        </div>
+<pre class="frame-pre"><span class="subtle">$</span> <span style="color:var(--fg)">keynv</span> exec --
+    <span style="color:var(--fg)">mysql</span> -p<span class="accent">@billing.prod.db_password</span>
+<span class="subtle">       \\</span> <span class="muted">// what your AI agent sees in tool input + output</span>
+
+<span class="subtle">$</span> ps aux | grep mysql
+<span class="muted">  mysql -p</span><span class="ok">******</span><span class="muted"> -h</span><span class="ok">******</span>
+<span class="subtle">       \\</span> <span class="muted">// argv redacted; subprocess holds the real values</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── PROBLEM ─────────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container narrow">
+      <div class="eyebrow">Why it exists</div>
+      <h2 class="h2">AI coding agents made the secret-leak problem <span class="muted">an order of magnitude worse.</span></h2>
+      <p class="body">
+        Developers leak credentials constantly — <code>.env</code> files committed to repos,
+        keys left in shell history, tokens in tool outputs. AI agents permanently residing in
+        your terminal made it worse: every command, every file, every diff is shipped to a
+        vendor&rsquo;s logs. Existing vaults (HashiCorp, Doppler, 1Password) are mature but none
+        were designed around AI agents being there.
+      </p>
+      <ul class="stats">
+        <li class="stat">
+          <div class="stat-value">23.7M</div>
+          <div class="stat-label">hardcoded secrets pushed to GitHub in 2024 (+25% YoY)</div>
+        </li>
+        <li class="stat">
+          <div class="stat-value">every diff</div>
+          <div class="stat-label">visible to your AI agent&rsquo;s vendor — and their logs</div>
+        </li>
+        <li class="stat">
+          <div class="stat-value">alias-only</div>
+          <div class="stat-label">resolution happens in a process the agent cannot read</div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ─── PILLARS ─────────────────────────────────────────────── -->
+  <section id="pillars" class="section">
+    <div class="container">
+      <div class="center">
+        <div class="eyebrow">What it does</div>
+        <h2 class="h2">Two products in one — a team vault and an AI-safety layer.</h2>
+      </div>
+
+      <div class="pillars">
+        <article class="pillar">
+          <span class="pillar-icon success">
+            <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="8" cy="15" r="4"/>
+              <path d="M10.85 12.15 19 4M18 5l2 2M15 8l2 2"/>
+            </svg>
+          </span>
+          <h3 class="pillar-title">Self-hosted vault</h3>
+          <ul class="pillar-list">
+            <li><svg class="icon-xs check success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>SQLite + Litestream — single file, real-time S3 backup</span></li>
+            <li><svg class="icon-xs check success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>Envelope encryption (libsodium): KEK in OS keychain, per-project DEK</span></li>
+            <li><svg class="icon-xs check success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>RBAC: Owner / Admin / Developer / Reader</span></li>
+            <li><svg class="icon-xs check success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>Append-only hash-chained audit log</span></li>
+          </ul>
+        </article>
+
+        <article class="pillar">
+          <span class="pillar-icon warn">
+            <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </span>
+          <h3 class="pillar-title">AI-safety layer</h3>
+          <ul class="pillar-list">
+            <li><svg class="icon-xs check warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span><code>@project.env.key</code> aliases everywhere</span></li>
+            <li><svg class="icon-xs check warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span><code>keynv exec</code> spawns a privileged subprocess your agent can&rsquo;t see</span></li>
+            <li><svg class="icon-xs check warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>MCP server returns single-use refs, never values</span></li>
+            <li><svg class="icon-xs check warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>Output redactor (regex + entropy) on every tool result</span></li>
+          </ul>
+        </article>
+
+        <article class="pillar">
+          <span class="pillar-icon neutral">
+            <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 3v4a2 2 0 0 0 2 2h4M21 7v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 4Z"/>
+              <path d="M8 13h8M8 17h8M8 9h2"/>
+            </svg>
+          </span>
+          <h3 class="pillar-title">Tamper-evident audit</h3>
+          <ul class="pillar-list">
+            <li><svg class="icon-xs check neutral" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>Every read, write, rotation, role change appended to the chain</span></li>
+            <li><svg class="icon-xs check neutral" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>SHA-256 prev-hash links every entry to the previous one</span></li>
+            <li><svg class="icon-xs check neutral" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>Re-verify integrity any time — green or &ldquo;broken at id X&rdquo;</span></li>
+            <li><svg class="icon-xs check neutral" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>Filter by actor, event type, alias, time range</span></li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── HOW IT WORKS ────────────────────────────────────────── -->
+  <section id="how-it-works" class="section">
+    <div class="container wide">
+      <div class="center">
+        <div class="eyebrow">How it works</div>
+        <h2 class="h2">Aliases in code. Resolution in a process the agent can&rsquo;t see.</h2>
+      </div>
+
+      <ol class="steps">
+        <li class="step">
+          <div class="step-head">
+            <span class="step-icon">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <path d="M14 2v6h6"/>
+                <rect width="8" height="5" x="8" y="13" rx="1"/>
+                <path d="M10 13v-2a2 2 0 1 1 4 0v2"/>
+              </svg>
+            </span>
+            <span class="step-num">step 1</span>
+          </div>
+          <h3 class="step-title">Store</h3>
+          <p class="step-body">
+            Your team adds secrets to the keynv server with the CLI or web UI. Values are
+            encrypted at rest with a per-project DEK; the master KEK lives in the OS keychain
+            or HSM.
+          </p>
+        </li>
+        <li class="step">
+          <div class="step-head">
+            <span class="step-icon">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m4 17 6-6-6-6M12 19h8"/>
+              </svg>
+            </span>
+            <span class="step-num">step 2</span>
+          </div>
+          <h3 class="step-title">Reference</h3>
+          <p class="step-body">
+            In code, configs, and bash commands you type
+            <code>@billing.prod.db_password</code>. That&rsquo;s the only string the AI agent
+            ever sees.
+          </p>
+        </li>
+        <li class="step">
+          <div class="step-head">
+            <span class="step-icon">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </span>
+            <span class="step-num">step 3</span>
+          </div>
+          <h3 class="step-title">Resolve safely</h3>
+          <p class="step-body">
+            <code>keynv exec</code> spawns a subprocess with the real value injected via stdin
+            or a temp file. The agent&rsquo;s process tree, env vars, and tool output are
+            scrubbed.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ─── BOTTOM CTA ──────────────────────────────────────────── -->
+  <section class="section">
+    <div class="footer-section">
+      <h2 class="h2">Ready to stop leaking?</h2>
+      <p class="body">
+        15-minute self-host on Coolify. Single binary CLI. Source-available, MIT-when-Phase-5
+        ships.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md">
+          Deploy guide
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14M13 5l7 7-7 7"/>
+          </svg>
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/keynv-labs/keynv" target="_blank" rel="noreferrer">
+          Browse the source
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <a href="/" class="brand">
+      <span class="brand-mark" style="width: 1.25rem; height: 1.25rem; font-size: 10px;">k</span>
+      <span>keynv</span>
+    </a>
+    <p class="footer-blurb">
+      Self-hosted, source-available secrets manager built for the AI-coding era. Phase 4 in
+      progress; treat as not-yet-OSI-licensed until Phase 5 ships.
+    </p>
+    <div class="footer-links">
+      <a href="https://github.com/keynv-labs/keynv" target="_blank" rel="noreferrer">
+        <svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+        </svg>
+        keynv-labs/keynv
+      </a>
+      <a href="https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md" target="_blank" rel="noreferrer">Deploy</a>
+      <a href="https://github.com/keynv-labs/keynv#readme" target="_blank" rel="noreferrer">Docs</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
