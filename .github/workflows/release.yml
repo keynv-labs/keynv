@@ -203,6 +203,9 @@ jobs:
         with:
           path: dist-release
           merge-multiple: true
+          # Skip the docker provenance artifact (keynv-labs~keynv~*.dockerbuild)
+          # uploaded by docker/build-push-action; we only want CLI binaries.
+          pattern: keynv-*-*
       - name: Compute SHA256SUMS
         working-directory: dist-release
         run: |
