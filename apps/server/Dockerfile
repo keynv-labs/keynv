@@ -17,7 +17,7 @@ FROM node:20-alpine AS builder
 RUN apk add --no-cache python3 make g++ libc6-compat
 
 WORKDIR /repo
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/core/package.json packages/core/tsconfig.json ./packages/core/
@@ -41,7 +41,7 @@ RUN pnpm --filter @keynv/core build \
   && pnpm --filter @keynv/server build
 
 # Trim devDependencies for the runtime stage.
-RUN pnpm --filter @keynv/server deploy --prod --legacy /out
+RUN pnpm --filter @keynv/server deploy --prod /out
 
 # ---- Stage 2: runtime ----
 FROM node:20-alpine AS runtime
