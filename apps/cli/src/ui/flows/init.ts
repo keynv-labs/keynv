@@ -37,6 +37,7 @@ import {
   hasExistingKeynvEnv,
   suggestedEnvForSuffix,
 } from '../../init/detect.js';
+import { writeAiContext } from '../../init/aiContext.js';
 import { classifyEntry, previewValue } from '../../init/heuristics.js';
 import { applyWraps, planScriptWrap } from '../../init/scriptWrap.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
@@ -306,7 +307,21 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     return { exitCode: 1 };
   }
 
-  // 12. Apply script wraps ---------------------------------------------------
+  // 12. Always write AGENTS.md so the user's AI agent learns about keynv.
+  // This is content (educational), not a defensive integration — there's
+  // no prompt, no opt-out: any project that uses keynv benefits from any
+  // AI agent that indexes it knowing how to use it correctly.
+  try {
+    const outcome = writeAiContext(root.path);
+    if (outcome === 'created') log.success('Wrote AGENTS.md (so AI agents understand keynv)');
+    else if (outcome === 'updated') log.success('Refreshed keynv section in AGENTS.md');
+    else if (outcome === 'appended') log.success('Appended keynv section to AGENTS.md');
+    // 'unchanged' — already up-to-date, stay quiet
+  } catch (err) {
+    log.warn(`Could not write AGENTS.md: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  // 13. Apply script wraps ---------------------------------------------------
   if (scriptWrapSelection.length > 0 && root.packageJsonScripts) {
     try {
       updatePackageJsonScripts(
@@ -322,7 +337,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     }
   }
 
-  // 13. Handle original .env files ------------------------------------------
+  // 14. Handle original .env files ------------------------------------------
   if (envFileFateRaw === 'delete') {
     for (const f of envFiles) {
       try {
@@ -342,7 +357,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     }
   }
 
-  // 14. Summary -------------------------------------------------------------
+  // 15. Summary -------------------------------------------------------------
   outro(
     failed.length > 0
       ? `Done with ${failed.length} failure(s) — see warnings above.`
