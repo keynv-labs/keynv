@@ -65,3 +65,32 @@ export const KEYNV_FILE_DENY_PATTERNS: ReadonlyArray<string> = [
   '.docker/config.json',
   '**/.docker/config.json',
 ];
+
+/**
+ * Patterns the agent IS allowed to read despite the broad `.env` deny
+ * rules. `.keynv.env` is the alias-mapping file that ships with this
+ * tool — it carries `@project.env.key` references, never resolved
+ * values, so it is safe (and necessary) for the agent to read and
+ * edit.
+ *
+ * Integrations apply these as either:
+ *   - allow rules (Claude Code's permissions.allow), which take
+ *     precedence over deny entries, OR
+ *   - gitignore-style negations (`!.keynv.env`), placed AFTER the
+ *     deny block so they re-include the file.
+ */
+export const KEYNV_FILE_ALLOW_PATTERNS: ReadonlyArray<string> = [
+  '.keynv.env',
+  '**/.keynv.env',
+];
+
+/**
+ * Returns the lines a gitignore-style integration should write into a
+ * keynv-managed block: every deny pattern, then every allow pattern as
+ * a `!negation` so it re-includes the file. Order matters — gitignore
+ * resolves rules top-down with later rules overriding earlier ones, so
+ * negations MUST follow the deny block.
+ */
+export function gitignoreBlock(): string[] {
+  return [...KEYNV_FILE_DENY_PATTERNS, ...KEYNV_FILE_ALLOW_PATTERNS.map((p) => `!${p}`)];
+}

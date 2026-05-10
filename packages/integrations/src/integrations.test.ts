@@ -34,13 +34,19 @@ describe('claude-code', () => {
     expect(report.applied).toBe(true);
     const settingsPath = join(cwd, '.claude', 'settings.local.json');
     const settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as {
-      permissions?: { deny?: string[] };
+      permissions?: { allow?: string[]; deny?: string[] };
       hooks?: Record<string, Array<{ matcher?: string; hooks?: Array<{ command: string }> }>>;
     };
     const denies = settings.permissions?.deny ?? [];
     expect(denies.length).toBeGreaterThan(0);
     expect(denies).toContain('Read(.env)');
     expect(denies).toContain('Read(*.pem)');
+    // .keynv.env carries alias references (not values) and must remain
+    // readable so the agent can edit the alias mapping. Allow takes
+    // precedence over the broad `*.env` deny in Claude Code.
+    const allows = settings.permissions?.allow ?? [];
+    expect(allows).toContain('Read(.keynv.env)');
+    expect(allows).toContain('Read(**/.keynv.env)');
     const post = settings.hooks?.PostToolUse ?? [];
     const bashHook = post.find((p) => p.matcher === 'Bash');
     expect(bashHook?.hooks?.[0]?.command).toBe('keynv redact-stream');
@@ -107,6 +113,11 @@ describe('cursor / aider — keynv-marked block', () => {
     expect(text).toContain('# >>> keynv >>>');
     expect(text).toContain('.env');
     expect(text).toContain('# <<< keynv <<<');
+    // `.keynv.env` must be re-included via gitignore negation; without
+    // this, `**/*.env` swallows it and the agent cannot edit the alias
+    // mapping file.
+    expect(text).toContain('!.keynv.env');
+    expect(text).toContain('!**/.keynv.env');
   });
 
   it('cursor uninstall removes only the keynv block', async () => {

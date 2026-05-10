@@ -1,5 +1,13 @@
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
+import {
+  ENV_FILE_BASENAME,
+  type EnvFileEntry,
+  EnvFileNotFoundError,
+  EnvFileParseError,
+  EnvFileTooLargeError,
+  loadEnvFile,
+} from '../exec/envFile.js';
 import { resolveAllAliases, substitute } from '../exec/resolve.js';
 import { spawnPrivileged } from '../exec/spawn.js';
 
@@ -17,11 +25,23 @@ the redactor before being copied to the calling process's stdout/stderr.
 
 The subprocess does NOT inherit the caller's full environment; only
 PATH/HOME/USER/SHELL/TERM/LANG/etc. plus anything passed through
---via-env. The intent is to keep accidental secrets in the caller's
-shell from being seen by the subprocess (and by extension, the AI
-agent that wraps it).
+--via-env or via an auto-loaded ${ENV_FILE_BASENAME} file.
+
+If a ${ENV_FILE_BASENAME} file is found in the current directory or any
+parent (walked git-style), every NAME=@alias entry is resolved and
+injected into the subprocess env. Plain NAME=value lines are passed
+through unchanged. The file is safe to commit because it carries
+references, not values. Use \`--no-env-file\` to opt out, \`--from PATH\`
+to load a specific file, or set KEYNV_ENV_FILE in the environment.
+
+(Note: Node.js itself reserves \`--env-file\`, so the keynv flag is
+spelled \`--from\` to avoid the collision.)
 `,
     examples: [
+      [
+        'Auto-load .keynv.env from cwd or parents',
+        '$0 exec -- next dev',
+      ],
       [
         'Run mysql with the alias substituted at fork-exec time',
         '$0 exec -- mysql -p@billing.dev.db_pass -h db.example.com',
@@ -30,6 +50,7 @@ agent that wraps it).
         'Inject env vars without showing them in argv',
         '$0 exec --via-env DB_PASS=@billing.dev.db_pass -- node ./scripts/migrate.js',
       ],
+      ['Skip auto-discovery', '$0 exec --no-env-file -- npm test'],
     ],
   });
 
@@ -40,8 +61,16 @@ agent that wraps it).
     description: 'Disable the stdout/stderr redactor. Audit-flagged.',
   });
   timeout = Option.String('--timeout', { description: 'Kill subprocess after N seconds.' });
+  envFile = Option.String('--from', {
+    description: `Load env mappings from this file instead of auto-discovering ${ENV_FILE_BASENAME}. Errors if missing. (Node intercepts \`--env-file\` for itself, so we use \`--from\`.)`,
+  });
+  noEnvFile = Option.Boolean('--no-env-file', false, {
+    description: `Skip auto-loading ${ENV_FILE_BASENAME} (and ignore KEYNV_ENV_FILE).`,
+  });
+  quiet = Option.Boolean('--quiet', false, {
+    description: `Suppress the "loaded N vars from ${ENV_FILE_BASENAME}" status line.`,
+  });
 
-  // Everything after `--` is the command + its args.
   rest = Option.Rest();
 
   async execute(): Promise<number> {
@@ -64,6 +93,34 @@ agent that wraps it).
       return 1;
     }
 
+    // Load .keynv.env (or explicit override) before parsing --via-env so
+    // we can resolve every alias in a single round-trip and report
+    // override conflicts coherently.
+    let envFileLoaded: { path: string; entries: EnvFileEntry[] } | null = null;
+    try {
+      const loaded = loadEnvFile({
+        cwd: process.cwd(),
+        disabled: this.noEnvFile,
+        ...(this.envFile !== undefined ? { explicitPath: this.envFile } : {}),
+        ...(process.env.KEYNV_ENV_FILE !== undefined
+          ? { envVarOverride: process.env.KEYNV_ENV_FILE }
+          : {}),
+      });
+      if (loaded) {
+        envFileLoaded = loaded;
+      }
+    } catch (err) {
+      if (
+        err instanceof EnvFileNotFoundError ||
+        err instanceof EnvFileParseError ||
+        err instanceof EnvFileTooLargeError
+      ) {
+        this.context.stderr.write(`keynv: ${err.message}\n`);
+        return 2;
+      }
+      throw err;
+    }
+
     // Parse --via-env entries (NAME=@alias).
     const viaEnvSpecs: Array<{ name: string; aliasLiteral: string }> = [];
     for (const spec of this.viaEnv ?? []) {
@@ -78,36 +135,77 @@ agent that wraps it).
       });
     }
 
-    // Resolve every alias appearing in argv OR --via-env values.
+    // Build the union of alias-bearing strings to resolve. The
+    // resolver scans for @aliases inside each string, so passing the
+    // raw values (rather than just the literals) is fine.
+    const extraAliasStrings: string[] = [];
+    if (envFileLoaded) {
+      for (const e of envFileLoaded.entries) {
+        if (e.isAlias) extraAliasStrings.push(e.value);
+      }
+    }
+    for (const s of viaEnvSpecs) extraAliasStrings.push(s.aliasLiteral);
+
     let resolved: Awaited<ReturnType<typeof resolveAllAliases>>;
     try {
-      resolved = await resolveAllAliases(
-        client,
-        [command, ...args],
-        viaEnvSpecs.map((s) => s.aliasLiteral),
-      );
+      resolved = await resolveAllAliases(client, [command, ...args], extraAliasStrings);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.context.stderr.write(`keynv: ${message}\n`);
       return 1;
     }
 
-    // Build substituted argv.
+    // Substituted argv.
     const substArgs = args.map((a) => substitute(a, resolved));
     const substCommand = substitute(command, resolved);
 
-    // Build injected env from --via-env.
+    // Build the injected env: env file first (last-wins on its own
+    // duplicates), then --via-env overlays so a CLI override beats the
+    // file. Conflict warnings go to stderr so the developer sees what
+    // happened.
     const injectedEnv: Record<string, string> = {};
+    const fromEnvFile = new Map<string, number>(); // name → line, for warning
+    if (envFileLoaded) {
+      for (const e of envFileLoaded.entries) {
+        if (e.isAlias) {
+          const subst = substitute(e.value, resolved);
+          if (subst === e.value) {
+            this.context.stderr.write(
+              `keynv: ${envFileLoaded.path}:${e.line}: alias ${e.value} did not resolve\n`,
+            );
+            return 1;
+          }
+          injectedEnv[e.name] = subst;
+        } else {
+          injectedEnv[e.name] = e.value;
+        }
+        fromEnvFile.set(e.name, e.line);
+      }
+    }
     for (const spec of viaEnvSpecs) {
       const value = substitute(spec.aliasLiteral, resolved);
       if (value === spec.aliasLiteral) {
-        // Substitution failed — alias literal made it through.
         this.context.stderr.write(
           `keynv: --via-env ${spec.name}: alias ${spec.aliasLiteral} did not resolve\n`,
         );
         return 1;
       }
+      const overriddenLine = fromEnvFile.get(spec.name);
+      if (overriddenLine !== undefined && envFileLoaded && !this.quiet) {
+        this.context.stderr.write(
+          `keynv: --via-env ${spec.name} overrides ${envFileLoaded.path}:${overriddenLine}\n`,
+        );
+      }
       injectedEnv[spec.name] = value;
+    }
+
+    if (envFileLoaded && !this.quiet) {
+      const total = envFileLoaded.entries.length;
+      const aliasCount = envFileLoaded.entries.filter((e) => e.isAlias).length;
+      this.context.stderr.write(
+        `keynv: loaded ${total} var${total === 1 ? '' : 's'} from ${envFileLoaded.path}` +
+          ` (${aliasCount} resolved from vault)\n`,
+      );
     }
 
     const timeoutS = this.timeout ? Number.parseInt(this.timeout, 10) : undefined;
@@ -146,3 +244,4 @@ function signalNumber(sig: NodeJS.Signals): number | null {
   };
   return map[sig] ?? null;
 }
+

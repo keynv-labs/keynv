@@ -113,12 +113,20 @@ After the server is up, install the CLI:
 ```bash
 npm install -g @keynv/cli
 
-keynv login --server https://keynv.your-domain --email you@example.com
+# Run `keynv` with no arguments to enter the interactive menu —
+# arrow-keys for everything, no need to memorize subcommands.
+keynv
+```
 
+The first run prompts for server URL + email + password, then drops you into the
+menu. From there you create projects, add environments, and load secrets without
+touching another command.
+
+If you prefer scripts, the same things work as one-shots:
+
+```bash
 keynv project create demo
 keynv secret create @demo.dev.api_key --value 'whatever'
-keynv secret get @demo.dev.api_key
-# → whatever
 ```
 
 > Prefer a standalone binary over Node? Each release also publishes
@@ -126,7 +134,43 @@ keynv secret get @demo.dev.api_key
 > [GitHub Releases](https://github.com/keynv-labs/keynv/releases) with
 > SHA256SUMS for verification.
 
-Wire up your agent:
+### Daily use — `.keynv.env`
+
+Create a `.keynv.env` file at your project root. **It is safe to commit** — it
+carries alias references, never values.
+
+```bash
+# .keynv.env  (commit this!)
+OPENAI_API_KEY=@demo.dev.openai-key
+DATABASE_URL=@demo.prod.db-url
+NODE_ENV=development      # plain literals work too
+```
+
+Then wrap whatever you'd normally run with `keynv exec`:
+
+```bash
+keynv exec -- npm run dev
+keynv exec -- pytest
+keynv exec -- next build
+```
+
+`keynv exec` walks up from your cwd to find `.keynv.env`, resolves every
+`@alias` against the vault, and forks the subprocess with the real values in its
+env. Your shell, your editor, and the AI agent driving the terminal never see
+the resolved values — only the alias literals.
+
+In `package.json` it disappears into the script:
+
+```json
+{
+  "scripts": {
+    "dev":  "keynv exec -- next dev",
+    "test": "keynv exec -- vitest"
+  }
+}
+```
+
+### Wire up your agent
 
 ```bash
 # pick whichever you actually use

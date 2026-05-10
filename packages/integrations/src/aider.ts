@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { KEYNV_FILE_DENY_PATTERNS } from './file-deny-list.js';
+import { KEYNV_FILE_DENY_PATTERNS, gitignoreBlock } from './file-deny-list.js';
 import { ensureKeynvBlock, removeKeynvBlock } from './fs-utils.js';
 import type { InstallOptions, InstallReport, Integration } from './types.js';
 
@@ -31,7 +31,7 @@ export const aider: Integration = {
         summary: `[dry-run] would write ${path}`,
       };
     }
-    const changed = ensureKeynvBlock(path, [...KEYNV_FILE_DENY_PATTERNS]);
+    const changed = ensureKeynvBlock(path, gitignoreBlock());
     return {
       agent: 'aider',
       applied: true,

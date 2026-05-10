@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { KEYNV_FILE_DENY_PATTERNS } from './file-deny-list.js';
+import { KEYNV_FILE_ALLOW_PATTERNS, KEYNV_FILE_DENY_PATTERNS } from './file-deny-list.js';
 import { readJsonOrEmpty, writeJson } from './fs-utils.js';
 import type { FileChange, InstallOptions, InstallReport, Integration } from './types.js';
 
@@ -9,6 +9,7 @@ const KEYNV_DENY_TAG = '__keynv_managed__';
 
 interface ClaudeSettings {
   permissions?: {
+    allow?: string[];
     deny?: string[];
   };
   hooks?: Record<
@@ -18,6 +19,7 @@ interface ClaudeSettings {
   /** keynv writes a marker so we can locate our entries on uninstall. */
   [KEYNV_DENY_TAG]?: {
     deny_added: string[];
+    allow_added: string[];
     hook_added: boolean;
   };
   [k: string]: unknown;
@@ -25,6 +27,10 @@ interface ClaudeSettings {
 
 function denyEntriesForReadTool(): string[] {
   return KEYNV_FILE_DENY_PATTERNS.map((p) => `Read(${p})`);
+}
+
+function allowEntriesForReadTool(): string[] {
+  return KEYNV_FILE_ALLOW_PATTERNS.map((p) => `Read(${p})`);
 }
 
 export const claudeCode: Integration = {
@@ -42,7 +48,9 @@ export const claudeCode: Integration = {
     const settings = readJsonOrEmpty(path) as ClaudeSettings;
 
     const denyToAdd = denyEntriesForReadTool();
+    const allowToAdd = allowEntriesForReadTool();
     const existingDeny = new Set(settings.permissions?.deny ?? []);
+    const existingAllow = new Set(settings.permissions?.allow ?? []);
     const newlyAdded: string[] = [];
     for (const entry of denyToAdd) {
       if (!existingDeny.has(entry)) {
@@ -50,9 +58,15 @@ export const claudeCode: Integration = {
         newlyAdded.push(entry);
       }
     }
+    for (const entry of allowToAdd) {
+      if (!existingAllow.has(entry)) {
+        existingAllow.add(entry);
+      }
+    }
 
     settings.permissions = {
       ...settings.permissions,
+      allow: [...existingAllow].sort((a, b) => a.localeCompare(b)),
       deny: [...existingDeny].sort((a, b) => a.localeCompare(b)),
     };
 
@@ -75,6 +89,7 @@ export const claudeCode: Integration = {
     // users who want to keep specific patterns can re-add them.
     settings[KEYNV_DENY_TAG] = {
       deny_added: denyToAdd,
+      allow_added: allowToAdd,
       hook_added: true,
     };
 
@@ -130,6 +145,11 @@ export const claudeCode: Integration = {
         return true;
       });
       if (permissions.deny.length === 0) delete permissions.deny;
+    }
+    if (tracker?.allow_added && permissions && Array.isArray(permissions.allow)) {
+      const remove = new Set(tracker.allow_added);
+      permissions.allow = permissions.allow.filter((entry) => !remove.has(entry));
+      if (permissions.allow.length === 0) delete permissions.allow;
     }
     const hooks = settings.hooks;
     if (tracker?.hook_added && hooks && Array.isArray(hooks.PostToolUse)) {

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { KEYNV_FILE_DENY_PATTERNS } from './file-deny-list.js';
+import { gitignoreBlock } from './file-deny-list.js';
 import { ensureKeynvBlock, removeKeynvBlock } from './fs-utils.js';
 import type { InstallOptions, InstallReport, Integration } from './types.js';
 
@@ -27,7 +27,7 @@ export const codexCli: Integration = {
         summary: `[dry-run] would write ${CODEX_IGNORE_REL}`,
       };
     }
-    const changed = ensureKeynvBlock(path, [...KEYNV_FILE_DENY_PATTERNS]);
+    const changed = ensureKeynvBlock(path, gitignoreBlock());
     return {
       agent: 'codex',
       applied: true,
