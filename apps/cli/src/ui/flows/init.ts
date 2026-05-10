@@ -3,17 +3,17 @@
  * `.env` files into the keynv vault and writes a `.keynv.env`
  * mapping file alongside.
  *
- * v1 limitations (will be lifted when the server grows the right
- * endpoints):
- *   - All discovered `.env*` files merge into a single keynv env
- *     (suggested via .env's suffix, defaults to `dev`). Multi-env
- *     support requires a `POST /v1/projects/:id/environments`
- *     route the server doesn't have yet.
- *   - Secrets are uploaded sequentially, not transactionally. If
- *     one fails partway, the prior uploads stay; only the
- *     successful ones go into the .keynv.env we write.
+ * Multi-env support (rc.10):
+ * Each discovered `.env*` file gets mapped to a keynv environment
+ * (auto-suggested from suffix; user can override). Secrets within a
+ * file go into that env's namespace in the vault. The `.keynv.env`
+ * we write only contains the *default* env's aliases — usually dev
+ * — because that's what `pnpm dev` will resolve via `keynv exec`.
+ * Production secrets land in the vault but stay out of the local
+ * `.keynv.env` (they get accessed at deploy time via a separate
+ * file or `KEYNV_ENV_FILE`).
  */
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildAlias } from '@keynv/core';
 import {
@@ -57,18 +57,31 @@ interface MergedEntry {
   name: string;
   value: string;
   isAlias: boolean;
-  /** First file (order of discovery) where this key appeared. */
+  /** First file (in mapping order) where this key appeared inside its env. */
   source: string;
   /** Line in `source`. */
   sourceLine: number;
-  /** Files that re-declared the same key (later wins for value). */
+  /** Files within the same env that re-declared this key (later wins). */
   shadowedBy: string[];
+}
+
+interface FileEnvAssignment {
+  file: EnvFileHit;
+  envName: string;
+}
+
+interface ProjectChoice {
+  id: string;
+  name: string;
+  created: boolean;
+  /** Envs this project already has on the server (empty for new project). */
+  existingEnvs: Array<{ name: string; tier: 'production' | 'non-production' }>;
 }
 
 export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Promise<InitOutcome> {
   intro('keynv init');
 
-  // 1. Project root + env file discovery -------------------------------------
+  // 1. Discover project root + env files ------------------------------------
   const root = findProjectRoot(opts.cwd);
   if (root === null) {
     cancel(
@@ -79,17 +92,15 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   if (root.packageJsonInvalid) {
     log.warn(`package.json at ${root.path} is not valid JSON — script wrapping will be skipped.`);
   }
-
   const envFiles = findEnvFiles(root.path);
-  if (envFiles.length === 0 && !hasExistingKeynvEnv(root.path)) {
+  const intoExisting = hasExistingKeynvEnv(root.path);
+  if (envFiles.length === 0 && !intoExisting) {
     log.info(
       `No .env files found in ${root.path}. There's nothing to migrate yet — create a .keynv.env by hand or run \`keynv exec\` once you have one.`,
     );
     outro('Nothing to do.');
     return { exitCode: 0 };
   }
-
-  const intoExisting = hasExistingKeynvEnv(root.path);
   note(
     [
       `Project root: ${root.path}`,
@@ -104,54 +115,106 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     'Detected',
   );
 
-  // 2. Parse + merge all env files into one keyspace ------------------------
-  const merged = mergeEnvFiles(envFiles);
-  if (merged.length === 0) {
-    log.info('All env files were empty (only comments/blanks). Nothing to upload.');
-    outro('Done.');
-    return { exitCode: 0 };
-  }
-
-  // 3. Pick keynv project (or create new) -----------------------------------
+  // 2. Pick (or create) the keynv project -----------------------------------
   const projectChoice = await pickOrCreateProject(client, root.suggestedName);
   if (projectChoice === null) {
     cancel('No project selected.');
     return { exitCode: 130 };
   }
 
-  // 4. Pick the single keynv env all secrets land in ------------------------
-  const envName = await pickEnvForUpload(client, projectChoice, envFiles);
-  if (envName === null) {
-    cancel('No environment selected.');
+  // 3. Map each .env file to a keynv environment ----------------------------
+  const fileMapping = await pickFileEnvMapping(envFiles, projectChoice);
+  if (fileMapping === null) {
+    cancel('No env mapping selected.');
     return { exitCode: 130 };
   }
 
-  // 5. Per-entry checklist: secret vs literal -------------------------------
-  const choices = merged.map((e) => {
-    const verdict = classifyEntry(e.name, e.value);
-    const hint = verdict.hint || (e.isAlias ? 'looks like an alias literal' : 'no signal');
-    const preview = e.isAlias ? e.value : previewValue(e.value, 32);
-    return {
-      name: e.name,
-      value: e.value,
-      isAlias: e.isAlias,
-      verdict: verdict.verdict,
-      label: `${e.name}  ${preview}`,
-      hint,
-      sourceLine: e.sourceLine,
-      source: e.source,
-    };
-  });
+  // Distinct env names we're going to need on the server.
+  const distinctEnvs = [...new Set(fileMapping.map((m) => m.envName))];
+
+  // 4. Parse files + merge per-env keyspaces --------------------------------
+  const perEnv = parseAndMergePerEnv(fileMapping);
+
+  // 5. Filter framework/shell-managed entries (NODE_ENV, PORT, …).
+  const skipped: Array<{ env: string; entry: MergedEntry }> = [];
+  for (const env of distinctEnvs) {
+    const before = perEnv.get(env) ?? [];
+    const kept: MergedEntry[] = [];
+    for (const e of before) {
+      if (classifyEntry(e.name, e.value).verdict === 'skip') {
+        skipped.push({ env, entry: e });
+      } else {
+        kept.push(e);
+      }
+    }
+    perEnv.set(env, kept);
+  }
+  if (skipped.length > 0) {
+    const names = [...new Set(skipped.map((s) => s.entry.name))];
+    log.info(
+      `Skipped ${skipped.length} framework/shell-managed entr${skipped.length === 1 ? 'y' : 'ies'}: ${names.join(', ')}`,
+    );
+  }
+
+  // Surface intra-env shadowed keys so the user knows last-wins ran.
+  for (const env of distinctEnvs) {
+    const shadowed = (perEnv.get(env) ?? []).filter((e) => e.shadowedBy.length > 0);
+    if (shadowed.length === 0) continue;
+    const detail = shadowed
+      .map((e) => `  [${env}] ${e.name}: ${e.source} → ${e.shadowedBy[e.shadowedBy.length - 1]}`)
+      .join('\n');
+    log.warn(
+      `Some keys appear in multiple env files mapped to the same env; using the last value (dotenv convention):\n${detail}`,
+    );
+  }
+
+  const totalEntries = [...perEnv.values()].reduce((n, arr) => n + arr.length, 0);
+  if (totalEntries === 0) {
+    log.info('All env files were empty or only contained framework-managed vars. Nothing to upload.');
+    outro('Done.');
+    return { exitCode: 0 };
+  }
+
+  // 6. Per-entry secret-or-literal checklist (flat across envs) -------------
+  interface Choice {
+    composite: string; // `${env}|${name}`
+    env: string;
+    name: string;
+    value: string;
+    isAlias: boolean;
+    verdict: ReturnType<typeof classifyEntry>['verdict'];
+    label: string;
+    hint: string;
+  }
+  const choices: Choice[] = [];
+  for (const env of distinctEnvs) {
+    for (const e of perEnv.get(env) ?? []) {
+      const c = classifyEntry(e.name, e.value);
+      const hint = c.hint || (e.isAlias ? 'looks like an alias literal' : 'no signal');
+      const preview = e.isAlias ? e.value : previewValue(e.value, 28);
+      const envTag = distinctEnvs.length > 1 ? `[${env}] ` : '';
+      choices.push({
+        composite: `${env}|${e.name}`,
+        env,
+        name: e.name,
+        value: e.value,
+        isAlias: e.isAlias,
+        verdict: c.verdict,
+        label: `${envTag}${e.name}  ${preview}`,
+        hint,
+      });
+    }
+  }
 
   const initialSecretSelection = choices
     .filter((c) => c.verdict === 'secret' && !c.isAlias)
-    .map((c) => c.name);
+    .map((c) => c.composite);
 
-  const selectedSecretNames = unwrap(
+  const selectedComposites = unwrap(
     await multiselect({
       message: 'Mark which keys are secrets (vault-uploaded). Unchecked keys stay as literals.',
       options: choices.map((c) => ({
-        value: c.name,
+        value: c.composite,
         label: c.label,
         hint: c.isAlias ? `${c.hint} — already aliased; will pass through` : c.hint,
       })),
@@ -159,56 +222,37 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
       required: false,
     }),
   ) as string[];
-  const selected = new Set(selectedSecretNames);
+  const selected = new Set(selectedComposites);
 
-  // 6. Confirm package.json script wrap (optional) --------------------------
+  // 7. Default env for .keynv.env content -----------------------------------
+  // The .keynv.env we write at the project root is loaded by `keynv exec`
+  // when the user runs (typically) `pnpm dev`. So the default env should
+  // be the one matching local development.
+  const defaultEnv = pickDefaultEnv(distinctEnvs);
+
+  // 8. Script wrap plan (no prompt) -----------------------------------------
   let scriptWrapSelection: string[] = [];
-  let scriptPlan = root.packageJsonScripts ? planScriptWrap(root.packageJsonScripts) : null;
+  const scriptPlan = root.packageJsonScripts ? planScriptWrap(root.packageJsonScripts) : null;
   if (!opts.noScripts && scriptPlan && scriptPlan.recommended.length > 0) {
-    const wrapAnswer = unwrap(
-      await multiselect({
-        message: 'Wrap package.json scripts with `keynv exec`? (recommended)',
-        options: [
-          ...scriptPlan.recommended.map((a) => ({
-            value: a.name,
-            label: `${a.name}  →  ${a.wrapped}`,
-            hint: a.hint,
-          })),
-          ...scriptPlan.unknown.map((a) => ({
-            value: a.name,
-            label: `${a.name}  →  ${a.wrapped}`,
-            hint: `unknown tool — opt in if you know it reads env`,
-          })),
-        ],
-        initialValues: scriptPlan.recommended.map((a) => a.name),
-        required: false,
-      }),
-    ) as string[];
-    scriptWrapSelection = wrapAnswer;
-  } else if (opts.noScripts) {
-    scriptPlan = null;
+    scriptWrapSelection = scriptPlan.recommended.map((a) => a.name);
   }
 
-  // 7. Decide what to do with the original .env files -----------------------
-  const envFileFateRaw = unwrap(
-    await select({
-      message: 'After upload, what about the original .env files?',
-      options: [
-        { value: 'delete', label: 'Delete (recommended — eliminates the leak vector)' },
-        { value: 'gitignore', label: 'Keep but make sure .gitignore covers them' },
-      ],
-      initialValue: 'delete',
-    }),
-  ) as 'delete' | 'gitignore';
-
-  // 8. Final confirm before any writes/uploads ------------------------------
+  // 9. Final confirm --------------------------------------------------------
+  const perEnvCounts = distinctEnvs
+    .map((env) => {
+      const entries = perEnv.get(env) ?? [];
+      const sec = entries.filter((e) => selected.has(`${env}|${e.name}`)).length;
+      const lit = entries.length - sec;
+      return `  ${env}: ${sec} secrets, ${lit} literals${env === defaultEnv ? ' (default — written to .keynv.env)' : ''}`;
+    })
+    .join('\n');
   const planSummary = [
-    `Project:          ${projectChoice.name}${projectChoice.created ? ' (will be created)' : ''}`,
-    `Environment:      ${envName}`,
-    `Secrets to vault: ${selected.size}`,
-    `Literals in file: ${merged.length - selected.size}`,
-    `Script wraps:     ${scriptWrapSelection.length}`,
-    `Original .env:    ${envFileFateRaw === 'delete' ? 'delete' : 'keep + gitignore'}`,
+    `Project:           ${projectChoice.name}${projectChoice.created ? ' (will be created)' : ''}`,
+    `Environments:      ${distinctEnvs.join(', ')}`,
+    `Per-env breakdown:`,
+    perEnvCounts,
+    `Script wraps:      ${scriptWrapSelection.length}`,
+    `Original .env:     delete after upload`,
     opts.dryRun ? 'Dry-run: no changes will be made.' : '',
   ]
     .filter(Boolean)
@@ -220,108 +264,96 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     cancel('Aborted.');
     return { exitCode: 130 };
   }
-
   if (opts.dryRun) {
     outro('Dry-run complete — no changes were made.');
     return { exitCode: 0 };
   }
 
-  // 9. Apply --------------------------------------------------------------
-  let projectId: string;
-  if (projectChoice.created) {
-    const s = spinner();
-    s.start(`Creating project "${projectChoice.name}"`);
-    try {
-      const created = await client.request<{ id: string; name: string }>('/v1/projects', {
-        method: 'POST',
-        body: {
-          name: projectChoice.name,
-          environments: [{ name: envName, tier: 'non-production', require_approval: false }],
-        },
-      });
-      projectId = created.id;
-      s.stop(`Created project ${created.name}`);
-    } catch (err) {
-      s.error(`Failed to create project: ${err instanceof Error ? err.message : String(err)}`);
-      return { exitCode: 1 };
-    }
-  } else {
-    projectId = projectChoice.id;
-  }
+  // 10. Ensure project + envs exist on the server ---------------------------
+  const projectId = await ensureProjectAndEnvs(client, projectChoice, distinctEnvs);
+  if (projectId === null) return { exitCode: 1 };
 
-  // 10. Upload secrets sequentially; track which succeed --------------------
-  const uploaded: Array<{ name: string; aliasLiteral: string }> = [];
-  const failed: Array<{ name: string; reason: string }> = [];
-  if (selected.size > 0) {
+  // 11. Upload secrets per env ----------------------------------------------
+  // Tracking per env so we can compose .keynv.env from defaultEnv only.
+  const uploadedByEnv = new Map<string, Map<string, string>>(); // env → name → aliasLiteral
+  const failed: Array<{ env: string; name: string; reason: string }> = [];
+  const totalToUpload = selected.size;
+  if (totalToUpload > 0) {
     const s = spinner();
-    s.start(`Uploading ${selected.size} secrets`);
+    s.start(`Uploading ${totalToUpload} secret${totalToUpload === 1 ? '' : 's'}`);
     let i = 0;
-    for (const entry of merged) {
-      if (!selected.has(entry.name)) continue;
-      i++;
-      s.message(`Uploading (${i}/${selected.size}) ${entry.name}`);
-      const aliasKey = entry.name.toLowerCase().replace(/_/g, '-');
-      try {
-        await client.request(`/v1/projects/${projectId}/secrets`, {
-          method: 'POST',
-          body: { env: envName, key: aliasKey, value: entry.value },
-        });
-        const alias = buildAlias({ project: projectChoice.name, environment: envName, key: aliasKey });
-        if (alias === null) {
-          failed.push({
-            name: entry.name,
-            reason: `produced an invalid alias for project=${projectChoice.name} env=${envName} key=${aliasKey}`,
+    for (const env of distinctEnvs) {
+      const envUploaded = new Map<string, string>();
+      uploadedByEnv.set(env, envUploaded);
+      for (const e of perEnv.get(env) ?? []) {
+        if (!selected.has(`${env}|${e.name}`)) continue;
+        i++;
+        s.message(`Uploading (${i}/${totalToUpload}) [${env}] ${e.name}`);
+        const aliasKey = e.name.toLowerCase().replace(/_/g, '-');
+        try {
+          await client.request(`/v1/projects/${projectId}/secrets`, {
+            method: 'POST',
+            body: { env, key: aliasKey, value: e.value },
           });
-        } else {
-          uploaded.push({ name: entry.name, aliasLiteral: alias.literal });
+          const alias = buildAlias({ project: projectChoice.name, environment: env, key: aliasKey });
+          if (alias === null) {
+            failed.push({
+              env,
+              name: e.name,
+              reason: `produced an invalid alias for project=${projectChoice.name} env=${env} key=${aliasKey}`,
+            });
+          } else {
+            envUploaded.set(e.name, alias.literal);
+          }
+        } catch (err) {
+          failed.push({
+            env,
+            name: e.name,
+            reason: err instanceof Error ? err.message : String(err),
+          });
         }
-      } catch (err) {
-        failed.push({ name: entry.name, reason: err instanceof Error ? err.message : String(err) });
       }
     }
     if (failed.length === 0) {
-      s.stop(`Uploaded ${uploaded.length} secrets`);
+      s.stop(`Uploaded ${totalToUpload} secret${totalToUpload === 1 ? '' : 's'}`);
     } else {
-      s.error(`${uploaded.length}/${selected.size} uploaded; ${failed.length} failed`);
-      for (const f of failed) log.warn(`  ${f.name}: ${f.reason}`);
+      s.error(`${totalToUpload - failed.length}/${totalToUpload} uploaded; ${failed.length} failed`);
+      for (const f of failed) log.warn(`  [${f.env}] ${f.name}: ${f.reason}`);
     }
   }
 
-  // 11. Compose .keynv.env --------------------------------------------------
-  const literals = merged.filter((e) => !selected.has(e.name));
-  const successUploads = new Map(uploaded.map((u) => [u.name, u.aliasLiteral]));
+  // 12. Compose .keynv.env from the default env's results -------------------
+  const defaultUploaded = uploadedByEnv.get(defaultEnv) ?? new Map<string, string>();
+  const defaultLiterals = (perEnv.get(defaultEnv) ?? []).filter(
+    (e) => !selected.has(`${defaultEnv}|${e.name}`),
+  );
   const keynvEnvPath = join(root.path, '.keynv.env');
-  let writtenLines: string[];
   try {
-    writtenLines = composeKeynvEnv({
-      uploadedAliases: successUploads,
-      literals,
+    const lines = composeKeynvEnv({
+      uploadedAliases: defaultUploaded,
+      literals: defaultLiterals,
       mergeWithExisting: intoExisting ? readFileSync(keynvEnvPath, 'utf8') : null,
     });
-    writeFileSync(keynvEnvPath, `${writtenLines.join('\n')}\n`);
+    writeFileSync(keynvEnvPath, `${lines.join('\n')}\n`);
     log.success(
-      `${intoExisting ? 'Updated' : 'Wrote'} ${keynvEnvPath} (${successUploads.size + literals.length} entries)`,
+      `${intoExisting ? 'Updated' : 'Wrote'} ${keynvEnvPath} (${defaultUploaded.size + defaultLiterals.length} entries from "${defaultEnv}")`,
     );
   } catch (err) {
     log.error(`Failed to write .keynv.env: ${err instanceof Error ? err.message : String(err)}`);
     return { exitCode: 1 };
   }
 
-  // 12. Always write AGENTS.md so the user's AI agent learns about keynv.
-  // This is content (educational), not a defensive integration — there's
-  // no prompt, no opt-out: any project that uses keynv benefits from any
-  // AI agent that indexes it knowing how to use it correctly.
+  // 13. AGENTS.md (always) ---------------------------------------------------
   try {
     const outcome = writeAiContext(root.path);
     if (outcome === 'created') log.success('Wrote AGENTS.md (so AI agents understand keynv)');
     else if (outcome === 'updated') log.success('Refreshed keynv section in AGENTS.md');
     else if (outcome === 'appended') log.success('Appended keynv section to AGENTS.md');
-    // 'unchanged' — already up-to-date, stay quiet
   } catch (err) {
     log.warn(`Could not write AGENTS.md: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // 13. Apply script wraps ---------------------------------------------------
+  // 14. Apply script wraps ---------------------------------------------------
   if (scriptWrapSelection.length > 0 && root.packageJsonScripts) {
     try {
       updatePackageJsonScripts(
@@ -329,7 +361,9 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
         root.packageJsonScripts,
         scriptWrapSelection,
       );
-      log.success(`Wrapped ${scriptWrapSelection.length} script(s) in package.json`);
+      log.success(
+        `Wrapped ${scriptWrapSelection.length} script${scriptWrapSelection.length === 1 ? '' : 's'} in package.json`,
+      );
     } catch (err) {
       log.warn(
         `Could not update package.json scripts: ${err instanceof Error ? err.message : String(err)}`,
@@ -337,31 +371,34 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     }
   }
 
-  // 14. Handle original .env files ------------------------------------------
-  if (envFileFateRaw === 'delete') {
-    for (const f of envFiles) {
-      try {
-        unlinkSync(f.path);
-        log.success(`Removed ${f.name}`);
-      } catch (err) {
-        log.warn(`Could not remove ${f.name}: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
-  } else {
-    const gitignorePath = join(root.path, '.gitignore');
+  // 15. Remove the original .env files --------------------------------------
+  for (const f of envFiles) {
     try {
-      ensureGitignoreEntries(gitignorePath, envFiles.map((f) => f.name));
-      log.success(`Updated .gitignore (${envFiles.length} entries ensured)`);
+      unlinkSync(f.path);
+      log.success(`Removed ${f.name}`);
     } catch (err) {
-      log.warn(`Could not update .gitignore: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn(`Could not remove ${f.name}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  // 15. Summary -------------------------------------------------------------
+  // 16. Mention non-default envs so the user knows their secrets are
+  // safely in the vault even though `.keynv.env` only references the
+  // default. They'll need a separate file or a deploy-time `keynv
+  // exec --from .keynv.<env>.env` to use them.
+  const otherEnvs = distinctEnvs.filter((e) => e !== defaultEnv);
+  if (otherEnvs.length > 0) {
+    const lines = otherEnvs.map((env) => {
+      const count = uploadedByEnv.get(env)?.size ?? 0;
+      return `  ${env}: ${count} secret${count === 1 ? '' : 's'} in vault (use \`keynv exec --from .keynv.${env}.env -- <cmd>\` after creating that file)`;
+    });
+    note(lines.join('\n'), 'Secrets in other envs');
+  }
+
+  // 17. Summary -------------------------------------------------------------
   outro(
     failed.length > 0
       ? `Done with ${failed.length} failure(s) — see warnings above.`
-      : `Done. Try: ${scriptWrapSelection.includes('dev') ? 'npm run dev' : 'keynv exec -- <your command>'}`,
+      : `Done. Try: ${scriptWrapSelection.includes('dev') ? 'pnpm dev' : 'keynv exec -- <your command>'}`,
   );
   return { exitCode: failed.length > 0 ? 1 : 0 };
 }
@@ -369,43 +406,6 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
 // -------------------------------------------------------------------------
 // helpers
 // -------------------------------------------------------------------------
-
-function mergeEnvFiles(files: EnvFileHit[]): MergedEntry[] {
-  const map = new Map<string, MergedEntry>();
-  for (const f of files) {
-    let entries: EnvFileEntry[];
-    try {
-      entries = parseEnvFile(readFileSync(f.path, 'utf8'), f.path);
-    } catch (err) {
-      log.warn(`${f.name}: ${err instanceof Error ? err.message : String(err)} — skipping file`);
-      continue;
-    }
-    for (const e of entries) {
-      const existing = map.get(e.name);
-      if (existing) {
-        existing.shadowedBy.push(f.name);
-        existing.value = e.value;
-        existing.isAlias = e.isAlias;
-      } else {
-        map.set(e.name, {
-          name: e.name,
-          value: e.value,
-          isAlias: e.isAlias,
-          source: f.name,
-          sourceLine: e.line,
-          shadowedBy: [],
-        });
-      }
-    }
-  }
-  return [...map.values()];
-}
-
-interface ProjectChoice {
-  id: string;
-  name: string;
-  created: boolean;
-}
 
 async function pickOrCreateProject(
   client: ApiClient,
@@ -432,64 +432,225 @@ async function pickOrCreateProject(
             : 'lowercase letters, digits, dashes; up to 48 chars',
       }),
     ) as string;
-    return { id: '', name, created: true };
+    return { id: '', name, created: true, existingEnvs: [] };
   }
   const match = projects.find((p) => p.id === value);
   if (!match) return null;
-  return { id: match.id, name: match.name, created: false };
+  // Fetch env list so the file→env picker can show what already exists.
+  const detail = await client.request<{
+    environments: Array<{ name: string; tier: 'production' | 'non-production' }>;
+  }>(`/v1/projects/${match.id}`);
+  return {
+    id: match.id,
+    name: match.name,
+    created: false,
+    existingEnvs: detail.environments,
+  };
 }
 
-async function pickEnvForUpload(
-  client: ApiClient,
+/**
+ * For each detected env file, decide which keynv environment its
+ * secrets land in. Auto-suggests from the filename suffix; users
+ * can override (or pick "+ create new env"). Returns null if the
+ * user cancels at any point.
+ *
+ * Single-file projects skip the prompt entirely and use the
+ * suffix-suggested env.
+ */
+async function pickFileEnvMapping(
+  files: EnvFileHit[],
   project: ProjectChoice,
-  envFiles: EnvFileHit[],
-): Promise<string | null> {
-  // Default suggestion: the suffix of the first env file (plain .env → dev).
-  const firstSuffix = envFiles[0]?.suffix ?? null;
-  const suggested = suggestedEnvForSuffix(firstSuffix);
+): Promise<FileEnvAssignment[] | null> {
+  if (files.length === 0) return [];
 
-  if (project.created) {
-    // For a brand-new project we'll create the env in the same call,
-    // so any name the user picks is fine.
-    const value = unwrap(
-      await text({
-        message: 'Environment to create',
+  // Build the picker option set for the project.
+  // For new projects: just suggested names (free text via "+ create").
+  // For existing: existing envs + "+ create new".
+  const existingEnvNames = new Set(project.existingEnvs.map((e) => e.name));
+
+  // Single file: no prompt — auto-suggest.
+  if (files.length === 1) {
+    const onlyFile = files[0];
+    if (!onlyFile) return [];
+    const suggested = suggestedEnvForSuffix(onlyFile.suffix);
+    return [{ file: onlyFile, envName: suggested }];
+  }
+
+  // Multi-file: per-file picker.
+  const assignments: FileEnvAssignment[] = [];
+  for (const f of files) {
+    const suggested = suggestedEnvForSuffix(f.suffix);
+    const opts: Array<{ value: string; label: string; hint?: string }> = [];
+
+    // Suggested env first (existing or fresh)
+    opts.push({
+      value: suggested,
+      label: suggested,
+      hint: existingEnvNames.has(suggested)
+        ? 'existing env'
+        : project.created
+          ? 'will be created with project'
+          : 'will be added to project',
+    });
+
+    // Other existing envs not equal to suggested
+    for (const e of project.existingEnvs) {
+      if (e.name === suggested) continue;
+      opts.push({ value: e.name, label: e.name, hint: e.tier });
+    }
+
+    opts.push({ value: '__custom', label: '+ Custom env name…' });
+
+    let envName = unwrap(
+      await select({
+        message: `Map ${f.name} to which keynv env?`,
+        options: opts,
         initialValue: suggested,
-        validate: (v) =>
-          v && /^[a-z0-9][a-z0-9-]{0,23}$/.test(v)
-            ? undefined
-            : 'lowercase letters, digits, dashes; up to 24 chars',
       }),
-    );
-    return value as string;
+    ) as string;
+
+    if (envName === '__custom') {
+      envName = unwrap(
+        await text({
+          message: 'New env name',
+          validate: (v) =>
+            v && /^[a-z0-9][a-z0-9-]{0,23}$/.test(v)
+              ? undefined
+              : 'lowercase letters, digits, dashes; up to 24 chars',
+        }),
+      ) as string;
+    }
+    assignments.push({ file: f, envName });
+  }
+  return assignments;
+}
+
+/**
+ * Parse each file and merge entries into per-env keyspaces. Within
+ * one env, dotenv last-wins applies across the files mapped to it.
+ */
+function parseAndMergePerEnv(mapping: FileEnvAssignment[]): Map<string, MergedEntry[]> {
+  // env → name → MergedEntry
+  const acc = new Map<string, Map<string, MergedEntry>>();
+  for (const { file, envName } of mapping) {
+    let entries: EnvFileEntry[];
+    try {
+      entries = parseEnvFile(readFileSync(file.path, 'utf8'), file.path);
+    } catch (err) {
+      log.warn(`${file.name}: ${err instanceof Error ? err.message : String(err)} — skipping file`);
+      continue;
+    }
+    let envMap = acc.get(envName);
+    if (!envMap) {
+      envMap = new Map<string, MergedEntry>();
+      acc.set(envName, envMap);
+    }
+    for (const e of entries) {
+      const existing = envMap.get(e.name);
+      if (existing) {
+        existing.shadowedBy.push(file.name);
+        existing.value = e.value;
+        existing.isAlias = e.isAlias;
+      } else {
+        envMap.set(e.name, {
+          name: e.name,
+          value: e.value,
+          isAlias: e.isAlias,
+          source: file.name,
+          sourceLine: e.line,
+          shadowedBy: [],
+        });
+      }
+    }
+  }
+  // flatten inner Maps to arrays for the caller
+  const out = new Map<string, MergedEntry[]>();
+  for (const [env, m] of acc) out.set(env, [...m.values()]);
+  return out;
+}
+
+/**
+ * Decide which env's aliases get written into the cwd `.keynv.env`.
+ * Heuristic: prefer 'dev' when present (matches the typical local
+ * dev workflow), otherwise the first env in iteration order.
+ */
+function pickDefaultEnv(envs: ReadonlyArray<string>): string {
+  if (envs.length === 0) return 'dev';
+  if (envs.includes('dev')) return 'dev';
+  return envs[0] as string;
+}
+
+/**
+ * Make sure `projectChoice` exists on the server with all the envs
+ * it needs. For a brand-new project, creates it with every distinct
+ * env upfront. For an existing project, POSTs each missing env
+ * individually. Returns the project id, or null on failure (with
+ * an error already logged).
+ */
+async function ensureProjectAndEnvs(
+  client: ApiClient,
+  projectChoice: ProjectChoice,
+  distinctEnvs: ReadonlyArray<string>,
+): Promise<string | null> {
+  if (projectChoice.created) {
+    const s = spinner();
+    s.start(`Creating project "${projectChoice.name}" with ${distinctEnvs.length} env(s)`);
+    try {
+      const created = await client.request<{ id: string; name: string }>('/v1/projects', {
+        method: 'POST',
+        body: {
+          name: projectChoice.name,
+          environments: distinctEnvs.map((name) => envBodyFor(name)),
+        },
+      });
+      s.stop(`Created project ${created.name}`);
+      return created.id;
+    } catch (err) {
+      s.error(`Failed to create project: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    }
   }
 
-  // Existing project: must pick from envs the project already has.
-  // The server doesn't yet support adding envs to an existing project.
-  const detail = await client.request<{
-    environments: Array<{ name: string; tier: string }>;
-  }>(`/v1/projects/${project.id}`);
-  if (detail.environments.length === 0) {
-    cancel(
-      `Project "${project.name}" has no environments yet, and we can't add one from init in this version. Create one with \`keynv project create\` (or pick a different project).`,
-    );
-    return null;
+  // Existing project — figure out which envs are missing.
+  const existing = new Set(projectChoice.existingEnvs.map((e) => e.name));
+  const missing = distinctEnvs.filter((e) => !existing.has(e));
+  if (missing.length === 0) return projectChoice.id;
+
+  const s = spinner();
+  s.start(`Adding ${missing.length} missing env(s) to project "${projectChoice.name}"`);
+  for (const envName of missing) {
+    try {
+      await client.request(`/v1/projects/${projectChoice.id}/environments`, {
+        method: 'POST',
+        body: envBodyFor(envName),
+      });
+    } catch (err) {
+      s.error(`Failed to add env "${envName}": ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    }
   }
-  if (detail.environments.length === 1) {
-    return detail.environments[0]?.name ?? null;
-  }
-  const value = unwrap(
-    await select({
-      message: 'Upload to which environment?',
-      options: detail.environments.map((e) => ({
-        value: e.name,
-        label: e.name,
-        hint: e.tier,
-      })),
-      initialValue: detail.environments.find((e) => e.name === suggested)?.name,
-    }),
-  );
-  return value as string;
+  s.stop(`Added env(s): ${missing.join(', ')}`);
+  return projectChoice.id;
+}
+
+/**
+ * Default tier + approval choice for a freshly-created env. Names
+ * that look like production (`prod`, `production`) get the
+ * production tier with approval-required; everything else stays
+ * non-production with no approval. Users who need a different
+ * setting can edit the env later (post-init UX TBD).
+ */
+function envBodyFor(name: string): {
+  name: string;
+  tier: 'production' | 'non-production';
+  require_approval: boolean;
+} {
+  const isProd = name === 'prod' || name === 'production';
+  return {
+    name,
+    tier: isProd ? 'production' : 'non-production',
+    require_approval: isProd,
+  };
 }
 
 interface ComposeOpts {
@@ -502,7 +663,6 @@ function composeKeynvEnv(opts: ComposeOpts): string[] {
   const { uploadedAliases, literals, mergeWithExisting } = opts;
   const lines: string[] = [];
   if (mergeWithExisting !== null) {
-    // Preserve existing content; new entries are appended below a marker.
     const trimmed = mergeWithExisting.replace(/\n+$/, '');
     if (trimmed.length > 0) {
       lines.push(...trimmed.split('\n'));
@@ -545,28 +705,14 @@ function updatePackageJsonScripts(
   selectedNames: ReadonlyArray<string>,
 ): void {
   const raw = readFileSync(path, 'utf8');
-  // Detect formatting (indent size + trailing newline) so we don't
-  // upend prettier-managed package.json files.
   const indentMatch = raw.match(/^([ \t]+)"/m);
   const indent = indentMatch ? indentMatch[1] : '  ';
   const trailingNewline = raw.endsWith('\n');
   const pkg = JSON.parse(raw) as { scripts?: Record<string, string>; [k: string]: unknown };
   const updated = applyWraps(originalScripts, selectedNames);
   pkg.scripts = updated;
-  // Re-serialize with the detected indent.
   const out = JSON.stringify(pkg, null, indent);
   writeFileSync(path, trailingNewline ? `${out}\n` : out);
-}
-
-function ensureGitignoreEntries(path: string, basenames: ReadonlyArray<string>): void {
-  let existing = '';
-  if (existsSync(path)) existing = readFileSync(path, 'utf8');
-  const existingLines = new Set(existing.split('\n').map((l) => l.trim()));
-  const toAdd = basenames.filter((n) => !existingLines.has(n));
-  if (toAdd.length === 0) return;
-  const sep = existing.length === 0 || existing.endsWith('\n') ? '' : '\n';
-  const block = ['', '# added by keynv init', ...toAdd, ''].join('\n');
-  writeFileSync(path, `${existing}${sep}${block}`);
 }
 
 // Re-export so the InitCommand can detect plan-mode aborts cleanly.
