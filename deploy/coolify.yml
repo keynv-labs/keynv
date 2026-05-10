@@ -30,6 +30,11 @@ services:
       KEYNV_BOOTSTRAP_OWNER_EMAIL: ${KEYNV_BOOTSTRAP_OWNER_EMAIL:-}
       KEYNV_BOOTSTRAP_OWNER_PASSWORD: ${KEYNV_BOOTSTRAP_OWNER_PASSWORD:-}
       KEYNV_BOOTSTRAP_ORG_NAME: ${KEYNV_BOOTSTRAP_ORG_NAME:-default}
+      # Public registration toggle. Self-host: leave at false (or unset);
+      # invite users via /admin/users. Hosted Cloud (keynv.dev): set true.
+      KEYNV_PUBLIC_REGISTRATION: ${KEYNV_PUBLIC_REGISTRATION:-false}
+      KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE: ${KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE:-5}
+      KEYNV_RATE_LIMIT_PER_MINUTE: ${KEYNV_RATE_LIMIT_PER_MINUTE:-120}
     volumes:
       - keynv-data:/data
     expose:

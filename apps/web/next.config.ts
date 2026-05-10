@@ -1,6 +1,15 @@
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
+  // Standalone output bundles the minimum runtime dependencies
+  // (next + react + page chunks) into .next/standalone so the
+  // Docker image can ship without the full node_modules tree.
+  // Required for the apps/web Dockerfile multi-stage build.
+  output: 'standalone',
+  // Resolve the workspace root explicitly so Next picks the right
+  // monorepo root when bundling traced files (we live two levels
+  // below the repo root inside apps/web).
+  outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
   experimental: {
     typedRoutes: true,
   },
