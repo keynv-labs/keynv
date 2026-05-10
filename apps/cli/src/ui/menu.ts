@@ -45,6 +45,7 @@ export async function runMenu(): Promise<number> {
       const value = await select({
         message: 'What now?',
         options: [
+          { value: 'init', label: 'Initialize this project (migrate .env)', hint: 'keynv init' },
           { value: 'projects', label: 'Projects' },
           { value: 'secrets', label: 'Secrets' },
           { value: 'members', label: 'Members' },
@@ -85,7 +86,10 @@ export async function runMenu(): Promise<number> {
         outro('Logged out.');
         return 0;
       }
-      if (choice === 'projects') await runProjectsFlow(client);
+      if (choice === 'init') {
+        const { runInitFlow } = await import('./flows/init.js');
+        await runInitFlow(client, { cwd: process.cwd(), dryRun: false, noScripts: false });
+      } else if (choice === 'projects') await runProjectsFlow(client);
       else if (choice === 'secrets') await runSecretsFlow(client);
       else if (choice === 'members') await runMembersFlow(client);
       else if (choice === 'audit') await runAuditFlow(client);

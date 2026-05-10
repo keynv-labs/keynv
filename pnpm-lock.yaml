@@ -47,9 +47,6 @@ importers:
       '@keynv/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@keynv/integrations':
-        specifier: workspace:*
-        version: link:../../packages/integrations
       '@keynv/rbac':
         specifier: workspace:*
         version: link:../../packages/rbac
@@ -213,8 +210,6 @@ importers:
       fast-check:
         specifier: ^3.23.0
         version: 3.23.2
-
-  packages/integrations: {}
 
   packages/rbac: {}
 

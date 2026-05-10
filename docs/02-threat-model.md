@@ -62,10 +62,14 @@ This is where keynv earns its keep. Every layer addresses one or more disclosure
 **Without keynv**: agent uses its file-read tool, gets back plaintext, forwards to LLM provider.
 
 **With keynv**:
-- Project doesn't store `.env` with values; uses `.keynv.toml` listing aliases only.
-- For agents that support hooks (Claude Code), `keynv install claude-code` writes a PreToolUse hook denying `Read` of `.env`, `*.pem`, `id_rsa*`.
-- For agents with ignore files (Cursor, Aider), `keynv install` writes the ignore file.
-- For agents without either, the value is simply not on disk.
+- `keynv init` migrates the project's existing `.env` into the vault and writes a
+  `.keynv.env` containing alias references (no values). The original `.env` is
+  removed by default; the leak source no longer exists on disk regardless of the
+  agent's read permissions.
+- Subprocesses launched with `keynv exec` only see the resolved values inside
+  their own argv/env; the agent's process tree never inherits them.
+- Bash output piped through `keynv redact-stream` masks any secret-shaped value
+  that does sneak through (third-party APIs, accidental echoes).
 
 #### 2. Agent runs `env` / `printenv` / reads `/proc/self/environ`
 

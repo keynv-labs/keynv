@@ -172,16 +172,6 @@ interface TestResult {
 }
 ```
 
-### `packages/integrations`
-
-Per-agent setup templates. Each integration knows:
-
-- Where the agent's config file lives (e.g., `.claude/settings.local.json`).
-- What hooks/MCP entries to add.
-- What ignore-files to write (e.g., `.cursorignore`).
-
-Integrations are pure data + idempotent file writers. They never run network calls.
-
 ## Data flow: a secret read
 
 ```

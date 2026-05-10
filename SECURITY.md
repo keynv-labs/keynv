@@ -34,7 +34,6 @@ In scope:
 - The keynv MCP server (`apps/mcp`).
 - The web dashboard (`apps/web`, when shipped).
 - All packages under `packages/`, especially `core/crypto/`, `redactor/`, `rbac/`.
-- Per-agent integration installers (`packages/integrations`) when they affect agent isolation.
 
 Out of scope:
 - Vulnerabilities in upstream dependencies that we have not yet patched but for which a fix exists upstream — please report to the upstream maintainer.

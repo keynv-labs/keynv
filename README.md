@@ -170,13 +170,6 @@ In `package.json` it disappears into the script:
 }
 ```
 
-### Wire up your agent
-
-```bash
-# pick whichever you actually use
-keynv install claude-code   # or: cursor / opencode / codex / aider
-```
-
 ### keynv Cloud
 
 Star this repo to be notified when sign-up opens. Phase 6 deliverable.

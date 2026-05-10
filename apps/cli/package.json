@@ -51,7 +51,6 @@
   },
   "devDependencies": {
     "@keynv/core": "workspace:*",
-    "@keynv/integrations": "workspace:*",
     "@keynv/rbac": "workspace:*",
     "@keynv/redactor": "workspace:*",
     "@keynv/testers": "workspace:*",

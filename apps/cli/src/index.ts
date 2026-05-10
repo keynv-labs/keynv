@@ -1,7 +1,7 @@
 import { Builtins, Cli } from 'clipanion';
 import { AuditListCommand, AuditVerifyCommand } from './commands/audit.js';
 import { ExecCommand } from './commands/exec.js';
-import { InstallCommand, UninstallCommand } from './commands/install.js';
+import { InitCommand } from './commands/init.js';
 import { LoginCommand, LogoutCommand, WhoamiCommand } from './commands/login.js';
 import { MemberAddCommand, MemberListCommand, MemberRemoveCommand } from './commands/member.js';
 import {
@@ -56,11 +56,9 @@ cli.register(AuditListCommand);
 cli.register(AuditVerifyCommand);
 
 cli.register(ExecCommand);
+cli.register(InitCommand);
 cli.register(RedactCommand);
 cli.register(RedactStreamCommand);
-
-cli.register(InstallCommand);
-cli.register(UninstallCommand);
 
 cli.register(TestCommand);
 
