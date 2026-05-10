@@ -8,7 +8,7 @@
  * string the UI can show next to the entry.
  */
 
-export type SecretVerdict = 'secret' | 'literal' | 'ambiguous';
+export type SecretVerdict = 'secret' | 'literal' | 'ambiguous' | 'skip';
 
 export interface ClassifyResult {
   verdict: SecretVerdict;
@@ -16,27 +16,43 @@ export interface ClassifyResult {
 }
 
 /**
- * Names that are almost always non-secret config. Exact-match or
- * prefix match (the trailing `*` marks a prefix). Order doesn't
- * matter — first list with a hit wins.
+ * Names that the framework or the shell itself sets (or expects to
+ * own). Putting these in `.keynv.env` actively breaks things — e.g.
+ * Next.js sets NODE_ENV=production during `next build`, and a stale
+ * `NODE_ENV=development` coming from `.keynv.env` triggers a build
+ * warning and a non-standard runtime. PATH/HOME/etc. shouldn't be
+ * overridden by us regardless; the subprocess already has them from
+ * its parent shell.
+ *
+ * The init flow filters these out completely — they don't appear in
+ * the secret checklist and they don't get written to `.keynv.env`.
  */
-const NAME_LITERAL_EXACT = new Set([
+const NAME_FRAMEWORK_MANAGED = new Set([
   'NODE_ENV',
   'PORT',
   'HOST',
   'HOSTNAME',
-  'DEBUG',
-  'LOG_LEVEL',
-  'LOGLEVEL',
-  'TZ',
-  'LANG',
-  'LC_ALL',
   'PATH',
   'HOME',
   'USER',
   'SHELL',
   'PWD',
   'CI',
+]);
+
+/**
+ * Names that are almost always non-secret config the *user* sets
+ * intentionally (debug toggles, locale, log level…). These DO belong
+ * in `.keynv.env` as plain literals so they reach the subprocess via
+ * `keynv exec`.
+ */
+const NAME_LITERAL_EXACT = new Set([
+  'DEBUG',
+  'LOG_LEVEL',
+  'LOGLEVEL',
+  'TZ',
+  'LANG',
+  'LC_ALL',
   'NODE_OPTIONS',
   'NPM_CONFIG_LOGLEVEL',
   'TS_NODE_PROJECT',
@@ -74,7 +90,7 @@ const VALUE_PATTERNS: Array<{ re: RegExp; hint: string }> = [
   { re: /^sk-[A-Za-z0-9]{20,}/, hint: 'OpenAI key' },
   { re: /^sk_live_/, hint: 'Stripe live key' },
   { re: /^sk_test_/, hint: 'Stripe test key' },
-  { re: /^pk_live_/, hint: 'Stripe publishable (often public, double-check)' },
+  { re: /^pk_live_/, hint: 'Stripe publishable — often public, double-check' },
   { re: /^xoxb-/, hint: 'Slack bot token' },
   { re: /^xoxp-/, hint: 'Slack user token' },
   { re: /^ghp_[A-Za-z0-9]{30,}/, hint: 'GitHub personal access token' },
@@ -124,12 +140,21 @@ function nameMatchesSecretSuffix(name: string): { matched: boolean; hint: string
 export function classifyEntry(name: string, value: string): ClassifyResult {
   const upper = name.toUpperCase();
 
-  // 1. Hard literal allowlist — these are basically never secrets.
+  // 0. Framework- or shell-managed names — drop entirely. These break
+  // things if we relay them through `.keynv.env` (NODE_ENV during
+  // `next build`, PATH overriding shell PATH, etc.). The init flow
+  // filters these out before they reach the checklist.
+  if (NAME_FRAMEWORK_MANAGED.has(upper)) {
+    return { verdict: 'skip', hint: 'framework/shell-managed' };
+  }
+
+  // 1. Hard literal allowlist — these are basically never secrets,
+  // but the user sets them on purpose and expects them in env.
   if (NAME_LITERAL_EXACT.has(upper)) {
     return { verdict: 'literal', hint: 'common config var' };
   }
   if (nameMatchesLiteralPrefix(name)) {
-    return { verdict: 'literal', hint: 'public env (build-time bundled)' };
+    return { verdict: 'literal', hint: 'public env, build-time bundled' };
   }
 
   // 2. Empty values can't be secrets in any meaningful sense.

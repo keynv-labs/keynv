@@ -19,7 +19,7 @@ const PROJECT_MARKERS = [
 const GIT_MARKER = '.git';
 
 const ENV_GLOB = /^\.env(\.[A-Za-z0-9_-]+)?$/;
-const ENV_EXAMPLE = /^\.env\.(example|sample|template)$/;
+const ENV_EXAMPLE = /^\.env\.(example|sample|template|dist|defaults)$/;
 const KEYNV_ENV_BASENAME = '.keynv.env';
 
 export interface ProjectRoot {

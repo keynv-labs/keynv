@@ -1,16 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { classifyEntry, previewValue } from './heuristics.js';
 
-describe('classifyEntry — literal allowlist', () => {
-  it('marks NODE_ENV literal regardless of value', () => {
-    expect(classifyEntry('NODE_ENV', 'development').verdict).toBe('literal');
-    expect(classifyEntry('NODE_ENV', 'sk-proj-fake-not-actually-a-secret').verdict).toBe('literal');
+describe('classifyEntry — framework-managed (skip)', () => {
+  it('skips NODE_ENV regardless of value (framework sets this itself)', () => {
+    expect(classifyEntry('NODE_ENV', 'development').verdict).toBe('skip');
+    expect(classifyEntry('NODE_ENV', 'production').verdict).toBe('skip');
   });
 
-  it('marks PORT, HOST, DEBUG literal', () => {
-    expect(classifyEntry('PORT', '3000').verdict).toBe('literal');
-    expect(classifyEntry('HOST', '0.0.0.0').verdict).toBe('literal');
+  it('skips PORT and HOST (deploy-target sets these)', () => {
+    expect(classifyEntry('PORT', '3000').verdict).toBe('skip');
+    expect(classifyEntry('HOST', '0.0.0.0').verdict).toBe('skip');
+    expect(classifyEntry('HOSTNAME', 'app').verdict).toBe('skip');
+  });
+
+  it('skips PATH/HOME/USER/SHELL/PWD (shell-set; never override)', () => {
+    expect(classifyEntry('PATH', '/usr/bin:/bin').verdict).toBe('skip');
+    expect(classifyEntry('HOME', '/home/me').verdict).toBe('skip');
+    expect(classifyEntry('USER', 'me').verdict).toBe('skip');
+    expect(classifyEntry('SHELL', '/bin/zsh').verdict).toBe('skip');
+    expect(classifyEntry('PWD', '/cwd').verdict).toBe('skip');
+  });
+
+  it('skips CI (set by CI runner, not by us)', () => {
+    expect(classifyEntry('CI', 'true').verdict).toBe('skip');
+  });
+});
+
+describe('classifyEntry — literal allowlist', () => {
+  it('marks DEBUG literal (user-set debug toggle)', () => {
     expect(classifyEntry('DEBUG', '*').verdict).toBe('literal');
+    expect(classifyEntry('DEBUG', 'express:*').verdict).toBe('literal');
+  });
+
+  it('marks LOG_LEVEL, TZ, LANG literal (intentional config)', () => {
+    expect(classifyEntry('LOG_LEVEL', 'debug').verdict).toBe('literal');
+    expect(classifyEntry('TZ', 'America/Los_Angeles').verdict).toBe('literal');
+    expect(classifyEntry('LANG', 'en_US.UTF-8').verdict).toBe('literal');
   });
 
   it('marks NEXT_PUBLIC_* and VITE_* literal (build-time bundled)', () => {

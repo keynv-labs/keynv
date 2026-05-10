@@ -92,10 +92,10 @@ describe('findEnvFiles', () => {
     expect(hits.map((h) => h.name)).toEqual(['.env', '.env.local', '.env.production']);
   });
 
-  it('skips .env.example, .env.sample, .env.template', () => {
-    writeFileSync(join(root, '.env.example'), '');
-    writeFileSync(join(root, '.env.sample'), '');
-    writeFileSync(join(root, '.env.template'), '');
+  it('skips placeholder/template variants (.example, .sample, .template, .dist, .defaults)', () => {
+    for (const name of ['.env.example', '.env.sample', '.env.template', '.env.dist', '.env.defaults']) {
+      writeFileSync(join(root, name), '');
+    }
     writeFileSync(join(root, '.env'), '');
     expect(findEnvFiles(root).map((h) => h.name)).toEqual(['.env']);
   });
