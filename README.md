@@ -170,6 +170,14 @@ In `package.json` it disappears into the script:
 }
 ```
 
+> **Heads up — Next.js 16 + React 19 build worker:** the upstream
+> `create-next-app@latest` template currently fails `next build` on
+> `/_global-error` prerender (`Cannot read properties of null
+> (reading 'useContext')`). This is a Next.js + React 19 template
+> issue, NOT a keynv issue — the same scaffold fails without keynv
+> in the loop. `next dev` works fine; for production builds either
+> pin `next@15` or wait for the upstream fix.
+
 ### keynv Cloud
 
 Star this repo to be notified when sign-up opens. Phase 6 deliverable.
