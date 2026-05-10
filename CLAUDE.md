@@ -17,7 +17,7 @@ The master plan that produced these docs lives at `~/.claude/plans/geli-tiricile
 ## Tech stack (locked)
 
 - TypeScript everywhere
-- **CLI**: Bun runtime, compiled to single binary via `bun build --compile`
+- **CLI**: Node 20+, bundled with tsup → published to npm as `@keynv/cli`. A `bun build --compile` artifact is kept as a secondary distribution channel (curl|sh, brew) but is no longer the primary path.
 - **Server**: Node 20+, Hono framework
 - **Database**: SQLite (better-sqlite3, WAL mode) + Litestream for backup. *Postgres is a Phase 6 commercial adapter; do not introduce it earlier.*
 - **ORM**: Drizzle (SQLite dialect first, Postgres dialect later)

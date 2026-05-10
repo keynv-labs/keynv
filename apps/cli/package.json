@@ -1,32 +1,62 @@
 {
   "name": "@keynv/cli",
   "version": "0.1.0-rc.1",
-  "private": true,
-  "description": "keynv command-line interface — Bun-compiled single binary.",
+  "description": "keynv command-line interface — AI-safe secrets management with alias-based references and a privileged subprocess wrapper.",
+  "license": "MIT",
   "type": "module",
   "bin": {
-    "keynv": "./dist/keynv"
+    "keynv": "dist/index.js"
   },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keynv-labs/keynv.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/keynv-labs/keynv#readme",
+  "bugs": {
+    "url": "https://github.com/keynv-labs/keynv/issues"
+  },
+  "keywords": [
+    "secrets",
+    "secrets-management",
+    "vault",
+    "ai-safety",
+    "mcp",
+    "cli",
+    "keynv"
+  ],
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "bun build src/index.ts --compile --outfile dist/keynv",
-    "build:js": "tsc -p tsconfig.json",
+    "build": "tsup",
+    "build:bun": "bun build src/index.ts --compile --external ssh2 --external cpu-features --outfile dist/keynv",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@napi-rs/keyring": "^1.1.7",
+    "libsodium-wrappers": "^0.7.16"
+  },
+  "optionalDependencies": {
+    "ssh2": "^1.16.0"
+  },
+  "devDependencies": {
     "@keynv/core": "workspace:*",
     "@keynv/integrations": "workspace:*",
     "@keynv/rbac": "workspace:*",
     "@keynv/redactor": "workspace:*",
     "@keynv/testers": "workspace:*",
-    "@napi-rs/keyring": "^1.1.7",
     "clipanion": "^4.0.0-rc.4",
-    "typanion": "^3.14.0"
-  },
-  "devDependencies": {
+    "typanion": "^3.14.0",
+    "tsup": "^8.3.5",
     "tsx": "^4.19.2"
   }
 }

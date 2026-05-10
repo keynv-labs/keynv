@@ -14,6 +14,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
 
 env:
   REGISTRY: ghcr.io
@@ -119,6 +120,43 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  npm-publish:
+    name: npm (@keynv/cli)
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --frozen-lockfile
+      # Sync the published version with the git tag (tag is the source of
+      # truth). No commit, no tag — just rewrite package.json in place.
+      - name: Sync @keynv/cli version with tag
+        working-directory: apps/cli
+        run: npm version "${{ needs.prepare.outputs.version }}" --no-git-tag-version --allow-same-version
+      # Workspace deps must be built so tsup can bundle them.
+      - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
+      - run: pnpm --filter @keynv/cli build
+      - name: Publish to npm
+        working-directory: apps/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then
+            npm publish --access public --tag next --provenance
+          else
+            npm publish --access public --provenance
+          fi
+
   docker-image:
     name: docker (multi-arch)
     needs: prepare
@@ -158,7 +196,7 @@ jobs:
 
   release:
     name: github release
-    needs: [prepare, cli-binaries, docker-image]
+    needs: [prepare, cli-binaries, npm-publish, docker-image]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

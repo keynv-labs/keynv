@@ -111,20 +111,20 @@ open https://github.com/keynv-labs/keynv/blob/main/deploy/README.md
 After the server is up, install the CLI:
 
 ```bash
-git clone https://github.com/keynv-labs/keynv.git
-cd keynv
-pnpm install
-pnpm --filter @keynv/cli build
-export PATH="$PWD/apps/cli/dist:$PATH"
+npm install -g @keynv/cli
 
-keynv config set server-url https://keynv.your-domain
-keynv login --email you@example.com
+keynv login --server https://keynv.your-domain --email you@example.com
 
 keynv project create demo
 keynv secret create @demo.dev.api_key --value 'whatever'
 keynv secret get @demo.dev.api_key
 # → whatever
 ```
+
+> Prefer a standalone binary over Node? Each release also publishes
+> `keynv-{darwin,linux,windows}-{arm64,x64}` archives at
+> [GitHub Releases](https://github.com/keynv-labs/keynv/releases) with
+> SHA256SUMS for verification.
 
 Wire up your agent:
 
