@@ -52,6 +52,14 @@ export const PAYLOAD_SCHEMAS = {
     .strict(),
   'project.deleted': z.object({ project_id: projectId, name: z.string() }).strict(),
   'project.dek_rotated': z.object({ project_id: projectId }).strict(),
+  'environment.created': z
+    .object({
+      project_id: projectId,
+      environment: z.string().min(1),
+      tier: z.enum(['production', 'non-production']),
+      require_approval: z.boolean(),
+    })
+    .strict(),
   'member.added': z.object({ project_id: projectId, target_user_id: userId, role }).strict(),
   'member.removed': z.object({ project_id: projectId, target_user_id: userId }).strict(),
   'member.role_changed': z.object({ project_id: projectId, target_user_id: userId, role }).strict(),

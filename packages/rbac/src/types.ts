@@ -35,6 +35,7 @@ export type Action =
   | 'project.delete'
   // Project-level
   | 'project.describe'
+  | 'environment.create'
   | 'member.add'
   | 'member.remove'
   | 'member.role_change'

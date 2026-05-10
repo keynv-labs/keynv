@@ -35,6 +35,7 @@ export const ROLE_ALLOWS_ACTION: Record<Action, ReadonlyArray<Role>> = {
   'project.delete': ['owner', 'admin'],
   // Project-level
   'project.describe': ['owner', 'admin', 'lead', 'developer', 'reader'],
+  'environment.create': ['owner', 'admin', 'lead'],
   'member.add': ['owner', 'admin', 'lead'],
   'member.remove': ['owner', 'admin', 'lead'],
   'member.role_change': ['owner', 'admin', 'lead'],

@@ -14,6 +14,7 @@ export type ErrorCode =
   | 'project.not_found'
   | 'project.already_exists'
   | 'environment.not_found'
+  | 'environment.already_exists'
   | 'secret.not_found'
   | 'secret.already_exists'
   | 'secret.invalid_alias'
@@ -36,6 +37,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   'project.not_found': 404,
   'project.already_exists': 409,
   'environment.not_found': 404,
+  'environment.already_exists': 409,
   'secret.not_found': 404,
   'secret.already_exists': 409,
   'secret.invalid_alias': 400,

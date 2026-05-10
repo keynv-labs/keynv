@@ -19,27 +19,26 @@ interface ProjectDeps {
   getKek: () => Uint8Array;
 }
 
+const EnvironmentBody = z.object({
+  name: z
+    .string()
+    .min(1)
+    .max(24)
+    .regex(/^[a-z0-9][a-z0-9-]*$/),
+  tier: z.enum(['production', 'non-production']).default('non-production'),
+  require_approval: z.boolean().default(false),
+});
+
 const CreateProjectBody = z.object({
   name: z
     .string()
     .min(1)
     .max(48)
     .regex(/^[a-z0-9][a-z0-9-]*$/, 'project name must be lowercase kebab-case'),
-  environments: z
-    .array(
-      z.object({
-        name: z
-          .string()
-          .min(1)
-          .max(24)
-          .regex(/^[a-z0-9][a-z0-9-]*$/),
-        tier: z.enum(['production', 'non-production']).default('non-production'),
-        require_approval: z.boolean().default(false),
-      }),
-    )
-    .min(1)
-    .max(16),
+  environments: z.array(EnvironmentBody).min(1).max(16),
 });
+
+const AddEnvironmentBody = EnvironmentBody;
 
 export function projectRoutes(deps: ProjectDeps): Hono {
   const r = new Hono();
@@ -178,6 +177,87 @@ export function projectRoutes(deps: ProjectDeps): Hono {
         require_approval: e.require_approval,
       })),
     });
+  });
+
+  r.post('/:id/environments', async (c) => {
+    const user = c.var.user;
+    const id = c.req.param('id');
+    if (
+      authorize('environment.create', { user, resource: { project_id: id } }) !== 'allow'
+    ) {
+      return jsonError(c, 'rbac.denied', 'Permission denied.');
+    }
+
+    const projectRows = await deps.db
+      .select({ id: schema.projects.id })
+      .from(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, id),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
+      .limit(1);
+    if (!projectRows[0]) return jsonError(c, 'project.not_found', 'Project not found.');
+
+    const parsed = AddEnvironmentBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return jsonError(c, 'validation.failed', 'Invalid environment body.', {
+        issues: parsed.error.issues,
+      });
+    }
+
+    const existing = await deps.db
+      .select({ id: schema.environments.id })
+      .from(schema.environments)
+      .where(
+        and(
+          eq(schema.environments.project_id, id),
+          eq(schema.environments.name, parsed.data.name),
+        ),
+      )
+      .limit(1);
+    if (existing[0]) {
+      return jsonError(
+        c,
+        'environment.already_exists',
+        `Environment '${parsed.data.name}' already exists on this project.`,
+      );
+    }
+
+    const envId = newEnvironmentId();
+    await deps.db
+      .insert(schema.environments)
+      .values({
+        id: envId,
+        project_id: id,
+        name: parsed.data.name,
+        tier: parsed.data.tier,
+        require_approval: parsed.data.require_approval,
+      });
+
+    await appendAudit(deps.db, {
+      actor_user_id: user.id,
+      actor_agent: readAgent(c),
+      event_type: 'environment.created',
+      payload: {
+        project_id: id,
+        environment: parsed.data.name,
+        tier: parsed.data.tier,
+        require_approval: parsed.data.require_approval,
+      },
+    });
+
+    return c.json(
+      {
+        id: envId,
+        name: parsed.data.name,
+        tier: parsed.data.tier,
+        require_approval: parsed.data.require_approval,
+      },
+      201,
+    );
   });
 
   r.delete('/:id', async (c) => {

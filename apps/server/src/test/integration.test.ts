@@ -1255,3 +1255,136 @@ describe('Health — capabilities', () => {
     }
   });
 });
+
+describe('POST /v1/projects/:id/environments', () => {
+  async function createProject(token: string): Promise<string> {
+    const res = await harness.app.request('http://localhost/v1/projects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        name: 'envtest',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { id: string };
+    return body.id;
+  }
+
+  it('owner can add a new environment to an existing project', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createProject(token);
+
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/environments`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: 'prod', tier: 'production', require_approval: true }),
+      },
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      id: string;
+      name: string;
+      tier: string;
+      require_approval: boolean;
+    };
+    expect(body.name).toBe('prod');
+    expect(body.tier).toBe('production');
+    expect(body.require_approval).toBe(true);
+    expect(body.id).toMatch(/^e_/);
+
+    // Project describe should reflect both envs.
+    const desc = await harness.app.request(`http://localhost/v1/projects/${projectId}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const descBody = (await desc.json()) as { environments: Array<{ name: string }> };
+    expect(descBody.environments.map((e) => e.name).sort()).toEqual(['dev', 'prod']);
+  });
+
+  it('rejects duplicate env name with 409', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createProject(token);
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/environments`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: 'dev' }),
+      },
+    );
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('environment.already_exists');
+  });
+
+  it('rejects invalid env name with 400', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createProject(token);
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/environments`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: 'INVALID UPPERCASE' }),
+      },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 for unknown project id', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const res = await harness.app.request(
+      'http://localhost/v1/projects/p_does_not_exist/environments',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: 'staging' }),
+      },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('developer (non-lead) is forbidden', async () => {
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createProject(ownerToken);
+    // grant developer access
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/members`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ email: harness.developerEmail, role: 'developer' }),
+    });
+    const devToken = await login(harness.app, harness.developerEmail, harness.developerPassword);
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/environments`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${devToken}` },
+        body: JSON.stringify({ name: 'staging' }),
+      },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('emits an environment.created audit entry', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createProject(token);
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/environments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: 'staging', tier: 'non-production' }),
+    });
+    const audit = await harness.app.request(
+      'http://localhost/v1/audit?event_type=environment.created',
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    const body = (await audit.json()) as {
+      entries: Array<{ event_type: string; payload: Record<string, unknown> }>;
+    };
+    const entry = body.entries.find((e) => (e.payload as { environment?: string }).environment === 'staging');
+    expect(entry).toBeDefined();
+    expect(entry?.event_type).toBe('environment.created');
+    expect(entry?.payload.project_id).toBe(projectId);
+  });
+});

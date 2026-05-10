@@ -19,6 +19,7 @@ describe('PAYLOAD_SCHEMAS', () => {
       'project.created',
       'project.deleted',
       'project.dek_rotated',
+      'environment.created',
       'member.added',
       'member.removed',
       'member.role_changed',
