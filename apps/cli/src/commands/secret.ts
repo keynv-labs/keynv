@@ -3,6 +3,11 @@ import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { table } from '../ui/format.js';
 import { promptHidden } from '../ui/input.js';
+import { isInteractive } from '../ui/helpers/tty.js';
+import { UserCancelled } from '../ui/helpers/cancel.js';
+import { pickProject } from '../ui/helpers/pickProject.js';
+import { pickSecret } from '../ui/helpers/pickSecret.js';
+import { promptNewSecret } from '../ui/flows/secret.js';
 
 interface ProjectListItem {
   id: string;
@@ -16,6 +21,19 @@ async function findProjectIdByName(client: ApiClient, name: string): Promise<str
   return match.id;
 }
 
+function missingAlias(stderr: NodeJS.WritableStream): number {
+  stderr.write('keynv: missing <alias> (TTY required for interactive prompt).\n');
+  return 1;
+}
+
+async function pickAliasInteractive(client: ApiClient): Promise<string | null> {
+  const project = await pickProject(client, 'Project');
+  if (!project) return null;
+  const secret = await pickSecret(client, project.id, 'Secret');
+  if (!secret) return null;
+  return secret.alias;
+}
+
 export class SecretCreateCommand extends Command {
   static override paths = [['secret', 'create']];
   static override usage = Command.Usage({
@@ -26,37 +44,52 @@ export class SecretCreateCommand extends Command {
         '$0 secret create @billing.dev.db_password --value example-fake-pass-do-not-use',
       ],
       ['From stdin', 'echo -n "..." | $0 secret create @billing.dev.db_password --stdin'],
+      ['Interactive (TTY)', '$0 secret create'],
     ],
   });
 
-  alias = Option.String();
+  alias = Option.String({ required: false });
   value = Option.String('--value', {
     description: 'Secret value (avoid this in shell history; prefer --stdin).',
   });
   stdin = Option.Boolean('--stdin', false);
 
   async execute(): Promise<number> {
-    const parsed = parseAlias(this.alias);
+    const client = new ApiClient();
+    await client.ensureHydrated();
+
+    let alias = this.alias;
+    let value = this.value;
+
+    if (!alias) {
+      if (!isInteractive()) return missingAlias(this.context.stderr);
+      try {
+        const built = await promptNewSecret(client);
+        if (!built) return 1;
+        alias = built.alias;
+        value = built.value;
+      } catch (err) {
+        if (err instanceof UserCancelled) return 130;
+        throw err;
+      }
+    }
+
+    const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(
-        `keynv: invalid alias '${this.alias}'. Expected @project.env.key.\n`,
-      );
+      this.context.stderr.write(`keynv: invalid alias '${alias}'. Expected @project.env.key.\n`);
       return 1;
     }
-    let value: string;
+
     if (this.stdin) {
       const chunks: Buffer[] = [];
       for await (const chunk of this.context.stdin) {
         chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
       }
       value = Buffer.concat(chunks).toString('utf8').replace(/\n$/, '');
-    } else if (this.value !== undefined) {
-      value = this.value;
-    } else {
+    } else if (value === undefined) {
       value = await promptHidden('value: ');
     }
 
-    const client = new ApiClient();
     const projectId = await findProjectIdByName(client, parsed.project);
     await client.request<{ alias: string; version: number }>(`/v1/projects/${projectId}/secrets`, {
       method: 'POST',
@@ -72,16 +105,30 @@ export class SecretGetCommand extends Command {
   static override usage = Command.Usage({
     description: 'Resolve a secret. The value is printed to stdout; nothing else.',
   });
-  alias = Option.String();
+  alias = Option.String({ required: false });
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {
-    const parsed = parseAlias(this.alias);
+    const client = new ApiClient();
+    await client.ensureHydrated();
+
+    let alias = this.alias;
+    if (!alias) {
+      if (!isInteractive()) return missingAlias(this.context.stderr);
+      try {
+        alias = (await pickAliasInteractive(client)) ?? undefined;
+      } catch (err) {
+        if (err instanceof UserCancelled) return 130;
+        throw err;
+      }
+      if (!alias) return 1;
+    }
+
+    const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${this.alias}'.\n`);
+      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
       return 1;
     }
-    const client = new ApiClient();
     const projectId = await findProjectIdByName(client, parsed.project);
     const data = await client.request<{ alias: string; value: string; version: number }>(
       `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
@@ -102,12 +149,30 @@ export class SecretListCommand extends Command {
   static override usage = Command.Usage({
     description: 'List alias names in a project (no values returned).',
   });
-  project = Option.String();
+  project = Option.String({ required: false });
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {
     const client = new ApiClient();
-    const projectId = await findProjectIdByName(client, this.project);
+    await client.ensureHydrated();
+
+    let projectName = this.project;
+    if (!projectName) {
+      if (!isInteractive()) {
+        this.context.stderr.write('keynv: missing <project>.\n');
+        return 1;
+      }
+      try {
+        const picked = await pickProject(client, 'Project');
+        if (!picked) return 1;
+        projectName = picked.name;
+      } catch (err) {
+        if (err instanceof UserCancelled) return 130;
+        throw err;
+      }
+    }
+
+    const projectId = await findProjectIdByName(client, projectName);
     const data = await client.request<{
       secrets: Array<{ alias: string; version: number; created_at: string }>;
     }>(`/v1/projects/${projectId}/secrets`);
@@ -132,14 +197,29 @@ export class SecretListCommand extends Command {
 export class SecretRotateCommand extends Command {
   static override paths = [['secret', 'rotate']];
   static override usage = Command.Usage({ description: 'Create a new version of a secret.' });
-  alias = Option.String();
+  alias = Option.String({ required: false });
   value = Option.String('--value');
   stdin = Option.Boolean('--stdin', false);
 
   async execute(): Promise<number> {
-    const parsed = parseAlias(this.alias);
+    const client = new ApiClient();
+    await client.ensureHydrated();
+
+    let alias = this.alias;
+    if (!alias) {
+      if (!isInteractive()) return missingAlias(this.context.stderr);
+      try {
+        alias = (await pickAliasInteractive(client)) ?? undefined;
+      } catch (err) {
+        if (err instanceof UserCancelled) return 130;
+        throw err;
+      }
+      if (!alias) return 1;
+    }
+
+    const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${this.alias}'.\n`);
+      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
       return 1;
     }
     let value: string;
@@ -154,7 +234,6 @@ export class SecretRotateCommand extends Command {
     } else {
       value = await promptHidden('new value: ');
     }
-    const client = new ApiClient();
     const projectId = await findProjectIdByName(client, parsed.project);
     const data = await client.request<{ alias: string; version: number }>(
       `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}/rotate`,
@@ -168,15 +247,29 @@ export class SecretRotateCommand extends Command {
 export class SecretDeleteCommand extends Command {
   static override paths = [['secret', 'delete']];
   static override usage = Command.Usage({ description: 'Soft-delete a secret.' });
-  alias = Option.String();
+  alias = Option.String({ required: false });
 
   async execute(): Promise<number> {
-    const parsed = parseAlias(this.alias);
+    const client = new ApiClient();
+    await client.ensureHydrated();
+
+    let alias = this.alias;
+    if (!alias) {
+      if (!isInteractive()) return missingAlias(this.context.stderr);
+      try {
+        alias = (await pickAliasInteractive(client)) ?? undefined;
+      } catch (err) {
+        if (err instanceof UserCancelled) return 130;
+        throw err;
+      }
+      if (!alias) return 1;
+    }
+
+    const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${this.alias}'.\n`);
+      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
       return 1;
     }
-    const client = new ApiClient();
     const projectId = await findProjectIdByName(client, parsed.project);
     await client.request(`/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`, {
       method: 'DELETE',

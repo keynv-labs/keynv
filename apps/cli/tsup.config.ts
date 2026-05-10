@@ -22,6 +22,7 @@ export default defineConfig({
   banner: { js: '#!/usr/bin/env node' },
   noExternal: [
     /^@keynv\//,
+    /^@clack\//,
     'clipanion',
     'typanion',
     'zod',

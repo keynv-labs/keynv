@@ -19,6 +19,7 @@ import {
   SecretRotateCommand,
 } from './commands/secret.js';
 import { TestCommand } from './commands/test.js';
+import { UICommand } from './commands/ui.js';
 import { fmtError } from './ui/format.js';
 import { VERSION } from './version.js';
 
@@ -63,9 +64,37 @@ cli.register(UninstallCommand);
 
 cli.register(TestCommand);
 
-cli
-  .runExit(process.argv.slice(2))
-  .catch((err: { code?: string; message: string; status?: number }) => {
-    process.stderr.write(`${fmtError(err)}\n`);
-    process.exit(1);
-  });
+cli.register(UICommand);
+
+const argv = process.argv.slice(2);
+
+if (argv.length === 0) {
+  // No subcommand → open the interactive menu (when on a TTY) instead of
+  // dumping a help page. The UICommand itself falls back to a short hint
+  // when stdin/stdout are not a TTY (CI, pipes), so scripts still get
+  // sensible behavior.
+  const { runMenu } = await import('./ui/menu.js');
+  const { isInteractive } = await import('./ui/helpers/tty.js');
+  if (isInteractive()) {
+    runMenu()
+      .then((code) => process.exit(code))
+      .catch((err: { code?: string; message: string; status?: number }) => {
+        process.stderr.write(`${fmtError(err)}\n`);
+        process.exit(1);
+      });
+  } else {
+    process.stdout.write(
+      'keynv — AI-safe secrets management.\n' +
+        'Run `keynv --help` for the full command list, or run `keynv` in an interactive\n' +
+        'terminal to open the menu.\n',
+    );
+    process.exit(0);
+  }
+} else {
+  cli
+    .runExit(argv)
+    .catch((err: { code?: string; message: string; status?: number }) => {
+      process.stderr.write(`${fmtError(err)}\n`);
+      process.exit(1);
+    });
+}
