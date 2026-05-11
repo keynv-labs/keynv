@@ -76,16 +76,22 @@ function buildRoot(dir: string, marker: string): ProjectRoot {
       }
       if (pkg.scripts && typeof pkg.scripts === 'object') {
         scripts = Object.fromEntries(
-          Object.entries(pkg.scripts).filter(
-            ([, v]) => typeof v === 'string',
-          ) as Array<[string, string]>,
+          Object.entries(pkg.scripts).filter(([, v]) => typeof v === 'string') as Array<
+            [string, string]
+          >,
         );
       }
     } catch {
       invalid = true;
     }
   }
-  return { path: dir, suggestedName, marker, packageJsonScripts: scripts, packageJsonInvalid: invalid };
+  return {
+    path: dir,
+    suggestedName,
+    marker,
+    packageJsonScripts: scripts,
+    packageJsonInvalid: invalid,
+  };
 }
 
 export interface EnvFileHit {

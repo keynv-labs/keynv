@@ -89,10 +89,8 @@ if (argv.length === 0) {
     process.exit(0);
   }
 } else {
-  cli
-    .runExit(argv)
-    .catch((err: { code?: string; message: string; status?: number }) => {
-      process.stderr.write(`${fmtError(err)}\n`);
-      process.exit(1);
-    });
+  cli.runExit(argv).catch((err: { code?: string; message: string; status?: number }) => {
+    process.stderr.write(`${fmtError(err)}\n`);
+    process.exit(1);
+  });
 }

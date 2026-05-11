@@ -35,9 +35,7 @@ export async function runMembersFlow(client: ApiClient, project?: ProjectSummary
         message: 'Action',
         options: [
           { value: 'add', label: '+ Add member' },
-          ...(members.length
-            ? [{ value: 'remove' as const, label: '- Remove member' }]
-            : []),
+          ...(members.length ? [{ value: 'remove' as const, label: '- Remove member' }] : []),
           { value: 'back' as const, label: '← Back' },
         ],
       }),
@@ -72,7 +70,7 @@ async function addMemberInteractive(client: ApiClient, project: ProjectSummary):
       email: () =>
         text({
           message: 'Email',
-          validate: (v) => (v && v.includes('@') ? undefined : 'enter an email'),
+          validate: (v) => (v?.includes('@') ? undefined : 'enter an email'),
         }),
       role: () =>
         select<string>({

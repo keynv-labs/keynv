@@ -23,15 +23,7 @@
   "bugs": {
     "url": "https://github.com/keynv-labs/keynv/issues"
   },
-  "keywords": [
-    "secrets",
-    "secrets-management",
-    "vault",
-    "ai-safety",
-    "mcp",
-    "cli",
-    "keynv"
-  ],
+  "keywords": ["secrets", "secrets-management", "vault", "ai-safety", "mcp", "cli", "keynv"],
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsup",

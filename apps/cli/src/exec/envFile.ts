@@ -102,7 +102,7 @@ export function parseEnvFile(content: string, filename: string): EnvFileEntry[] 
       );
     }
 
-    let valueRaw = body.slice(eq + 1);
+    const valueRaw = body.slice(eq + 1);
     let value: string;
 
     // Quoting: only honor when the *first non-space* char is a quote.

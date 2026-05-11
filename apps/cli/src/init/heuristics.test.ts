@@ -74,17 +74,15 @@ describe('classifyEntry — value-shape detectors', () => {
 
   it('flags JWTs', () => {
     expect(
-      classifyEntry(
-        'FOO',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.signature-here',
-      ).verdict,
+      classifyEntry('FOO', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.signature-here')
+        .verdict,
     ).toBe('secret');
   });
 
   it('flags PEM private keys', () => {
-    expect(
-      classifyEntry('FOO', '-----BEGIN RSA PRIVATE KEY-----\nMIIEpA...').verdict,
-    ).toBe('secret');
+    expect(classifyEntry('FOO', '-----BEGIN RSA PRIVATE KEY-----\nMIIEpA...').verdict).toBe(
+      'secret',
+    );
   });
 
   it('flags connection strings with embedded credentials', () => {
@@ -123,9 +121,7 @@ describe('classifyEntry — entropy fallback', () => {
   });
 
   it('keeps low-entropy long values ambiguous', () => {
-    expect(classifyEntry('MY_THING', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa').verdict).toBe(
-      'ambiguous',
-    );
+    expect(classifyEntry('MY_THING', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa').verdict).toBe('ambiguous');
   });
 });
 

@@ -182,9 +182,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
   r.post('/:id/environments', async (c) => {
     const user = c.var.user;
     const id = c.req.param('id');
-    if (
-      authorize('environment.create', { user, resource: { project_id: id } }) !== 'allow'
-    ) {
+    if (authorize('environment.create', { user, resource: { project_id: id } }) !== 'allow') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
 
@@ -212,10 +210,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       .select({ id: schema.environments.id })
       .from(schema.environments)
       .where(
-        and(
-          eq(schema.environments.project_id, id),
-          eq(schema.environments.name, parsed.data.name),
-        ),
+        and(eq(schema.environments.project_id, id), eq(schema.environments.name, parsed.data.name)),
       )
       .limit(1);
     if (existing[0]) {
@@ -227,15 +222,13 @@ export function projectRoutes(deps: ProjectDeps): Hono {
     }
 
     const envId = newEnvironmentId();
-    await deps.db
-      .insert(schema.environments)
-      .values({
-        id: envId,
-        project_id: id,
-        name: parsed.data.name,
-        tier: parsed.data.tier,
-        require_approval: parsed.data.require_approval,
-      });
+    await deps.db.insert(schema.environments).values({
+      id: envId,
+      project_id: id,
+      name: parsed.data.name,
+      tier: parsed.data.tier,
+      require_approval: parsed.data.require_approval,
+    });
 
     await appendAudit(deps.db, {
       actor_user_id: user.id,

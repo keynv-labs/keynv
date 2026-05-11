@@ -1,13 +1,13 @@
 import { parseAlias } from '@keynv/core';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
+import { promptNewSecret } from '../ui/flows/secret.js';
 import { table } from '../ui/format.js';
-import { promptHidden } from '../ui/input.js';
-import { isInteractive } from '../ui/helpers/tty.js';
 import { UserCancelled } from '../ui/helpers/cancel.js';
 import { pickProject } from '../ui/helpers/pickProject.js';
 import { pickSecret } from '../ui/helpers/pickSecret.js';
-import { promptNewSecret } from '../ui/flows/secret.js';
+import { isInteractive } from '../ui/helpers/tty.js';
+import { promptHidden } from '../ui/input.js';
 
 interface ProjectListItem {
   id: string;

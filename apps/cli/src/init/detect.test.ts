@@ -93,7 +93,13 @@ describe('findEnvFiles', () => {
   });
 
   it('skips placeholder/template variants (.example, .sample, .template, .dist, .defaults)', () => {
-    for (const name of ['.env.example', '.env.sample', '.env.template', '.env.dist', '.env.defaults']) {
+    for (const name of [
+      '.env.example',
+      '.env.sample',
+      '.env.template',
+      '.env.dist',
+      '.env.defaults',
+    ]) {
       writeFileSync(join(root, name), '');
     }
     writeFileSync(join(root, '.env'), '');

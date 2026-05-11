@@ -1,6 +1,6 @@
 import { Command } from 'clipanion';
-import { runMenu } from '../ui/menu.js';
 import { isInteractive } from '../ui/helpers/tty.js';
+import { runMenu } from '../ui/menu.js';
 
 /**
  * Default command: opens the interactive TUI when `keynv` is invoked

@@ -86,7 +86,10 @@ function printDetail(detail: ProjectDetail | null): void {
   const envLines = detail.environments.map(
     (e) => `  ${e.name}  (tier=${e.tier}, approval=${e.require_approval})`,
   );
-  note(`${detail.name}  (${detail.id})\n${envLines.join('\n') || '  (no environments)'}`, 'Project');
+  note(
+    `${detail.name}  (${detail.id})\n${envLines.join('\n') || '  (no environments)'}`,
+    'Project',
+  );
 }
 
 export async function createProjectInteractive(client: ApiClient): Promise<ProjectSummary | null> {

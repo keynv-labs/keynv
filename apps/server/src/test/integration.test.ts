@@ -1382,7 +1382,9 @@ describe('POST /v1/projects/:id/environments', () => {
     const body = (await audit.json()) as {
       entries: Array<{ event_type: string; payload: Record<string, unknown> }>;
     };
-    const entry = body.entries.find((e) => (e.payload as { environment?: string }).environment === 'staging');
+    const entry = body.entries.find(
+      (e) => (e.payload as { environment?: string }).environment === 'staging',
+    );
     expect(entry).toBeDefined();
     expect(entry?.event_type).toBe('environment.created');
     expect(entry?.payload.project_id).toBe(projectId);

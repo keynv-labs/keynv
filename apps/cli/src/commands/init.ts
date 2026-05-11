@@ -1,8 +1,8 @@
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
-import { isInteractive } from '../ui/helpers/tty.js';
 import { runInitFlow } from '../ui/flows/init.js';
 import { UserCancelled } from '../ui/helpers/cancel.js';
+import { isInteractive } from '../ui/helpers/tty.js';
 
 export class InitCommand extends Command {
   static override paths = [['init']];

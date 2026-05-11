@@ -15,7 +15,6 @@
  */
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildAlias } from '@keynv/core';
 import {
   cancel,
   confirm,
@@ -28,8 +27,10 @@ import {
   spinner,
   text,
 } from '@clack/prompts';
+import { buildAlias } from '@keynv/core';
 import type { ApiClient } from '../../client/http.js';
 import { type EnvFileEntry, parseEnvFile } from '../../exec/envFile.js';
+import { writeAiContext } from '../../init/aiContext.js';
 import {
   type EnvFileHit,
   findEnvFiles,
@@ -37,7 +38,6 @@ import {
   hasExistingKeynvEnv,
   suggestedEnvForSuffix,
 } from '../../init/detect.js';
-import { writeAiContext } from '../../init/aiContext.js';
 import { classifyEntry, previewValue } from '../../init/heuristics.js';
 import { applyWraps, planScriptWrap } from '../../init/scriptWrap.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
@@ -170,7 +170,9 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
 
   const totalEntries = [...perEnv.values()].reduce((n, arr) => n + arr.length, 0);
   if (totalEntries === 0) {
-    log.info('All env files were empty or only contained framework-managed vars. Nothing to upload.');
+    log.info(
+      'All env files were empty or only contained framework-managed vars. Nothing to upload.',
+    );
     outro('Done.');
     return { exitCode: 0 };
   }
@@ -249,10 +251,10 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   const planSummary = [
     `Project:           ${projectChoice.name}${projectChoice.created ? ' (will be created)' : ''}`,
     `Environments:      ${distinctEnvs.join(', ')}`,
-    `Per-env breakdown:`,
+    'Per-env breakdown:',
     perEnvCounts,
     `Script wraps:      ${scriptWrapSelection.length}`,
-    `Original .env:     delete after upload`,
+    'Original .env:     delete after upload',
     opts.dryRun ? 'Dry-run: no changes will be made.' : '',
   ]
     .filter(Boolean)
@@ -295,7 +297,11 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
             method: 'POST',
             body: { env, key: aliasKey, value: e.value },
           });
-          const alias = buildAlias({ project: projectChoice.name, environment: env, key: aliasKey });
+          const alias = buildAlias({
+            project: projectChoice.name,
+            environment: env,
+            key: aliasKey,
+          });
           if (alias === null) {
             failed.push({
               env,
@@ -317,7 +323,9 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     if (failed.length === 0) {
       s.stop(`Uploaded ${totalToUpload} secret${totalToUpload === 1 ? '' : 's'}`);
     } else {
-      s.error(`${totalToUpload - failed.length}/${totalToUpload} uploaded; ${failed.length} failed`);
+      s.error(
+        `${totalToUpload - failed.length}/${totalToUpload} uploaded; ${failed.length} failed`,
+      );
       for (const f of failed) log.warn(`  [${f.env}] ${f.name}: ${f.reason}`);
     }
   }
@@ -625,7 +633,9 @@ async function ensureProjectAndEnvs(
         body: envBodyFor(envName),
       });
     } catch (err) {
-      s.error(`Failed to add env "${envName}": ${err instanceof Error ? err.message : String(err)}`);
+      s.error(
+        `Failed to add env "${envName}": ${err instanceof Error ? err.message : String(err)}`,
+      );
       return null;
     }
   }
@@ -690,7 +700,7 @@ function composeKeynvEnv(opts: ComposeOpts): string[] {
     }
   }
   if (mergeWithExisting !== null) {
-    lines.push(`# <<< keynv init <<<`);
+    lines.push('# <<< keynv init <<<');
   }
   return lines;
 }

@@ -7,7 +7,10 @@ interface ProjectDetail {
   environments: Array<{ name: string; tier: string; require_approval: boolean }>;
 }
 
-export async function describeProject(client: ApiClient, projectId: string): Promise<ProjectDetail> {
+export async function describeProject(
+  client: ApiClient,
+  projectId: string,
+): Promise<ProjectDetail> {
   return client.request<ProjectDetail>(`/v1/projects/${projectId}`);
 }
 

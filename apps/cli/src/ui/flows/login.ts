@@ -1,5 +1,5 @@
 import { cancel, group, password, spinner, text } from '@clack/prompts';
-import { ApiClient } from '../../client/http.js';
+import type { ApiClient } from '../../client/http.js';
 import { saveCredentials } from '../../client/store.js';
 import { AGENT } from '../../version.js';
 import { UserCancelled } from '../helpers/cancel.js';
@@ -29,7 +29,7 @@ export async function runLoginFlow(client: ApiClient): Promise<boolean> {
       email: () =>
         text({
           message: 'Email',
-          validate: (v) => (v && v.includes('@') ? undefined : 'enter an email'),
+          validate: (v) => (v?.includes('@') ? undefined : 'enter an email'),
         }),
       password: () =>
         password({

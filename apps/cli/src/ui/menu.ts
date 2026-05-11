@@ -1,14 +1,14 @@
 import { cancel, intro, isCancel, log, outro, select } from '@clack/prompts';
 import { ApiClient } from '../client/http.js';
 import { clearCredentials } from '../client/store.js';
-import { fmtError } from './format.js';
-import { UserCancelled } from './helpers/cancel.js';
+import { VERSION } from '../version.js';
 import { runAuditFlow } from './flows/audit.js';
 import { runLoginFlow } from './flows/login.js';
 import { runMembersFlow } from './flows/member.js';
 import { runProjectsFlow } from './flows/project.js';
 import { runSecretsFlow } from './flows/secret.js';
-import { VERSION } from '../version.js';
+import { fmtError } from './format.js';
+import { UserCancelled } from './helpers/cancel.js';
 
 /**
  * Top-level interactive loop. Returns the process exit code.

@@ -38,10 +38,7 @@ to load a specific file, or set KEYNV_ENV_FILE in the environment.
 spelled \`--from\` to avoid the collision.)
 `,
     examples: [
-      [
-        'Auto-load .keynv.env from cwd or parents',
-        '$0 exec -- next dev',
-      ],
+      ['Auto-load .keynv.env from cwd or parents', '$0 exec -- next dev'],
       [
         'Run mysql with the alias substituted at fork-exec time',
         '$0 exec -- mysql -p@billing.dev.db_pass -h db.example.com',
@@ -244,4 +241,3 @@ function signalNumber(sig: NodeJS.Signals): number | null {
   };
   return map[sig] ?? null;
 }
-

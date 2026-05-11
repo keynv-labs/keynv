@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
-import { buildAlias, parseAlias } from '@keynv/core';
 import { confirm, group, log, note, password, select, text } from '@clack/prompts';
+import { buildAlias, parseAlias } from '@keynv/core';
 import type { ApiClient } from '../../client/http.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
 import { pickEnv } from '../helpers/pickEnv.js';
@@ -79,7 +79,10 @@ async function runSecretMenu(
       }
     } else if (choice === 'rotate') {
       const newValue = unwrap(
-        await password({ message: 'New value', validate: (v) => (v && v.length ? undefined : 'required') }),
+        await password({
+          message: 'New value',
+          validate: (v) => (v?.length ? undefined : 'required'),
+        }),
       );
       const data = await client.request<{ alias: string; version: number }>(`${path}/rotate`, {
         method: 'POST',
@@ -87,9 +90,7 @@ async function runSecretMenu(
       });
       log.success(`Rotated ${data.alias} → v${data.version}`);
     } else if (choice === 'delete') {
-      const confirmed = unwrap(
-        await confirm({ message: `Delete ${alias}?`, initialValue: false }),
-      );
+      const confirmed = unwrap(await confirm({ message: `Delete ${alias}?`, initialValue: false }));
       if (!confirmed) continue;
       await client.request(path, { method: 'DELETE' });
       log.success(`Deleted ${alias}`);
@@ -108,7 +109,9 @@ async function copyToClipboard(value: string): Promise<boolean> {
         : ['xclip', ['-selection', 'clipboard']];
   return new Promise((resolve) => {
     try {
-      const child = spawn(cmd[0] as string, cmd[1] as string[], { stdio: ['pipe', 'ignore', 'ignore'] });
+      const child = spawn(cmd[0] as string, cmd[1] as string[], {
+        stdio: ['pipe', 'ignore', 'ignore'],
+      });
       child.on('error', () => resolve(false));
       child.on('exit', (code) => resolve(code === 0));
       child.stdin.end(value);
@@ -154,7 +157,7 @@ export async function promptNewSecret(
       value: () =>
         password({
           message: 'Value (hidden)',
-          validate: (v) => (v && v.length ? undefined : 'required'),
+          validate: (v) => (v?.length ? undefined : 'required'),
         }),
     },
     {
@@ -169,10 +172,7 @@ export async function promptNewSecret(
   return { alias: built.literal, value: answers.value };
 }
 
-async function createSecretInteractive(
-  client: ApiClient,
-  project: ProjectSummary,
-): Promise<void> {
+async function createSecretInteractive(client: ApiClient, project: ProjectSummary): Promise<void> {
   const built = await promptNewSecret(client, project);
   if (!built) return;
   const parsed = parseAlias(built.alias);
