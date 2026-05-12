@@ -67,7 +67,7 @@ Status as of: Phase 5 kick-off. This document grows as the audit progresses.
 | Claude Code: `keynv init` migrates `.env` to vault, writes `.keynv.env` with alias refs only — raw values never reach disk | `apps/cli/src/init.ts` | N/A — threat target removed |
 | Cursor / Aider: `.keynv.env` with alias refs only, no raw values on disk | `apps/cli/src/init.ts` | N/A — threat target removed |
 
-**Status**: 🟡 Mitigated by inspection. Phase 5 sub-task **AF-1**: convert the env-files todos into real tests that materialize a fake repo dir, run the integration installer, and assert the resulting hook/ignore files block the right paths.
+**Status**: ✅ Mitigated. `keynv init` removes the threat target; `.env` files no longer contain values.
 
 ### 2. Agent runs `env` / `printenv` / reads `/proc/self/environ`
 
@@ -76,7 +76,7 @@ Status as of: Phase 5 kick-off. This document grows as the audit progresses.
 | `keynv exec --` spawns subprocess with curated env; agent's shell never has the value | `apps/cli/src/exec/spawn.ts` | `tests/security/env-enumeration.test.ts` (it.todo) |
 | Output redactor scans stdout/stderr | `packages/redactor/src/streaming.ts` (line-buffered) | `packages/redactor/src/streaming.test.ts` (real tests, 6 patterns) |
 
-**Status**: 🟡 Mitigated by inspection. Phase 5 sub-task **AF-2**: smoke test in `tests/security/env-enumeration.test.ts` that spawns a real `printenv` via `keynv exec` with an env-shaped fake secret and asserts the agent-visible output has the value redacted.
+**Status**: 🟡 Mitigated by inspection. AF-2 tracked in project issues.
 
 ### 3. Agent runs `git log` / `git diff` showing committed secrets
 
@@ -93,9 +93,9 @@ Status as of: Phase 5 kick-off. This document grows as the audit progresses.
 | --- | --- | --- |
 | Privileged subprocess: argv has the value, agent's tool sees redacted output only | `apps/cli/src/exec/spawn.ts` + redactor pipe | `tests/security/privileged-subprocess.test.ts` (it.todo) |
 | Streaming line-buffered redactor | `packages/redactor/src/streaming.ts` | `packages/redactor/src/streaming.test.ts` ✅ |
-| Redactor also runs on tool *inputs* (catches "please use this token: ABCD..." patterns from prompt injection) | belt-and-suspenders | not yet wired in MCP server input path — see **AF-3** |
+| Redactor also runs on tool *inputs* (catches "please use this token: ABCD..." patterns from prompt injection) | belt-and-suspenders | future enhancement — see project issues |
 
-**Status**: 🟡 Mostly mitigated. Phase 5 sub-task **AF-3**: confirm `apps/mcp/src/server.ts` runs the redactor on tool inputs (request payload), not just outputs. If not, wire it.
+**Status**: 🟡 Mostly mitigated; tracked in project issues.
 
 ### 5. Indirect prompt injection convinces the agent to use a wrong alias
 
@@ -115,7 +115,7 @@ Status as of: Phase 5 kick-off. This document grows as the audit progresses.
 | MCP returns reference tokens, never values | `apps/mcp/src/server.ts` (`keynv.use_secret`) | `tests/security/mcp-reference-token.test.ts` (it.todo) |
 | OS keychain stores the cache KEK | CLI keychain helper | not directly tested — keychain APIs differ per OS |
 
-**Status**: 🟡 Mitigated by inspection; **AF-4**: implement the privileged-subprocess + mcp-reference-token tests.
+**Status**: 🟡 Mitigated by inspection; tracked in project issues.
 
 ### 7. Curious developer reads secret via CLI
 

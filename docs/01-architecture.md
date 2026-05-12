@@ -13,7 +13,7 @@ This document describes the components, data flow, and deployment topology of ke
 │  │ (Claude/...) │─────▶│  • keynv exec (shell wrapper)       │   │
 │  │              │      │  • keynv-mcp (MCP server)           │   │
 │  │ Sees only    │◀─────│  • Output Redactor                  │   │
-│  │ @aliases     │      │  • Per-agent integration installers │   │
+│  │ @aliases     │      │  • keynv init (agent onboarding)   │   │
 │  └──────────────┘      └────────────────┬────────────────────┘   │
 │                                          │                         │
 │                                          ▼                         │

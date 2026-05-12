@@ -46,11 +46,9 @@ export class RedactStreamCommand extends Command {
   static override usage = Command.Usage({
     description: 'Stream stdin through the line-buffered redactor to stdout.',
     details: `
-Used as a hook handler by per-agent integrations (e.g., Claude Code's
-PostToolUse hook): \`keynv redact-stream\` reads its tool output on
-stdin and writes a redacted version on stdout, preserving the original
-line structure. Multi-line patterns are NOT applied here (see the
-streaming-mode limitation in @keynv/redactor).
+Pipe any output through the line-buffered redactor to stdout.
+Preserves original line structure. Multi-line patterns are NOT applied
+here (see the streaming-mode limitation in the redactor package).
 `,
   });
 

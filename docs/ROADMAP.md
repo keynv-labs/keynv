@@ -104,7 +104,7 @@ Pre-public-launch hardening. Active streams in priority order:
 |---|---|---|
 | **B** | CI re-activation (`ci.yml`, `security.yml`) | ✓ done |
 | **D** | License finalize (MIT) + dep license audit | ✓ done |
-| **A** | Security audit + remediation (semgrep / threat-model walkthrough) | ◐ in progress — A1 closed (rate limiter), AF-1..5/AF-7 deferred to `0.1.x` |
+| **A** | Security audit + remediation (semgrep / threat-model walkthrough) | ◐ in progress — rate limiter (A1) closed; remaining items tracked in project issues |
 | **G** | Versioning (`v0.1.0-rc.1` cut), CHANGELOG, deprecation policy | ✓ done (2026-05-10) |
 | **C** | Release pipeline — Bun binaries × 5 platforms + multi-arch Docker | ○ next |
 | **E** | Public docs polish (`getting-started.md`, integration guides) | ○ pending |

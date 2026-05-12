@@ -19,8 +19,8 @@ interface OnboardingDeps {
  * the caller's own user (cli tokens) so a teammate's progress doesn't
  * silently mark steps complete for someone else who hasn't done them.
  *
- * `integration_installed` is no longer tracked — `keynv init` replaces the
- * per-agent installers. The web client skips the install CTA when
+ * `integration_installed` is no longer tracked — `keynv init` replaces
+ * per-agent installers. The web client skips the onboarding CTA when
  * `.keynv.env` exists in the project root.
  *
  * Dismissal state is NOT tracked here — kept in browser localStorage
