@@ -149,10 +149,11 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then
-            npm publish --access public --tag next --provenance
+            npm publish --access public --tag next --provenance || true
             npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
           else
             npm publish --access public --provenance
+            npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
           fi
 
   docker-image:
