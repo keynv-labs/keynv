@@ -8,6 +8,20 @@ interface ProjectListItem {
   created_at: string;
 }
 
+export function isProjectId(input: string): boolean {
+  return input.startsWith('p_') || /^[a-f0-9]{20,}$/i.test(input);
+}
+
+export async function resolveProjectId(client: ApiClient, input: string): Promise<string> {
+  if (isProjectId(input)) {
+    return input;
+  }
+  const data = await client.request<{ projects: ProjectListItem[] }>('/v1/projects');
+  const match = data.projects.find((p) => p.name === input);
+  if (!match) throw new Error(`project not found: ${input}`);
+  return match.id;
+}
+
 export class ProjectListCommand extends Command {
   static override paths = [['project', 'list']];
   static override usage = Command.Usage({
@@ -75,17 +89,24 @@ export class ProjectCreateCommand extends Command {
 
 export class ProjectDescribeCommand extends Command {
   static override paths = [['project', 'describe']];
-  static override usage = Command.Usage({ description: 'Show metadata for one project.' });
+  static override usage = Command.Usage({
+    description: 'Show metadata for one project.',
+    examples: [
+      ['By ID', '$0 project describe p_go6rqgwz0wlokdsl55ikn'],
+      ['By name', '$0 project describe myproject'],
+    ],
+  });
   id = Option.String();
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {
     const client = new ApiClient();
+    const projectId = await resolveProjectId(client, this.id);
     const data = await client.request<{
       id: string;
       name: string;
       environments: Array<{ name: string; tier: string; require_approval: boolean }>;
-    }>(`/v1/projects/${this.id}`);
+    }>(`/v1/projects/${projectId}`);
     if (this.json) {
       this.context.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
       return 0;
