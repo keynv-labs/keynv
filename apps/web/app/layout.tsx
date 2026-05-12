@@ -14,9 +14,8 @@ export const metadata: Metadata = {
   },
   description: 'AI-safe secrets management dashboard',
   robots: { index: true, follow: true },
-  icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-  },
+  // icon.svg + apple-icon.tsx are auto-detected from app/ — no explicit
+  // <link> needed.
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
