@@ -10,16 +10,7 @@ import {
   isOnboardingComplete,
 } from '@/lib/onboarding';
 import { notify } from '@/lib/toast';
-import {
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  Circle,
-  Copy,
-  ExternalLink,
-  Terminal,
-  X,
-} from 'lucide-react';
+import { ArrowRight, Check, CheckCircle2, Circle, Copy, Terminal, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -209,17 +200,25 @@ function buildSteps(): StepDef[] {
     },
     {
       id: 'integration_installed',
-      title: 'Install in your AI agent',
+      title: 'Onboard your AI agents',
       body: () => (
         <div className="space-y-2.5">
           <p className="text-fg-muted">
-            Connect Claude Code, Cursor, or Codex so the agent uses aliases — never values.
+            Run{' '}
+            <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
+              keynv init
+            </code>{' '}
+            in your project root. It scans existing
+            <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
+              .env
+            </code>{' '}
+            files, migrates secrets to the vault, and writes a
+            <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
+              .keynv.env
+            </code>{' '}
+            that maps alias names — safe to commit.
           </p>
-          <div className="flex flex-wrap gap-2">
-            <IntegrationButton href="/docs/quickstart" label="Claude Code" />
-            <IntegrationButton href="/docs/quickstart" label="Cursor" />
-            <IntegrationButton href="/docs/quickstart" label="Codex" />
-          </div>
+          <CommandSnippet command="keynv init" />
         </div>
       ),
     },
@@ -257,16 +256,5 @@ function CommandSnippet({ command }: { command: string }) {
         )}
       </button>
     </div>
-  );
-}
-
-function IntegrationButton({ href, label }: { href: string; label: string }) {
-  return (
-    <Link href={{ pathname: href } as never}>
-      <Button variant="outline" size="sm" className="gap-1.5">
-        {label}
-        <ExternalLink size={11} strokeWidth={2} />
-      </Button>
-    </Link>
   );
 }
