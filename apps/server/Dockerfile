@@ -56,6 +56,8 @@ COPY --from=builder --chown=keynv:keynv /out/node_modules ./node_modules
 COPY --from=builder --chown=keynv:keynv /repo/apps/server/src/db/migrations ./dist/db/migrations
 COPY --from=builder --chown=keynv:keynv /out/package.json ./package.json
 
+RUN mkdir -p /data && chown keynv:keynv /data
+
 USER keynv
 ENV NODE_ENV=production
 ENV KEYNV_PORT=8080
