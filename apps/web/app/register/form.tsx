@@ -2,11 +2,16 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useActionState } from 'react';
+import { PasswordInput } from '@/components/ui/password-input';
+import { PasswordStrength } from '@/components/ui/password-strength';
+import { useActionState, useState } from 'react';
 import { type RegisterState, registerAction } from './actions';
 
 export function RegisterForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<RegisterState, FormData>(registerAction, {});
+  const [email, setEmail] = useState('');
+  const [orgName, setOrgName] = useState('');
+  const [password, setPassword] = useState('');
 
   return (
     <form action={action} className="mt-4 space-y-3">
@@ -17,9 +22,15 @@ export function RegisterForm({ next }: { next: string }) {
           type="email"
           name="email"
           autoComplete="email"
+          inputMode="email"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           required
           autoFocus
           placeholder="alice@team.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
       </Field>
 
@@ -31,22 +42,30 @@ export function RegisterForm({ next }: { next: string }) {
           required
           placeholder="Acme Inc"
           maxLength={64}
+          value={orgName}
+          onChange={(e) => setOrgName(e.target.value)}
         />
       </Field>
 
       <Field label="Password">
-        <Input
-          type="password"
+        <PasswordInput
           name="password"
           autoComplete="new-password"
           required
           placeholder="At least 12 characters"
           minLength={12}
           maxLength={256}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
+        <PasswordStrength password={password} userInputs={[email, orgName]} />
       </Field>
 
-      {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+      {state.error ? (
+        <p className="text-xs text-danger" role="alert" aria-live="polite">
+          {state.error}
+        </p>
+      ) : null}
 
       <Button type="submit" disabled={pending} className="w-full mt-1">
         {pending ? 'Creating account…' : 'Create account'}

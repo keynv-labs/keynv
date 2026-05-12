@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { useActionState } from 'react';
 import { type LoginState, loginAction } from './actions';
 
@@ -38,8 +39,7 @@ export function LoginForm({ next }: { next: string }) {
       </Field>
 
       <Field label="Password">
-        <Input
-          type="password"
+        <PasswordInput
           name="password"
           autoComplete="current-password"
           required
@@ -48,7 +48,11 @@ export function LoginForm({ next }: { next: string }) {
         />
       </Field>
 
-      {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+      {state.error ? (
+        <p className="text-xs text-danger" role="alert" aria-live="polite">
+          {state.error}
+        </p>
+      ) : null}
 
       <Button type="submit" disabled={pending} className="w-full mt-1">
         {pending ? 'Signing in…' : 'Sign in'}
