@@ -10,8 +10,11 @@ describe('scrubToastMessage', () => {
   });
 
   it('redacts Resend API keys', () => {
-    const real = 'Resend rejected: re_ixsmZx4q_LpctWfA3iEGTRFtLZuFMo1kU is invalid';
-    expect(scrubToastMessage(real)).toBe('Resend rejected: [redacted] is invalid');
+    // Clearly-synthetic fixture. NEVER use a real (even rotated) key here —
+    // the file's purpose is to prove the pattern fires, not to ship a
+    // historic credential into git history.
+    const fake = 'Resend rejected: re_FAKE_FAKE_FAKE_FAKE_FAKE_FAKE is invalid';
+    expect(scrubToastMessage(fake)).toBe('Resend rejected: [redacted] is invalid');
   });
 
   it('redacts Anthropic / OpenAI keys', () => {

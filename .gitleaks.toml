@@ -23,6 +23,14 @@ paths = [
   '''packages/redactor/src/patterns\.ts$''',
   '''packages/redactor/src/.*\.test\.ts$''',
 
+  # apps/web/lib/toast.ts is the redactor's frontend cousin: it scrubs
+  # secret-shaped strings out of toast messages before they reach the
+  # DOM. The accompanying test asserts on JWT / GitHub PAT / AWS key /
+  # PEM block fixtures intentionally — same regression-test pattern
+  # as packages/redactor. Real values never live in this file.
+  '''apps/web/lib/toast\.ts$''',
+  '''apps/web/lib/.*\.test\.ts$''',
+
   # Test fixtures explicitly named "innocent" or "*.example.*"
   '''.*test/fixtures/innocent.*$''',
   '''.*\.example\..*$''',
