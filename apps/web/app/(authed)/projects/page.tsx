@@ -75,7 +75,9 @@ export default async function ProjectsPage() {
 
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight leading-tight">Projects</h1>
+          <h1 className="font-display text-[32px] font-medium tracking-[-0.01em] leading-tight">
+            Projects
+          </h1>
           <p className="text-sm text-fg-muted mt-1">Operational state across your organization.</p>
         </div>
         {canCreate ? (

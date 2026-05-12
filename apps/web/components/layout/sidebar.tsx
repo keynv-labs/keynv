@@ -1,6 +1,7 @@
 'use client';
 
 import { logoutAction } from '@/app/(authed)/actions';
+import { Logomark } from '@/components/dossier/logomark';
 import { cn } from '@/lib/cn';
 import { FolderKanban, ScrollText, Settings, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -99,12 +100,10 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
         <Link
           href={{ pathname: '/projects' }}
           onClick={handleNavigate}
-          className="flex items-center gap-2 font-semibold tracking-tight text-fg"
+          className="flex items-baseline gap-2.5 font-display text-fg"
         >
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[11px] font-bold">
-            k
-          </span>
-          <span>keynv</span>
+          <Logomark size="sm" />
+          <span className="text-xl font-medium tracking-tight leading-none">keynv</span>
         </Link>
       </div>
 

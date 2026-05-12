@@ -41,7 +41,9 @@ export default async function ProjectLayout({
           segments={[{ label: 'Projects', href: '/projects' }, { label: project.name }]}
         />
         <header className="mt-3">
-          <h1 className="text-[22px] font-semibold tracking-tight">{project.name}</h1>
+          <h1 className="font-display text-[32px] font-medium tracking-[-0.01em] leading-tight">
+            {project.name}
+          </h1>
           <div className="font-mono text-xs text-fg-subtle mt-1">{project.id}</div>
         </header>
       </div>

@@ -21,7 +21,9 @@ export default async function AdminUsersPage() {
       <Breadcrumb segments={[{ label: 'Admin' }, { label: 'Users' }]} />
 
       <header>
-        <h1 className="text-[22px] font-semibold tracking-tight">Users</h1>
+        <h1 className="font-display text-[32px] font-medium tracking-[-0.01em] leading-tight">
+          Users
+        </h1>
         <p className="text-sm text-fg-muted mt-1">
           Org members and their org-level role. Project-level membership is managed inside each
           project.
