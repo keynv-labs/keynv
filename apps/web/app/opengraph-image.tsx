@@ -28,35 +28,29 @@ const ACCENT_SOFT = '#2a1d0a';
 const ACCENT_SOFT_BORDER = '#5a3d18';
 const SUCCESS = '#5dd9a8';
 
-async function loadGeist(weight: 400 | 500 | 600) {
-  // Geist is available on Google Fonts as well; mirror the same loader
-  // pattern as before. If the fetch fails we fall back to default sans.
-  const url = `https://fonts.googleapis.com/css2?family=Geist:wght@${weight}&display=swap`;
+// Inter / JetBrains Mono are used here (not the in-app Geist family)
+// because @vercel/og's font parser does not yet support some of Geist's
+// OpenType features — the build hits
+//   `lookupType: 6 - substFormat: 1 is not yet supported`
+// during static prerender of /opengraph-image. The visual identity
+// (amber accent, alias chip, layout) is what carries the brand on
+// social previews; the typeface is a secondary signal.
+async function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer> {
+  const url = `https://fonts.googleapis.com/css2?family=${family}:wght@${weight}&display=swap`;
   const css = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } }).then((r) => r.text());
   const match = css.match(/src: url\((.+?)\) format/);
-  if (!match) throw new Error(`Could not find Geist weight ${weight} font URL`);
+  if (!match) throw new Error(`Could not find ${family} weight ${weight} font URL`);
   const fontUrl = match[1] as string;
-  const buffer = await fetch(fontUrl).then((r) => r.arrayBuffer());
-  return buffer;
-}
-
-async function loadGeistMono(weight: 400 | 500) {
-  const url = `https://fonts.googleapis.com/css2?family=Geist+Mono:wght@${weight}&display=swap`;
-  const css = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } }).then((r) => r.text());
-  const match = css.match(/src: url\((.+?)\) format/);
-  if (!match) throw new Error(`Could not find Geist Mono weight ${weight} font URL`);
-  const fontUrl = match[1] as string;
-  const buffer = await fetch(fontUrl).then((r) => r.arrayBuffer());
-  return buffer;
+  return fetch(fontUrl).then((r) => r.arrayBuffer());
 }
 
 export default async function OpengraphImage() {
-  const [geistRegular, geistMedium, geistSemibold, geistMono, geistMonoMedium] = await Promise.all([
-    loadGeist(400),
-    loadGeist(500),
-    loadGeist(600),
-    loadGeistMono(400),
-    loadGeistMono(500),
+  const [interRegular, interMedium, interSemibold, jbMono, jbMonoMedium] = await Promise.all([
+    loadGoogleFont('Inter', 400),
+    loadGoogleFont('Inter', 500),
+    loadGoogleFont('Inter', 600),
+    loadGoogleFont('JetBrains+Mono', 400),
+    loadGoogleFont('JetBrains+Mono', 500),
   ]);
 
   return new ImageResponse(
@@ -69,7 +63,7 @@ export default async function OpengraphImage() {
         flexDirection: 'column',
         background: BG,
         color: FG,
-        fontFamily: 'Geist',
+        fontFamily: 'Inter',
         padding: '64px',
         overflow: 'hidden',
       }}
@@ -148,7 +142,7 @@ export default async function OpengraphImage() {
             color: ACCENT,
             fontSize: 14,
             fontWeight: 500,
-            fontFamily: 'Geist Mono',
+            fontFamily: 'JetBrains Mono',
             textTransform: 'uppercase',
             letterSpacing: '0.14em',
           }}
@@ -200,7 +194,7 @@ export default async function OpengraphImage() {
             borderRadius: 14,
             padding: '20px 24px',
             maxWidth: 920,
-            fontFamily: 'Geist Mono',
+            fontFamily: 'JetBrains Mono',
             fontSize: 26,
             letterSpacing: '-0.005em',
           }}
@@ -227,7 +221,7 @@ export default async function OpengraphImage() {
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            fontFamily: 'Geist Mono',
+            fontFamily: 'JetBrains Mono',
             textTransform: 'uppercase',
             letterSpacing: '0.16em',
             fontSize: 14,
@@ -242,11 +236,11 @@ export default async function OpengraphImage() {
     {
       ...size,
       fonts: [
-        { name: 'Geist', data: geistRegular, weight: 400, style: 'normal' },
-        { name: 'Geist', data: geistMedium, weight: 500, style: 'normal' },
-        { name: 'Geist', data: geistSemibold, weight: 600, style: 'normal' },
-        { name: 'Geist Mono', data: geistMono, weight: 400, style: 'normal' },
-        { name: 'Geist Mono', data: geistMonoMedium, weight: 500, style: 'normal' },
+        { name: 'Inter', data: interRegular, weight: 400, style: 'normal' },
+        { name: 'Inter', data: interMedium, weight: 500, style: 'normal' },
+        { name: 'Inter', data: interSemibold, weight: 600, style: 'normal' },
+        { name: 'JetBrains Mono', data: jbMono, weight: 400, style: 'normal' },
+        { name: 'JetBrains Mono', data: jbMonoMedium, weight: 500, style: 'normal' },
       ],
     },
   );
