@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { Card, CardEyebrow, CardTitle } from '@/components/ui/card';
 import { getSession } from '@/lib/session';
 import { CheckCircle2 } from 'lucide-react';
 import { redirect } from 'next/navigation';
@@ -10,68 +11,69 @@ export default async function AccountProfilePage() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <section className="rounded-lg border border-border bg-bg-elevated p-5 space-y-4">
+      <Card bezel className="space-y-5">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            Profile
-          </div>
+          <CardEyebrow>profile</CardEyebrow>
           <div className="mt-3 flex items-center gap-3">
             <span
               aria-hidden
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg-elevated-hover text-sm font-semibold text-fg"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border-strong bg-bg-inset font-mono text-sm font-semibold text-fg"
             >
               {session.email.slice(0, 2).toUpperCase()}
             </span>
             <div className="flex-1 min-w-0">
               <div className="text-sm text-fg">{session.email}</div>
-              <div className="text-[11px] text-fg-subtle mt-0.5 font-mono">{session.user_id}</div>
+              <div className="text-[11px] text-fg-subtle mt-0.5 font-mono tabular">
+                {session.user_id}
+              </div>
             </div>
-            <Badge tone={session.org_role === 'owner' ? 'warn' : 'success'}>
+            <Badge tone={session.org_role === 'owner' ? 'accent' : 'success'}>
               {session.org_role}
             </Badge>
           </div>
         </div>
 
-        <div className="border-t border-border pt-4 grid gap-3 sm:grid-cols-2 text-sm">
-          <Field label="Email">
+        <div className="border-t border-border pt-5 grid gap-4 sm:grid-cols-2 text-sm">
+          <Field label="email">
             <span className="text-fg">{session.email}</span>
-            <span className="block text-[11px] text-fg-subtle mt-0.5">
+            <span className="block text-[11px] text-fg-subtle mt-1">
               Email change requires admin support today.
             </span>
           </Field>
-          <Field label="Org role">
+          <Field label="org role">
             <span className="capitalize text-fg">{session.org_role}</span>
-            <span className="block text-[11px] text-fg-subtle mt-0.5">
+            <span className="block text-[11px] text-fg-subtle mt-1">
               Set by org admins. Affects what you can read and write.
             </span>
           </Field>
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-lg border border-border bg-bg-elevated p-5">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+      <Card>
+        <CardTitle>
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
           Password
-        </div>
-        <p className="text-sm text-fg-muted mt-2">
+        </CardTitle>
+        <p className="text-sm text-fg-muted -mt-1">
           Changing your password signs you out from any other device with an active session.
           Argon2id-hashed at rest.
         </p>
         <ChangePasswordForm />
-      </section>
+      </Card>
 
-      <section className="rounded-lg border border-border bg-bg-elevated p-5 opacity-60">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+      <Card className="opacity-70">
+        <CardTitle className="flex-wrap">
           MFA
-          <span className="rounded-sm border border-border px-1.5 py-0.5 normal-case font-medium tracking-normal text-[10px]">
-            Phase 5+
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle border border-border rounded-sm px-1.5 py-0.5">
+            phase 5+
           </span>
-        </div>
-        <p className="text-sm text-fg-muted mt-2 flex items-start gap-2">
+        </CardTitle>
+        <p className="text-sm text-fg-muted -mt-1 flex items-start gap-2">
           <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-fg-subtle" />
           TOTP enrollment ships in Phase 5 hardening. For now your account is protected by the owner
           password and rate-limited login.
         </p>
-      </section>
+      </Card>
     </div>
   );
 }
@@ -85,10 +87,10 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
         {label}
       </div>
-      <div className="mt-1">{children}</div>
+      <div className="mt-1.5">{children}</div>
     </div>
   );
 }

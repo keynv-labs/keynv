@@ -37,10 +37,16 @@ export async function StatusPill() {
   const tone = TONE[status];
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-2 py-1 text-[11px] text-fg-muted"
+      className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-inset px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted"
       aria-label={`API status: ${tone.label}`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} aria-hidden />
+      <span className="relative inline-flex">
+        <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} aria-hidden />
+        <span
+          className={`absolute inset-0 rounded-full ${tone.dot} opacity-60 animate-ping motion-reduce:hidden`}
+          aria-hidden
+        />
+      </span>
       {tone.label}
     </span>
   );

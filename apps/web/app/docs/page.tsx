@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { DOC_REGISTRY } from '@/lib/docs-registry';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -16,33 +16,43 @@ export const metadata: Metadata = {
 export default function DocsIndex() {
   return (
     <div>
-      <h1 className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight">
-        Documentation
+      <div className="display-eyebrow mb-3">documentation · self-host & integrate</div>
+      <h1 className="display text-3xl md:text-[42px] tracking-tight leading-[1.05]">
+        Operator guides &
+        <br />
+        <span className="text-fg-muted">threat-model reference.</span>
       </h1>
-      <p className="mt-3 text-base text-fg-muted leading-relaxed max-w-2xl">
+      <p className="mt-6 text-base text-fg-muted leading-relaxed max-w-2xl">
         Everything you need to self-host keynv, integrate it with your AI coding agent, and reason
         about what it does and doesn&rsquo;t defend against.
       </p>
 
-      <div className="mt-10 space-y-10">
-        {DOC_REGISTRY.map((section) => (
+      <div className="mt-12 space-y-10">
+        {DOC_REGISTRY.map((section, idx) => (
           <section key={section.section}>
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+            <h2 className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle flex items-center gap-2">
+              <span className="font-mono text-fg/40 tabular">
+                {String(idx + 1).padStart(2, '0')}
+              </span>
               {section.section}
             </h2>
-            <ul className="mt-3 grid gap-3 md:grid-cols-2">
+            <ul className="mt-4 grid gap-3 md:grid-cols-2">
               {section.pages.map((page) => (
                 <li key={page.slug}>
                   <Link
                     href={{ pathname: `/docs/${page.slug}` } as never}
-                    className="block rounded-lg border border-border bg-bg-elevated p-4 hover:border-border-strong hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
+                    className="group block rounded-lg border border-border bg-bg-elevated p-5 hover:border-border-strong hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
                   >
-                    <div className="flex items-center gap-2 text-fg font-semibold tracking-tight">
-                      {page.title}
-                      <ArrowRight size={13} strokeWidth={2} className="text-fg-subtle" />
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-fg font-semibold tracking-tight">{page.title}</div>
+                      <ArrowUpRight
+                        size={14}
+                        strokeWidth={2}
+                        className="shrink-0 text-fg-subtle group-hover:text-accent group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-fast ease-snap"
+                      />
                     </div>
                     {page.summary ? (
-                      <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{page.summary}</p>
+                      <p className="mt-2 text-sm text-fg-muted leading-relaxed">{page.summary}</p>
                     ) : null}
                   </Link>
                 </li>
@@ -52,9 +62,9 @@ export default function DocsIndex() {
         ))}
       </div>
 
-      <div className="mt-16 rounded-lg border border-border bg-bg-elevated p-5 flex items-center justify-between gap-4 flex-wrap">
+      <div className="mt-16 rounded-xl border border-border bg-bg-elevated p-6 flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <div className="text-fg font-semibold">Want everything in one file?</div>
+          <div className="text-fg font-semibold tracking-tight">Want everything in one file?</div>
           <p className="mt-1 text-sm text-fg-muted">
             The full source lives on GitHub alongside the code.
           </p>
@@ -64,7 +74,7 @@ export default function DocsIndex() {
           target="_blank"
           rel="noreferrer"
         >
-          <Button variant="secondary" className="gap-1.5">
+          <Button variant="outline" className="gap-1.5">
             View on GitHub
             <ArrowRight size={13} strokeWidth={2.25} />
           </Button>

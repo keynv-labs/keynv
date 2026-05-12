@@ -71,16 +71,14 @@ export function InstallTabs() {
 
   return (
     <section className="border-b border-border">
-      <div className="mx-auto max-w-4xl px-4 md:px-6 py-16 md:py-20">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle text-center">
-          Install the CLI
-        </div>
-        <h2 className="mt-3 text-2xl md:text-3xl font-semibold tracking-tight leading-tight text-center max-w-2xl mx-auto">
-          One command. The CLI does the rest.
+      <div className="mx-auto max-w-4xl px-4 md:px-6 py-20 md:py-24">
+        <div className="display-eyebrow text-center">04 · install the CLI</div>
+        <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-2xl mx-auto">
+          One command. <span className="text-fg-muted">The CLI does the rest.</span>
         </h2>
 
         <div
-          className="mt-8 rounded-xl border border-border bg-bg-elevated overflow-hidden"
+          className="mt-10 rounded-xl border border-border bg-bg-elevated overflow-hidden shadow-[0_24px_64px_-24px_rgba(0,0,0,0.5)]"
           suppressHydrationWarning
         >
           <div role="tablist" aria-label="Install commands" className="flex border-b border-border">
@@ -94,7 +92,7 @@ export function InstallTabs() {
                 id={`install-tab-${t.id}`}
                 onClick={() => setActive(t.id)}
                 className={cn(
-                  'flex-1 px-3 py-2.5 text-sm font-medium transition-colors duration-fast ease-snap border-b-2',
+                  'flex-1 px-3 py-3 text-sm font-medium transition-colors duration-fast ease-snap border-b-2',
                   t.id === active
                     ? 'text-fg border-accent bg-bg-elevated-hover'
                     : 'text-fg-muted border-transparent hover:text-fg hover:bg-bg-elevated-hover',
@@ -102,7 +100,7 @@ export function InstallTabs() {
               >
                 {t.label}
                 {mounted && t.os !== 'any' && t.id === active ? (
-                  <span className="ml-2 text-[10px] uppercase tracking-wider text-fg-subtle">
+                  <span className="ml-2 font-mono text-[9px] uppercase tracking-[0.18em] text-accent">
                     detected
                   </span>
                 ) : null}
@@ -113,19 +111,18 @@ export function InstallTabs() {
             role="tabpanel"
             id={`install-panel-${tab.id}`}
             aria-labelledby={`install-tab-${tab.id}`}
-            className="p-5 space-y-4"
+            className="p-6 space-y-5"
           >
             <CommandRow label="Install" command={tab.install} primary />
             <CommandRow label="Verify" command={tab.verify} />
           </div>
         </div>
 
-        <p className="mt-4 text-center text-xs text-fg-subtle">
-          See the{' '}
-          <a className="text-fg hover:underline" href="/docs/quickstart">
+        <p className="mt-5 text-center text-xs text-fg-subtle font-mono uppercase tracking-[0.14em]">
+          full first-run walkthrough →{' '}
+          <a className="text-accent hover:underline normal-case font-sans" href="/docs/quickstart">
             quickstart
-          </a>{' '}
-          for the full first-run walkthrough.
+          </a>
         </p>
       </div>
     </section>
@@ -156,16 +153,20 @@ function CommandRow({
 
   return (
     <div>
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-fg-subtle mb-2">
         {label}
       </div>
       <div
         className={cn(
-          'group flex items-center gap-3 rounded-lg border bg-bg px-3 py-2.5',
-          primary ? 'border-border-strong' : 'border-border',
+          'group flex items-center gap-3 rounded-lg border bg-bg-inset px-3.5 py-3',
+          primary ? 'border-accent-soft-border' : 'border-border',
         )}
       >
-        <Terminal size={13} strokeWidth={2} className="shrink-0 text-fg-subtle" />
+        <Terminal
+          size={13}
+          strokeWidth={2}
+          className={cn('shrink-0', primary ? 'text-accent' : 'text-fg-subtle')}
+        />
         <code className="flex-1 font-mono text-sm text-fg overflow-x-auto whitespace-nowrap">
           {command}
         </code>
@@ -173,7 +174,7 @@ function CommandRow({
           type="button"
           onClick={handleCopy}
           aria-label={copied ? 'Copied' : `Copy ${label.toLowerCase()} command`}
-          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
         >
           {copied ? (
             <Check size={13} strokeWidth={2.25} className="text-success" />

@@ -85,21 +85,21 @@ export function CliTokensClient({ tokens }: { tokens: CliTokenRow[] }) {
             >
               <span
                 aria-hidden
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-bg-elevated-hover"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-accent-soft-border bg-accent-soft"
               >
-                <KeyRound size={14} className="text-fg-muted" strokeWidth={2} />
+                <KeyRound size={14} className="text-accent" strokeWidth={2} />
               </span>
 
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-fg truncate">{t.name}</div>
-                <div className="text-[11px] text-fg-subtle mt-0.5">
-                  Created {formatRelative(t.created_at)}
-                  <span className="mx-2">·</span>
-                  Last used {formatRelative(t.last_used_at)}
+                <div className="text-sm text-fg truncate font-medium">{t.name}</div>
+                <div className="text-[11px] text-fg-subtle mt-0.5 font-mono tabular">
+                  created {formatRelative(t.created_at)}
+                  <span className="mx-2 text-fg-subtle/60">·</span>
+                  used {formatRelative(t.last_used_at)}
                   {t.expires_at ? (
                     <>
-                      <span className="mx-2">·</span>
-                      Expires {new Date(t.expires_at).toLocaleDateString()}
+                      <span className="mx-2 text-fg-subtle/60">·</span>
+                      expires {new Date(t.expires_at).toLocaleDateString()}
                     </>
                   ) : null}
                 </div>
@@ -113,8 +113,8 @@ export function CliTokensClient({ tokens }: { tokens: CliTokenRow[] }) {
 
       {revoked.length > 0 ? (
         <details className="group">
-          <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg transition-colors duration-fast ease-snap select-none">
-            Show revoked tokens ({revoked.length})
+          <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap select-none">
+            show revoked ({revoked.length})
           </summary>
           <ul className="mt-2 rounded-lg border border-border bg-bg-elevated/50 divide-y divide-border overflow-hidden opacity-70">
             {revoked.map((t) => (
@@ -191,7 +191,7 @@ function CreateTokenDialog() {
 
             <form action={action} className="mt-4 space-y-3">
               <label className="block">
-                <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+                <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
                   Name
                 </span>
                 <Input
@@ -205,7 +205,11 @@ function CreateTokenDialog() {
                 />
               </label>
 
-              {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+              {state.error ? (
+                <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
+                  {state.error}
+                </p>
+              ) : null}
 
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
@@ -236,15 +240,15 @@ function RawTokenReveal({ token, name }: { token: string; name: string }) {
   };
 
   return (
-    <div className="mt-4 space-y-2">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+    <div className="mt-4 space-y-2.5">
+      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
         {name}
       </div>
       <div className="flex items-stretch gap-2">
         <code
           className={cn(
-            'flex-1 min-w-0 rounded-md border border-border bg-bg p-2.5',
-            'font-mono text-[12px] text-fg break-all',
+            'flex-1 min-w-0 rounded-md border border-accent-soft-border bg-bg-inset p-3',
+            'font-mono text-[12px] text-fg break-all tabular',
           )}
         >
           {token}
@@ -253,9 +257,9 @@ function RawTokenReveal({ token, name }: { token: string; name: string }) {
           type="button"
           onClick={onCopy}
           className={cn(
-            'shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md',
-            'border border-border bg-bg-elevated text-fg',
-            'hover:bg-bg-elevated-hover hover:border-border-strong',
+            'shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-md',
+            'border border-border-strong bg-bg-elevated text-fg',
+            'hover:bg-bg-elevated-hover hover:border-border-bright',
             'transition-colors duration-fast ease-snap',
           )}
           aria-label="Copy token"
@@ -267,7 +271,9 @@ function RawTokenReveal({ token, name }: { token: string; name: string }) {
           )}
         </button>
       </div>
-      <p className="text-[11px] text-warn">Copy this now. You will not see it again.</p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-warn">
+        copy now · will not be shown again
+      </p>
     </div>
   );
 }
@@ -290,7 +296,7 @@ function RevokeAction({ id, name }: { id: string; name: string }) {
           <div className="flex items-start gap-3">
             <span
               aria-hidden
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--color-danger)_14%,transparent)]"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-danger-soft-border bg-danger-soft"
             >
               <Trash2 size={16} className="text-danger" strokeWidth={2} />
             </span>

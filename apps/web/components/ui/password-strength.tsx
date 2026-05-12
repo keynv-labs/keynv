@@ -92,13 +92,13 @@ export function PasswordStrength({ password, userInputs = [] }: Props) {
   const label = result ? LABELS[score] : 'Checking…';
 
   return (
-    <div className="mt-1.5" aria-live="polite">
+    <div className="mt-2" aria-live="polite">
       <div className="flex gap-1">
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
             className={cn(
-              'h-1 flex-1 rounded-full transition-colors duration-fast ease-snap',
+              'h-[3px] flex-1 rounded-full transition-colors duration-fast ease-snap',
               i <= score ? TONES[score] : 'bg-border',
             )}
           />
@@ -106,7 +106,10 @@ export function PasswordStrength({ password, userInputs = [] }: Props) {
       </div>
       <div className="mt-1.5 flex items-baseline justify-between gap-3">
         <span
-          className={cn('text-[11px] font-medium', result ? LABEL_TONES[score] : 'text-fg-subtle')}
+          className={cn(
+            'font-mono text-[10px] font-medium uppercase tracking-[0.14em]',
+            result ? LABEL_TONES[score] : 'text-fg-subtle',
+          )}
         >
           {label}
         </span>

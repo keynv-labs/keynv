@@ -1,5 +1,6 @@
 'use client';
 
+import { Logomark } from '@/components/brand/logomark';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
@@ -16,10 +17,6 @@ export function MobileTopBar({ email, role }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close the drawer whenever the path changes. The effect body
-  // doesn't read `pathname` directly — we list it as a dep purely to
-  // re-run the close on each navigation. Biome's exhaustive-deps rule
-  // doesn't have a way to express that intent, so it's ignored here.
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-run on path change is the intent
   useEffect(() => {
     setOpen(false);
@@ -27,7 +24,7 @@ export function MobileTopBar({ email, role }: Props) {
 
   return (
     <>
-      <header className="md:hidden sticky top-0 z-30 h-14 flex items-center gap-3 px-3 border-b border-border bg-bg-elevated">
+      <header className="md:hidden sticky top-0 z-30 h-14 flex items-center gap-3 px-3 border-b border-border bg-bg-elevated/80 backdrop-blur">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -36,14 +33,8 @@ export function MobileTopBar({ email, role }: Props) {
         >
           <Menu size={18} strokeWidth={2} />
         </button>
-        <Link
-          href={{ pathname: '/projects' }}
-          className="flex items-center gap-2 font-semibold tracking-tight text-fg"
-        >
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[11px] font-bold">
-            k
-          </span>
-          <span>keynv</span>
+        <Link href={{ pathname: '/projects' }} className="flex items-center">
+          <Logomark size={22} />
         </Link>
       </header>
 

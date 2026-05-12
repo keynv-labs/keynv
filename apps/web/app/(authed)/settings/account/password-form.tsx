@@ -56,8 +56,16 @@ export function ChangePasswordForm() {
         />
       </Field>
 
-      {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
-      {state.ok ? <p className="text-xs text-success">{state.ok}</p> : null}
+      {state.error ? (
+        <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
+          {state.error}
+        </p>
+      ) : null}
+      {state.ok ? (
+        <p className="rounded-md border border-success-soft-border bg-success-soft px-3 py-2 text-xs text-success">
+          {state.ok}
+        </p>
+      ) : null}
 
       <div className="flex items-center justify-end pt-1">
         <Button type="submit" disabled={pending}>
@@ -79,7 +87,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

@@ -1,4 +1,5 @@
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { PageHeader } from '@/components/layout/page-header';
 import { type RouteTab, RouteTabs } from '@/components/ui/route-tabs';
 import { type ApiError, api } from '@/lib/api';
 import { notFound } from 'next/navigation';
@@ -35,16 +36,15 @@ export default async function ProjectLayout({
   ];
 
   return (
-    <div className="space-y-5">
-      <div>
-        <Breadcrumb
-          segments={[{ label: 'Projects', href: '/projects' }, { label: project.name }]}
-        />
-        <header className="mt-3">
-          <h1 className="text-[22px] font-semibold tracking-tight">{project.name}</h1>
-          <div className="font-mono text-xs text-fg-subtle mt-1">{project.id}</div>
-        </header>
-      </div>
+    <div className="space-y-6">
+      <Breadcrumb
+        segments={[
+          { label: 'Projects', href: '/projects' },
+          { label: project.name, mono: false },
+        ]}
+      />
+
+      <PageHeader eyebrow="project" title={project.name} id={project.id} />
 
       <RouteTabs tabs={tabs} />
 

@@ -1,3 +1,4 @@
+import { SectionHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { Users } from 'lucide-react';
@@ -35,16 +36,18 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
   const { members } = await api<{ members: Member[] }>(`/v1/projects/${id}/members`);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <AddMemberDialog projectId={id} />
-      </div>
+    <div className="space-y-5">
+      <SectionHeader
+        title="members"
+        count={members.length}
+        actions={<AddMemberDialog projectId={id} />}
+      />
 
       {members.length === 0 ? (
-        <div className="rounded-lg border border-border bg-bg-elevated p-10 text-center">
+        <div className="rounded-xl border border-border bg-bg-elevated p-10 text-center">
           <Users size={20} className="mx-auto mb-3 text-fg-subtle" strokeWidth={1.75} aria-hidden />
           <p className="text-sm text-fg-muted">No members on this project yet.</p>
-          <p className="text-xs text-fg-subtle mt-1">
+          <p className="text-xs text-fg-subtle mt-1.5">
             Add a teammate to grant them access. Roles control what they can read or write.
           </p>
         </div>
@@ -57,15 +60,15 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
             >
               <span
                 aria-hidden
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-elevated-hover text-[12px] font-semibold text-fg"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border-strong bg-bg-inset font-mono text-[12px] font-semibold text-fg"
               >
                 {m.email.slice(0, 2).toUpperCase()}
               </span>
 
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-fg truncate">{m.email}</div>
-                <div className="text-[11px] text-fg-subtle mt-0.5">
-                  Joined {formatRelative(m.granted_at)}
+                <div className="text-[11px] text-fg-subtle mt-0.5 font-mono tabular">
+                  joined {formatRelative(m.granted_at)}
                 </div>
               </div>
 

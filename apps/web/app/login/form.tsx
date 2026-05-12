@@ -23,7 +23,7 @@ export function LoginForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
 
   return (
-    <form action={action} className="mt-4 space-y-3">
+    <form action={action} className="mt-5 space-y-4">
       <input type="hidden" name="next" value={next} />
 
       <Field label="Email">
@@ -49,18 +49,22 @@ export function LoginForm({ next }: { next: string }) {
       </Field>
 
       {state.error ? (
-        <p className="text-xs text-danger" role="alert" aria-live="polite">
+        <p
+          className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger"
+          role="alert"
+          aria-live="polite"
+        >
           {state.error}
         </p>
       ) : null}
 
-      <Button type="submit" disabled={pending} className="w-full mt-1">
+      <Button type="submit" size="lg" disabled={pending} className="w-full">
         {pending ? 'Signing in…' : 'Sign in'}
       </Button>
 
       {DEV_AUTOFILL ? (
-        <p className="text-[11px] text-fg-subtle text-center pt-1">
-          Dev autofill is on. Press <kbd className="font-mono text-fg-muted">Enter</kbd> to sign in.
+        <p className="text-[11px] text-fg-subtle text-center pt-1 font-mono uppercase tracking-[0.14em]">
+          dev autofill on · press <kbd className="text-fg-muted normal-case">Enter</kbd>
         </p>
       ) : null}
     </form>
@@ -70,7 +74,7 @@ export function LoginForm({ next }: { next: string }) {
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

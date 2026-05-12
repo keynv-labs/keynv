@@ -1,4 +1,5 @@
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { PageHeader, SectionHeader, StatCard } from '@/components/layout/page-header';
 import { OnboardingChecklist } from '@/components/onboarding/checklist';
 import { Badge, envTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,23 +71,24 @@ export default async function ProjectsPage() {
   const canCreate = session?.org_role === 'owner' || session?.org_role === 'admin';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <Breadcrumb segments={[{ label: 'Projects' }]} />
 
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-tight leading-tight">Projects</h1>
-          <p className="text-sm text-fg-muted mt-1">Operational state across your organization.</p>
-        </div>
-        {canCreate ? (
-          <Link href={{ pathname: '/projects/new' }}>
-            <Button className="gap-1.5">
-              <Plus size={14} strokeWidth={2.25} />
-              New project
-            </Button>
-          </Link>
-        ) : null}
-      </header>
+      <PageHeader
+        eyebrow="vault · all projects"
+        title="Projects"
+        description="Operational state across your organization."
+        actions={
+          canCreate ? (
+            <Link href={{ pathname: '/projects/new' }}>
+              <Button className="gap-1.5">
+                <Plus size={14} strokeWidth={2.25} />
+                New project
+              </Button>
+            </Link>
+          ) : null
+        }
+      />
 
       <Suspense fallback={<ProjectsSkeleton />}>
         <ProjectsContent canCreate={canCreate} />
@@ -115,36 +117,39 @@ async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
       {showChecklist ? <OnboardingChecklist initialStatus={onboarding} compact /> : null}
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <RollupStat label="Projects" value={projects.length} />
-        <RollupStat label="Environments" value={totalEnvs} />
-        <RollupStat label="Secrets" value={totalSecrets} />
+        <StatCard label="Projects" value={projects.length.toLocaleString()} hint="namespaces" />
+        <StatCard label="Environments" value={totalEnvs.toLocaleString()} hint="dev · stg · prod" />
+        <StatCard label="Secrets" value={totalSecrets.toLocaleString()} hint="encrypted at rest" />
       </section>
 
       <section>
-        <div className="px-1 mb-2 flex items-center justify-between">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            All projects
-          </h2>
-          <span className="text-xs text-fg-subtle">
-            {projects.length} {projects.length === 1 ? 'project' : 'projects'}
-          </span>
-        </div>
+        <SectionHeader
+          title="all projects"
+          count={projects.length}
+          actions={
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+              sorted by recency
+            </span>
+          }
+        />
 
         <ul className="rounded-lg border border-border bg-bg-elevated divide-y divide-border overflow-hidden">
           {projects.map((p) => (
             <li key={p.id} className="animate-list-enter">
               <Link
                 href={{ pathname: `/projects/${p.id}` }}
-                className="group block px-4 py-3.5 hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
+                className="group block px-4 py-4 hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
               >
                 <div className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-fg truncate">{p.name}</span>
-                      <span className="font-mono text-[11px] text-fg-subtle">{p.id}</span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-semibold text-fg truncate tracking-tight">
+                        {p.name}
+                      </span>
+                      <span className="font-mono text-[11px] text-fg-subtle tabular">{p.id}</span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-3 text-xs text-fg-muted">
-                      <span>
+                      <span className="font-mono tabular">
                         {p.secret_count} {p.secret_count === 1 ? 'secret' : 'secrets'}
                       </span>
                       <span className="text-fg-subtle">·</span>
@@ -162,7 +167,7 @@ async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
 
                   <ArrowUpRight
                     size={15}
-                    className="shrink-0 text-fg-subtle group-hover:text-fg transition-colors duration-fast ease-snap"
+                    className="shrink-0 text-fg-subtle group-hover:text-accent group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-fast ease-snap"
                   />
                 </div>
               </Link>
@@ -174,23 +179,7 @@ async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
   );
 }
 
-function RollupStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-        {label}
-      </div>
-      <div className="mt-2 text-[28px] font-semibold leading-none tracking-tight tabular-nums">
-        {value.toLocaleString()}
-      </div>
-    </div>
-  );
-}
-
 async function safeFetchOnboarding(): Promise<OnboardingStatus | null> {
-  // Older server versions don't have /v1/onboarding/status. The dashboard
-  // must not break for self-host instances that pin to an earlier
-  // release — fall back to "no checklist" if the endpoint 404s.
   try {
     return await fetchOnboardingStatus();
   } catch {
@@ -210,10 +199,10 @@ function ProjectsSkeleton() {
         ))}
       </section>
       <section>
-        <Skeleton className="h-3 w-24 mb-2" />
+        <Skeleton className="h-3 w-24 mb-3" />
         <div className="rounded-lg border border-border bg-bg-elevated divide-y divide-border">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="px-4 py-3.5 flex items-center gap-4">
+            <div key={i} className="px-4 py-4 flex items-center gap-4">
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-40" />
                 <Skeleton className="h-3 w-56" />
@@ -229,37 +218,38 @@ function ProjectsSkeleton() {
 
 function EmptyState({ canCreate }: { canCreate: boolean }) {
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-10">
-      <div className="mx-auto max-w-md text-center">
-        <h2 className="text-base font-semibold text-fg">No projects yet</h2>
-        <p className="text-sm text-fg-muted mt-2">
+    <div className="relative rounded-xl border border-border bg-bg-elevated p-10 overflow-hidden">
+      <div aria-hidden className="absolute inset-0 bg-grid bg-grid-fade opacity-30" />
+      <div className="relative mx-auto max-w-md text-center">
+        <h2 className="display text-xl tracking-tight text-fg">No projects yet</h2>
+        <p className="text-sm text-fg-muted mt-3 leading-relaxed">
           A project is a namespace for secrets. References look like{' '}
-          <code className="font-mono text-fg">@&lt;project&gt;.&lt;env&gt;.&lt;key&gt;</code> and
-          get resolved by the keynv CLI without exposing the value to your AI agent.
+          <code className="text-accent">@&lt;project&gt;.&lt;env&gt;.&lt;key&gt;</code> and get
+          resolved by the keynv CLI without exposing the value to your AI agent.
         </p>
 
-        <div className="mt-5 rounded-md border border-border bg-bg p-3 text-left">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            <Terminal size={12} />
-            Example
+        <div className="mt-6 rounded-lg border border-border bg-bg-inset p-4 text-left">
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+            <Terminal size={12} className="text-accent" />
+            example
           </div>
-          <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
+          <pre className="mt-3 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
             <span className="text-fg-subtle">$ </span>keynv exec -- pnpm dev{'\n'}
-            <span className="text-fg-subtle"> </span>resolves{' '}
-            <span className="text-fg">@billing.dev.STRIPE_KEY</span> into the subprocess
+            <span className="text-fg-subtle"> # </span>resolves{' '}
+            <span className="text-accent">@billing.dev.STRIPE_KEY</span> into the subprocess
           </pre>
         </div>
 
         {canCreate ? (
-          <div className="mt-6">
+          <div className="mt-7">
             <Link href={{ pathname: '/projects/new' }}>
-              <Button>
+              <Button className="gap-1.5">
                 <Plus size={14} strokeWidth={2.25} />
                 Create first project
               </Button>
             </Link>
-            <div className="mt-2 text-xs text-fg-subtle">
-              or run <code className="font-mono text-fg-muted">keynv project init</code> from the
+            <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+              or run <code className="text-accent normal-case">keynv project init</code> from the
               CLI
             </div>
           </div>

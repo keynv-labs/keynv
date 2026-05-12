@@ -59,17 +59,22 @@ export function StatusClient({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-bg-elevated p-4">
+      <div className="rounded-lg border border-accent-soft-border bg-accent-soft p-4">
         <div className="flex items-start gap-3">
           <span
             aria-hidden
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-accent-soft-border bg-bg-inset"
           >
-            <Activity size={16} className="text-fg-muted" strokeWidth={2} />
+            <Activity size={16} className="text-accent" strokeWidth={2} />
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-fg">Connection tester</div>
-            <div className="text-xs text-fg-muted mt-0.5">
+            <div className="text-sm font-medium text-fg flex items-center gap-2">
+              Connection tester
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                · in-memory only
+              </span>
+            </div>
+            <div className="text-xs text-fg-muted mt-1 leading-relaxed">
               Run a live test against any secret to confirm it still authenticates. Postgres / MySQL
               / Redis / SSH / HTTP. The plaintext value never leaves the server process — it lives
               in memory only for the duration of the test call.
@@ -92,13 +97,14 @@ export function StatusClient({
             className="pl-8"
           />
         </div>
-        <div className="ml-auto text-xs text-fg-subtle tabular-nums">
-          {filtered.length} of {parsed.length}
+        <div className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+          <span className="text-fg tabular">{filtered.length}</span> of{' '}
+          <span className="tabular">{parsed.length}</span>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-lg border border-border bg-bg-elevated p-10 text-center text-sm text-fg-muted">
+        <div className="rounded-xl border border-border bg-bg-elevated p-10 text-center text-sm text-fg-muted">
           {parsed.length === 0
             ? 'No secrets in this project. Add one in the Secrets tab to test it here.'
             : 'No secrets match that search.'}
@@ -113,8 +119,13 @@ export function StatusClient({
               <Badge tone={envTone(envTier(s.env))}>{s.env}</Badge>
 
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-[13px] text-fg truncate">{s.alias}</div>
-                <div className="text-[11px] text-fg-subtle mt-0.5 tabular-nums">v{s.version}</div>
+                <div className="font-mono text-[13px] text-fg truncate tabular">
+                  <span className="text-accent">@</span>
+                  {s.alias.replace(/^@/, '')}
+                </div>
+                <div className="text-[11px] text-fg-subtle mt-0.5 font-mono tabular">
+                  v{s.version}
+                </div>
               </div>
 
               <TestSecretDialog
@@ -123,7 +134,7 @@ export function StatusClient({
                 keyName={s.keyName}
                 alias={s.alias}
                 trigger={
-                  <Button variant="secondary" size="sm" className="gap-1">
+                  <Button variant="outline" size="sm" className="gap-1">
                     Test
                     <ChevronRight size={12} strokeWidth={2.25} />
                   </Button>

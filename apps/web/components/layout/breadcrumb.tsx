@@ -1,5 +1,4 @@
 import { cn } from '@/lib/cn';
-import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment } from 'react';
 
@@ -22,13 +21,15 @@ export function Breadcrumb({ segments, className }: Props) {
       {segments.map((segment, i) => {
         const isLast = i === segments.length - 1;
         const labelClass = cn(
-          segment.mono && 'font-mono text-[13px]',
-          isLast ? 'text-fg' : 'text-fg-muted hover:text-fg transition-colors',
+          segment.mono && 'font-mono text-[12.5px] tabular',
+          isLast ? 'text-fg font-medium' : 'text-fg-muted hover:text-fg transition-colors',
         );
         return (
           <Fragment key={`${segment.label}-${i}`}>
             {i > 0 ? (
-              <ChevronRight size={12} className="shrink-0 text-fg-subtle" aria-hidden />
+              <span aria-hidden className="text-fg-subtle font-mono text-[11px]">
+                /
+              </span>
             ) : null}
             {segment.href && !isLast ? (
               <Link href={{ pathname: segment.href }} className={labelClass}>

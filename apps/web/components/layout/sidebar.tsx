@@ -1,8 +1,9 @@
 'use client';
 
 import { logoutAction } from '@/app/(authed)/actions';
+import { Logomark } from '@/components/brand/logomark';
 import { cn } from '@/lib/cn';
-import { FolderKanban, ScrollText, Settings, ShieldCheck, Users } from 'lucide-react';
+import { FolderKanban, LogOut, ScrollText, Settings, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
@@ -23,7 +24,7 @@ interface NavGroup {
 function buildGroups(role: string): NavGroup[] {
   const groups: NavGroup[] = [
     {
-      title: 'Home',
+      title: 'Vault',
       items: [
         {
           href: '/projects',
@@ -80,11 +81,6 @@ interface SidebarContentProps {
   onNavigate?: () => void;
 }
 
-/**
- * The actual sidebar content. Renders a vertical column with a brand
- * block, nav groups, audit chain pill, and user block. No outer wrapper;
- * callers decide how to position it (desktop aside vs. mobile sheet).
- */
 const NOOP = () => {};
 
 export function SidebarContent({ email, role, onNavigate }: SidebarContentProps) {
@@ -99,22 +95,19 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
         <Link
           href={{ pathname: '/projects' }}
           onClick={handleNavigate}
-          className="flex items-center gap-2 font-semibold tracking-tight text-fg"
+          className="flex items-center"
         >
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[11px] font-bold">
-            k
-          </span>
-          <span>keynv</span>
+          <Logomark size={22} />
         </Link>
       </div>
 
-      <nav className="flex-1 px-2 py-3 overflow-y-auto">
+      <nav className="flex-1 px-2.5 py-4 overflow-y-auto">
         {navGroups.map((group) => (
-          <div key={group.title} className="mb-4">
-            <div className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          <div key={group.title} className="mb-5">
+            <div className="px-2 mb-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
               {group.title}
             </div>
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex flex-col gap-px">
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const active = item.match(pathname);
@@ -125,17 +118,23 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
                       onClick={handleNavigate}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'group flex items-center gap-2.5 rounded-md px-2 py-1.5',
+                        'group relative flex items-center gap-2.5 rounded-md px-2 py-1.5',
                         'text-sm transition-colors duration-fast ease-snap',
                         active
                           ? 'bg-bg-elevated-hover text-fg'
                           : 'text-fg-muted hover:bg-bg-elevated-hover hover:text-fg',
                       )}
                     >
+                      {active ? (
+                        <span
+                          aria-hidden
+                          className="absolute -left-2.5 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-r bg-accent"
+                        />
+                      ) : null}
                       <Icon size={15} strokeWidth={2} className="shrink-0" />
                       <span className="flex-1">{item.label}</span>
                       {item.shortcut ? (
-                        <kbd className="hidden md:group-hover:inline-flex font-mono text-[10px] text-fg-subtle">
+                        <kbd className="hidden md:group-hover:inline-flex font-mono text-[10px] tabular text-fg-subtle">
                           {item.shortcut}
                         </kbd>
                       ) : null}
@@ -151,19 +150,24 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
       <Link
         href={{ pathname: '/audit' }}
         onClick={handleNavigate}
-        className="mx-3 mb-3 flex items-center gap-2.5 rounded-md border border-border bg-bg px-2.5 py-2 text-xs hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
+        className="mx-3 mb-3 flex items-center gap-2.5 rounded-md border border-border bg-bg-inset px-2.5 py-2 text-xs hover:border-border-strong transition-colors duration-fast ease-snap"
       >
-        <ShieldCheck size={14} className="shrink-0 text-success" />
+        <span className="relative inline-flex shrink-0">
+          <ShieldCheck size={14} className="text-success" />
+          <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-success animate-amber-pulse [animation-name:amber-pulse]" />
+        </span>
         <div className="flex-1 min-w-0">
           <div className="text-fg leading-tight">Audit chain</div>
-          <div className="text-fg-subtle leading-tight mt-0.5">tamper-evident log</div>
+          <div className="text-fg-subtle leading-tight mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em]">
+            tamper-evident
+          </div>
         </div>
       </Link>
 
-      <div className="border-t border-border px-3 py-3 flex items-start gap-2.5">
+      <div className="border-t border-border px-3 py-3 flex items-center gap-2.5">
         <span
           aria-hidden
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bg-elevated-hover text-[11px] font-semibold text-fg"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-strong bg-bg-inset font-mono text-[11px] font-semibold text-fg"
         >
           {initials}
         </span>
@@ -171,25 +175,24 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
           <div className="truncate text-xs text-fg" title={email}>
             {email}
           </div>
-          <div className="text-[11px] text-fg-subtle capitalize">{role}</div>
+          <div className="text-[10px] text-fg-subtle font-mono uppercase tracking-[0.14em]">
+            {role}
+          </div>
         </div>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            aria-label="Sign out"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-subtle hover:bg-bg-elevated-hover hover:text-fg transition-colors duration-fast ease-snap"
+          >
+            <LogOut size={13} strokeWidth={2} />
+          </button>
+        </form>
       </div>
-      <form action={logoutAction} className="px-3 pb-3">
-        <button
-          type="submit"
-          className="w-full text-left px-2 py-1.5 rounded-md text-xs text-fg-muted hover:bg-bg-elevated-hover hover:text-fg transition-colors duration-fast ease-snap"
-        >
-          Sign out
-        </button>
-      </form>
     </div>
   );
 }
 
-/**
- * Desktop sidebar — fixed-width column to the left of main content.
- * Hidden below md (mobile uses MobileTopBar + Sheet).
- */
 export function Sidebar(props: SidebarContentProps) {
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-bg-elevated">

@@ -39,14 +39,14 @@ export async function GithubStars() {
       href={`https://github.com/${REPO}`}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-elevated px-2 py-1 text-xs text-fg-muted hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+      className="inline-flex items-center gap-2 rounded-md border border-border bg-bg-inset px-2 py-1 text-xs text-fg-muted hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
       aria-label={stars !== null ? `${REPO} on GitHub — ${stars} stars` : `${REPO} on GitHub`}
     >
       <Github size={12} strokeWidth={2} />
       <span className="font-medium text-fg">{REPO}</span>
       {stars !== null ? (
-        <span className="inline-flex items-center gap-1 text-fg-subtle">
-          <Star size={11} strokeWidth={2} className="text-warn" />
+        <span className="inline-flex items-center gap-1 text-fg-subtle font-mono tabular">
+          <Star size={11} strokeWidth={2} className="text-accent fill-accent" />
           {formatStars(stars)}
         </span>
       ) : null}

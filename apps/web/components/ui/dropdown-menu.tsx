@@ -21,7 +21,7 @@ export function DropdownMenuContent({
         align={align}
         className={cn(
           'z-40 min-w-44 rounded-md border border-border-strong bg-bg-overlay p-1',
-          'text-sm text-fg shadow-lg',
+          'text-sm text-fg shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7),0_1px_0_rgba(255,255,255,0.04)_inset]',
           'data-[state=open]:animate-in data-[state=closed]:animate-out',
           'data-[state=open]:fade-in data-[state=closed]:fade-out',
           'data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1',
@@ -69,7 +69,7 @@ export function DropdownMenuLabel({
   return (
     <RadixMenu.Label
       className={cn(
-        'px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle',
+        'px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle',
         className,
       )}
       {...rest}

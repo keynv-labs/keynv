@@ -1,3 +1,4 @@
+import { SectionHeader, StatCard } from '@/components/layout/page-header';
 import { Badge, envTone } from '@/components/ui/badge';
 import { type ApiError, api } from '@/lib/api';
 import { ArrowUpRight, ShieldCheck, Users } from 'lucide-react';
@@ -48,7 +49,6 @@ export default async function ProjectOverviewPage({
     api<{ members: Member[] }>(`/v1/projects/${id}/members`).catch(() => ({ members: [] })),
   ]);
 
-  // Group secrets by environment for the per-env stat.
   const secretsByEnv = new Map<string, number>();
   for (const s of secretsResp.secrets) {
     const env = s.alias.replace(/^@/, '').split('.')[1] ?? '';
@@ -56,17 +56,15 @@ export default async function ProjectOverviewPage({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Stat label="Secrets" value={secretsResp.secrets.length} />
-        <Stat label="Environments" value={project.environments.length} />
-        <Stat label="Members" value={membersResp.members.length} />
+        <StatCard label="Secrets" value={secretsResp.secrets.length.toLocaleString()} />
+        <StatCard label="Environments" value={project.environments.length.toLocaleString()} />
+        <StatCard label="Members" value={membersResp.members.length.toLocaleString()} />
       </section>
 
       <section>
-        <SectionHeader title="Environments">
-          <span className="text-xs text-fg-subtle">{project.environments.length}</span>
-        </SectionHeader>
+        <SectionHeader title="environments" count={project.environments.length} />
 
         <div className="rounded-lg border border-border bg-bg-elevated overflow-hidden">
           <table className="w-full text-sm">
@@ -84,7 +82,7 @@ export default async function ProjectOverviewPage({
                   key={e.id}
                   className="border-t border-border hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
                 >
-                  <td className="px-4 py-3 font-mono text-[13px] text-fg">{e.name}</td>
+                  <td className="px-4 py-3 font-mono text-[13px] text-fg tabular">{e.name}</td>
                   <td className="px-4 py-3">
                     <Badge tone={envTone(e.tier)}>
                       {e.tier === 'production' ? 'production' : 'non-prod'}
@@ -92,15 +90,17 @@ export default async function ProjectOverviewPage({
                   </td>
                   <td className="px-4 py-3 text-fg-muted">
                     {e.require_approval ? (
-                      <span className="inline-flex items-center gap-1.5 text-warn">
+                      <span className="inline-flex items-center gap-1.5 text-warn font-mono text-[10px] uppercase tracking-[0.14em]">
                         <ShieldCheck size={12} />
                         required
                       </span>
                     ) : (
-                      <span>not required</span>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+                        not required
+                      </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right text-fg-muted tabular-nums">
+                  <td className="px-4 py-3 text-right text-fg-muted font-mono tabular">
                     {secretsByEnv.get(e.name) ?? 0}
                   </td>
                 </tr>
@@ -111,21 +111,25 @@ export default async function ProjectOverviewPage({
       </section>
 
       <section>
-        <SectionHeader title="Members">
-          <Link
-            href={{ pathname: `/projects/${id}/members` }}
-            className="inline-flex items-center gap-1 text-xs text-fg-muted hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            View all
-            <ArrowUpRight size={12} strokeWidth={2} />
-          </Link>
-        </SectionHeader>
+        <SectionHeader
+          title="members"
+          count={membersResp.members.length}
+          actions={
+            <Link
+              href={{ pathname: `/projects/${id}/members` }}
+              className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap"
+            >
+              view all
+              <ArrowUpRight size={11} strokeWidth={2} />
+            </Link>
+          }
+        />
 
         {membersResp.members.length === 0 ? (
-          <div className="rounded-lg border border-border bg-bg-elevated p-6 text-sm text-fg-muted text-center">
+          <div className="rounded-lg border border-border bg-bg-elevated p-8 text-sm text-fg-muted text-center">
             <Users
-              size={18}
-              className="mx-auto mb-2 text-fg-subtle"
+              size={20}
+              className="mx-auto mb-3 text-fg-subtle"
               strokeWidth={1.75}
               aria-hidden
             />
@@ -137,7 +141,7 @@ export default async function ProjectOverviewPage({
               <li key={m.user_id} className="flex items-center gap-3 px-4 py-3">
                 <span
                   aria-hidden
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bg-elevated-hover text-[11px] font-semibold text-fg"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-strong bg-bg-inset font-mono text-[11px] font-semibold text-fg"
                 >
                   {m.email.slice(0, 2).toUpperCase()}
                 </span>
@@ -154,38 +158,10 @@ export default async function ProjectOverviewPage({
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-        {label}
-      </div>
-      <div className="mt-2 text-[28px] font-semibold leading-none tracking-tight tabular-nums">
-        {value.toLocaleString()}
-      </div>
-    </div>
-  );
-}
-
-function SectionHeader({
-  title,
-  children,
-}: {
-  title: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="px-1 mb-2 flex items-center justify-between">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
 function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
   return (
     <th
-      className={`px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-fg-subtle border-b border-border ${className ?? ''}`}
+      className={`px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle border-b border-border bg-bg-inset/40 ${className ?? ''}`}
     >
       {children}
     </th>

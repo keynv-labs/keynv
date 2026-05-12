@@ -20,41 +20,47 @@ export function ChainBanner() {
     <div
       className={
         tone === 'broken'
-          ? 'rounded-lg border border-[color-mix(in_oklab,var(--color-danger)_30%,var(--color-border))] bg-[color-mix(in_oklab,var(--color-danger)_8%,transparent)] p-4'
+          ? 'rounded-lg border border-danger-soft-border bg-danger-soft p-4'
           : tone === 'verified'
-            ? 'rounded-lg border border-[color-mix(in_oklab,var(--color-success)_30%,var(--color-border))] bg-[color-mix(in_oklab,var(--color-success)_8%,transparent)] p-4'
+            ? 'rounded-lg border border-success-soft-border bg-success-soft p-4'
             : 'rounded-lg border border-border bg-bg-elevated p-4'
       }
     >
       <div className="flex items-center gap-3">
         <span
           aria-hidden
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border-strong bg-bg-inset"
         >
           {tone === 'broken' ? (
             <AlertTriangle size={16} className="text-danger" strokeWidth={2} />
           ) : (
             <ShieldCheck
               size={16}
-              className={tone === 'verified' ? 'text-success' : 'text-fg-muted'}
+              className={tone === 'verified' ? 'text-success' : 'text-accent'}
               strokeWidth={2}
             />
           )}
         </span>
 
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-fg">
+          <div className="text-sm font-medium text-fg flex items-center gap-2">
             {tone === 'broken' ? 'Chain integrity broken' : 'Audit chain'}
+            {tone === 'verified' ? (
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-success">
+                · verified
+              </span>
+            ) : null}
           </div>
-          <div className="text-xs text-fg-muted mt-0.5">
+          <div className="text-xs text-fg-muted mt-1">
             {tone === 'verified' ? (
               <>
-                Verified <span className="tabular-nums text-fg">{state.checked}</span>{' '}
+                Verified <span className="font-mono tabular text-fg">{state.checked}</span>{' '}
                 {state.checked === 1 ? 'entry' : 'entries'}. Hash chain is intact.
               </>
             ) : tone === 'broken' ? (
               <>
-                First mismatch at id <span className="font-mono text-fg">{state.broken_at_id}</span>
+                First mismatch at id{' '}
+                <span className="font-mono text-fg tabular">{state.broken_at_id}</span>
                 {state.reason ? (
                   <>
                     {' · '}
@@ -74,7 +80,7 @@ export function ChainBanner() {
         </div>
 
         <form action={action}>
-          <Button type="submit" variant="secondary" size="sm" disabled={pending}>
+          <Button type="submit" variant="outline" size="sm" disabled={pending}>
             {pending ? 'Verifying…' : 'Re-verify'}
           </Button>
         </form>

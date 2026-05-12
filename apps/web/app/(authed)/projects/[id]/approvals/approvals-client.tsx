@@ -106,19 +106,19 @@ export function ApprovalsClient({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-bg-elevated p-4">
+      <div className="rounded-lg border border-warn-soft-border bg-warn-soft p-4">
         <div className="flex items-start gap-3">
           <span
             aria-hidden
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-warn-soft-border bg-bg-inset"
           >
-            <ShieldAlert size={16} className="text-fg-muted" strokeWidth={2} />
+            <ShieldAlert size={16} className="text-warn" strokeWidth={2} />
           </span>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-fg">Production-access approvals</div>
-            <div className="text-xs text-fg-muted mt-0.5">
+            <div className="text-xs text-fg-muted mt-1 leading-relaxed">
               When a developer hits a secret in an environment marked{' '}
-              <span className="font-mono text-fg">require_approval</span>, a pending row appears
+              <span className="font-mono text-accent">require_approval</span>, a pending row appears
               here. Lead / admin / owner grant or deny.
               {canDecide ? null : (
                 <>
@@ -133,7 +133,7 @@ export function ApprovalsClient({
         </div>
       </div>
 
-      <div className="flex items-center gap-1 flex-wrap">
+      <div className="flex items-center gap-1.5 flex-wrap">
         {(['pending', 'granted', 'denied', 'expired', 'all'] as const).map((s) => (
           <button
             key={s}
@@ -141,15 +141,15 @@ export function ApprovalsClient({
             onClick={() => setFilter(s)}
             aria-pressed={filter === s}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium capitalize',
+              'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em]',
               'transition-colors duration-fast ease-snap',
               filter === s
-                ? 'border-border-strong bg-bg-elevated-hover text-fg'
-                : 'border-border bg-bg-elevated text-fg-muted hover:text-fg hover:bg-bg-elevated-hover',
+                ? 'border-accent-soft-border bg-accent-soft text-accent'
+                : 'border-border bg-bg-elevated text-fg-muted hover:text-fg hover:border-border-strong',
             )}
           >
             {s}
-            <span className="text-fg-subtle tabular-nums">{counts[s]}</span>
+            <span className="text-fg-subtle tabular">{counts[s]}</span>
           </button>
         ))}
       </div>
@@ -170,9 +170,12 @@ export function ApprovalsClient({
               <Badge tone={STATUS_TONE[a.status]}>{a.status}</Badge>
 
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-[13px] text-fg break-all">{a.alias}</div>
-                <div className="text-[11px] text-fg-subtle mt-0.5">
-                  Requested by{' '}
+                <div className="font-mono text-[13px] text-fg break-all tabular">
+                  <span className="text-accent">@</span>
+                  {a.alias.replace(/^@/, '')}
+                </div>
+                <div className="text-[11px] text-fg-subtle mt-1 font-mono tabular">
+                  requested by{' '}
                   <span className="text-fg-muted">{a.requester_email ?? a.requester_user_id}</span>
                   {' · '}
                   {relative(a.created_at)}
@@ -246,7 +249,7 @@ function GrantDialog({
               <select
                 name="expires_in_seconds"
                 defaultValue="3600"
-                className="block h-8 w-full rounded-md border border-border bg-bg px-2.5 text-sm text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+                className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
               >
                 <option value="900">15 minutes</option>
                 <option value="3600">1 hour</option>
@@ -313,7 +316,7 @@ function DenyDialog({
           <div className="flex items-start gap-3">
             <span
               aria-hidden
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--color-danger)_14%,transparent)]"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-danger-soft-border bg-danger-soft"
             >
               <X size={16} className="text-danger" strokeWidth={2.25} />
             </span>
@@ -380,7 +383,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

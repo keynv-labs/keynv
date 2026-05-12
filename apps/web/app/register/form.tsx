@@ -14,7 +14,7 @@ export function RegisterForm({ next }: { next: string }) {
   const [password, setPassword] = useState('');
 
   return (
-    <form action={action} className="mt-4 space-y-3">
+    <form action={action} className="mt-5 space-y-4">
       <input type="hidden" name="next" value={next} />
 
       <Field label="Work email">
@@ -62,16 +62,20 @@ export function RegisterForm({ next }: { next: string }) {
       </Field>
 
       {state.error ? (
-        <p className="text-xs text-danger" role="alert" aria-live="polite">
+        <p
+          className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger"
+          role="alert"
+          aria-live="polite"
+        >
           {state.error}
         </p>
       ) : null}
 
-      <Button type="submit" disabled={pending} className="w-full mt-1">
+      <Button type="submit" size="lg" disabled={pending} className="w-full">
         {pending ? 'Creating account…' : 'Create account'}
       </Button>
 
-      <p className="text-[11px] text-fg-subtle text-center pt-1">
+      <p className="text-[11px] text-fg-subtle text-center pt-1 leading-relaxed">
         By signing up you agree to keynv being in public beta — no usage limits today, paid tiers
         announced before any charge.
       </p>
@@ -82,7 +86,7 @@ export function RegisterForm({ next }: { next: string }) {
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

@@ -106,11 +106,11 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
                 onClick={() => toggleEnv(env.name)}
                 aria-pressed={active}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
+                  'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em]',
                   'transition-colors duration-fast ease-snap',
                   active
-                    ? 'border-border-strong bg-bg-elevated-hover text-fg'
-                    : 'border-border bg-bg-elevated text-fg-muted hover:text-fg hover:bg-bg-elevated-hover',
+                    ? 'border-accent-soft-border bg-accent-soft text-accent'
+                    : 'border-border bg-bg-elevated text-fg-muted hover:text-fg hover:border-border-strong',
                 )}
               >
                 <span
@@ -147,14 +147,15 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
               setActiveEnvs(new Set());
               setSearch('');
             }}
-            className="text-xs text-fg-muted hover:text-fg transition-colors duration-fast ease-snap"
+            className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap"
           >
-            Clear filters
+            clear
           </button>
         ) : null}
 
-        <div className="ml-auto text-xs text-fg-subtle tabular-nums">
-          {filtered.length} of {parsed.length}
+        <div className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+          <span className="text-fg tabular">{filtered.length}</span> of{' '}
+          <span className="tabular">{parsed.length}</span>
         </div>
       </div>
 
@@ -211,12 +212,19 @@ function SecretsTable({
               key={s.alias}
               className="border-t border-border hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap animate-list-enter"
             >
-              <td className="px-4 py-3 font-mono text-[13px] text-fg">{s.alias}</td>
+              <td className="px-4 py-3 font-mono text-[13px] text-fg tabular">
+                <span className="text-accent">@</span>
+                {s.alias.replace(/^@/, '')}
+              </td>
               <td className="px-4 py-3">
                 <Badge tone={envTone(envTier(s.env))}>{s.env}</Badge>
               </td>
-              <td className="px-4 py-3 text-fg-muted tabular-nums">v{s.version}</td>
-              <td className="px-4 py-3 text-fg-muted">{formatRelative(s.created_at)}</td>
+              <td className="px-4 py-3 text-fg-muted font-mono tabular text-[12px]">
+                v{s.version}
+              </td>
+              <td className="px-4 py-3 text-fg-muted text-[12px]">
+                {formatRelative(s.created_at)}
+              </td>
               <td className="px-2 py-3 text-right">
                 <RowActions projectId={projectId} env={s.env} keyName={s.keyName} alias={s.alias} />
               </td>
@@ -232,8 +240,8 @@ function Th({ children, className }: { children?: React.ReactNode; className?: s
   return (
     <th
       className={cn(
-        'px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-fg-subtle',
-        'border-b border-border',
+        'px-4 py-3 text-left font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle',
+        'border-b border-border bg-bg-inset/40',
         className,
       )}
     >
@@ -244,14 +252,14 @@ function Th({ children, className }: { children?: React.ReactNode; className?: s
 
 function NoMatches({ onClear }: { onClear: () => void }) {
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-10 text-center">
+    <div className="rounded-xl border border-border bg-bg-elevated p-10 text-center">
       <p className="text-sm text-fg-muted">No secrets match those filters.</p>
       <button
         type="button"
         onClick={onClear}
-        className="mt-3 text-xs text-fg-muted hover:text-fg transition-colors duration-fast ease-snap"
+        className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-accent hover:underline transition-colors duration-fast ease-snap"
       >
-        Clear filters
+        clear filters
       </button>
     </div>
   );
@@ -259,32 +267,33 @@ function NoMatches({ onClear }: { onClear: () => void }) {
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-lg border border-border bg-bg-elevated p-10">
-      <div className="mx-auto max-w-md text-center">
-        <h2 className="text-base font-semibold text-fg">No secrets in this project yet</h2>
-        <p className="text-sm text-fg-muted mt-2">
+    <div className="relative rounded-xl border border-border bg-bg-elevated p-10 overflow-hidden">
+      <div aria-hidden className="absolute inset-0 bg-grid bg-grid-fade opacity-30" />
+      <div className="relative mx-auto max-w-md text-center">
+        <h2 className="display text-xl tracking-tight text-fg">No secrets yet</h2>
+        <p className="text-sm text-fg-muted mt-3 leading-relaxed">
           Add one to start using{' '}
-          <code className="font-mono text-fg">@&lt;project&gt;.&lt;env&gt;.&lt;key&gt;</code>{' '}
-          references in your code. The keynv CLI resolves them inside a privileged subprocess your
-          AI agent never sees.
+          <code className="text-accent">@&lt;project&gt;.&lt;env&gt;.&lt;key&gt;</code> references
+          in your code. The keynv CLI resolves them inside a privileged subprocess your AI agent
+          never sees.
         </p>
 
-        <div className="mt-5 rounded-md border border-border bg-bg p-3 text-left">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            <Terminal size={12} />
-            Example
+        <div className="mt-6 rounded-lg border border-border bg-bg-inset p-4 text-left">
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+            <Terminal size={12} className="text-accent" />
+            example
           </div>
-          <pre className="mt-2 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
+          <pre className="mt-3 font-mono text-[12px] text-fg-muted leading-relaxed whitespace-pre-wrap break-words">
             <span className="text-fg-subtle">$ </span>
             <span className="text-fg">keynv exec</span> -- pnpm dev{'\n'}
-            <span className="text-fg-subtle"> </span>resolves{' '}
-            <span className="text-fg">@&lt;this-project&gt;.dev.&lt;alias&gt;</span> into the
+            <span className="text-fg-subtle"> # </span>resolves{' '}
+            <span className="text-accent">@&lt;this-project&gt;.dev.&lt;alias&gt;</span> into the
             subprocess
           </pre>
         </div>
 
-        <div className="mt-6">
-          <Button onClick={onCreate}>
+        <div className="mt-7">
+          <Button onClick={onCreate} className="gap-1.5">
             <Plus size={14} strokeWidth={2.25} />
             Add first secret
           </Button>

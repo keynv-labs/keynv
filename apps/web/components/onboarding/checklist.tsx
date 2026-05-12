@@ -62,16 +62,20 @@ export function OnboardingChecklist({ initialStatus, compact = false }: Props) {
   return (
     <section
       className={cn(
-        'rounded-xl border border-border bg-bg-elevated overflow-hidden',
+        'relative rounded-xl border border-accent-soft-border bg-bg-elevated overflow-hidden',
+        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent before:to-transparent',
         compact ? 'mb-6' : '',
       )}
       aria-label="Get started checklist"
     >
-      <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border">
+      <header className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-accent-soft/40">
         <div className="flex items-center gap-3 min-w-0">
-          <h2 className="text-base font-semibold text-fg">Get started</h2>
-          <span className="text-xs text-fg-subtle font-mono tabular-nums">
-            {completed} / {ONBOARDING_STEPS}
+          <h2 className="display text-base tracking-tight text-fg flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent animate-amber-pulse" aria-hidden />
+            Get started
+          </h2>
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle tabular">
+            <span className="text-accent">{completed}</span> / {ONBOARDING_STEPS}
           </span>
           <ProgressBar completed={completed} />
         </div>
@@ -79,7 +83,7 @@ export function OnboardingChecklist({ initialStatus, compact = false }: Props) {
           type="button"
           onClick={handleDismiss}
           aria-label="Hide checklist"
-          className="inline-flex h-6 w-6 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
+          className="inline-flex h-7 w-7 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
         >
           <X size={13} strokeWidth={2} />
         </button>
@@ -95,20 +99,23 @@ export function OnboardingChecklist({ initialStatus, compact = false }: Props) {
               key={step.id}
               className={cn(
                 'flex items-start gap-3 px-5 py-4 transition-colors duration-fast ease-snap',
-                isCurrent ? 'bg-bg-elevated-hover/50' : '',
+                isCurrent ? 'bg-accent-soft/30' : '',
               )}
             >
               <StepIcon state={state} />
               <div className="flex-1 min-w-0">
                 <div
                   className={cn(
-                    'text-sm font-medium',
+                    'text-sm font-medium flex items-center gap-2',
                     isDone ? 'text-fg-subtle line-through' : 'text-fg',
                   )}
                 >
+                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle no-underline tabular">
+                    {String(idx + 1).padStart(2, '0')}
+                  </span>
                   {step.title}
                 </div>
-                {!isDone ? <div className="mt-2 text-sm">{step.body(state)}</div> : null}
+                {!isDone ? <div className="mt-2.5 text-sm">{step.body(state)}</div> : null}
               </div>
             </li>
           );
@@ -124,7 +131,7 @@ function StepIcon({ state }: { state: StepState }) {
   }
   if (state === 'current') {
     return (
-      <span className="mt-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+      <span className="mt-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
         <Circle size={10} strokeWidth={3} fill="currentColor" />
       </span>
     );
@@ -133,9 +140,6 @@ function StepIcon({ state }: { state: StepState }) {
 }
 
 function ProgressBar({ completed }: { completed: number }) {
-  // Decorative — the "{completed} / {total}" label next to it carries
-  // the same info for assistive tech, so we skip the progressbar role
-  // (which would require a focusable element) and aria-hide instead.
   const pct = (completed / ONBOARDING_STEPS) * 100;
   return (
     <div aria-hidden className="hidden sm:block h-1 w-32 rounded-full bg-border overflow-hidden">
@@ -153,14 +157,14 @@ function buildSteps(): StepDef[] {
       id: 'project_created',
       title: 'Create your first project',
       body: () => (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="text-fg-muted">
-            A project is a namespace for related secrets. Pick a short kebab-case name like
-            <code className="ml-1 font-mono text-fg bg-bg border border-border rounded px-1 py-px text-[0.9em]">
+            A project is a namespace for related secrets. Pick a short kebab-case name like{' '}
+            <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
               billing
             </code>{' '}
-            or
-            <code className="ml-1 font-mono text-fg bg-bg border border-border rounded px-1 py-px text-[0.9em]">
+            or{' '}
+            <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
               api
             </code>
             .
@@ -178,10 +182,10 @@ function buildSteps(): StepDef[] {
       id: 'secret_added',
       title: 'Add a secret to it',
       body: () => (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <p className="text-fg-muted">
             Secrets live under{' '}
-            <code className="font-mono text-fg bg-bg border border-border rounded px-1 py-px text-[0.9em]">
+            <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
               @project.env.key
             </code>{' '}
             aliases. Add one from the project page, or run:
@@ -194,7 +198,7 @@ function buildSteps(): StepDef[] {
       id: 'cli_authenticated',
       title: 'Sign in from your CLI',
       body: () => (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <p className="text-fg-muted">
             The CLI lives on your laptop and talks to this server. Install + log in:
           </p>
@@ -207,7 +211,7 @@ function buildSteps(): StepDef[] {
       id: 'integration_installed',
       title: 'Install in your AI agent',
       body: () => (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <p className="text-fg-muted">
             Connect Claude Code, Cursor, or Codex so the agent uses aliases — never values.
           </p>
@@ -235,16 +239,16 @@ function CommandSnippet({ command }: { command: string }) {
     }
   }
   return (
-    <div className="flex items-center gap-2.5 rounded-md border border-border bg-bg px-3 py-2 max-w-full">
-      <Terminal size={12} strokeWidth={2} className="shrink-0 text-fg-subtle" />
-      <code className="flex-1 font-mono text-xs text-fg overflow-x-auto whitespace-nowrap">
+    <div className="flex items-center gap-2.5 rounded-md border border-border bg-bg-inset px-3 py-2.5 max-w-full">
+      <Terminal size={12} strokeWidth={2} className="shrink-0 text-accent" />
+      <code className="flex-1 font-mono text-xs text-fg overflow-x-auto whitespace-nowrap tabular">
         {command}
       </code>
       <button
         type="button"
         onClick={copy}
         aria-label={copied ? 'Copied' : 'Copy command'}
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
       >
         {copied ? (
           <Check size={11} strokeWidth={2.25} className="text-success" />
@@ -259,7 +263,7 @@ function CommandSnippet({ command }: { command: string }) {
 function IntegrationButton({ href, label }: { href: string; label: string }) {
   return (
     <Link href={{ pathname: href } as never}>
-      <Button variant="secondary" size="sm" className="gap-1.5">
+      <Button variant="outline" size="sm" className="gap-1.5">
         {label}
         <ExternalLink size={11} strokeWidth={2} />
       </Button>

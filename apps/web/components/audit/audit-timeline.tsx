@@ -107,11 +107,11 @@ export function AuditTimeline({ entries }: Props) {
                 onClick={() => toggleCategory(c)}
                 aria-pressed={active}
                 className={cn(
-                  'inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium',
+                  'inline-flex items-center rounded-md border px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em]',
                   'transition-colors duration-fast ease-snap',
                   active
-                    ? 'border-border-strong bg-bg-elevated-hover text-fg'
-                    : 'border-border bg-bg-elevated text-fg-muted hover:text-fg hover:bg-bg-elevated-hover',
+                    ? 'border-accent-soft-border bg-accent-soft text-accent'
+                    : 'border-border bg-bg-elevated text-fg-muted hover:text-fg hover:border-border-strong',
                 )}
               >
                 {CATEGORY_LABELS[c]}
@@ -141,14 +141,15 @@ export function AuditTimeline({ entries }: Props) {
               setActiveCategories(new Set());
               setSearch('');
             }}
-            className="text-xs text-fg-muted hover:text-fg transition-colors duration-fast ease-snap"
+            className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap"
           >
-            Clear filters
+            clear
           </button>
         ) : null}
 
-        <div className="ml-auto text-xs text-fg-subtle tabular-nums">
-          {filtered.length} of {entries.length}
+        <div className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+          <span className="text-fg tabular">{filtered.length}</span> of{' '}
+          <span className="tabular">{entries.length}</span>
         </div>
       </div>
 
@@ -160,7 +161,8 @@ export function AuditTimeline({ entries }: Props) {
         <div className="space-y-5">
           {grouped.map(([key, { label, entries: dayEntries }]) => (
             <section key={key}>
-              <h2 className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm py-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+              <h2 className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm py-2 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle flex items-center gap-2">
+                <span className="h-1 w-1 rounded-full bg-accent" aria-hidden />
                 {label}
               </h2>
               <ul className="rounded-lg border border-border bg-bg-elevated divide-y divide-border overflow-hidden">
@@ -206,8 +208,10 @@ function TimelineRow({
         <span
           aria-hidden
           className={cn(
-            'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
-            isSystem ? 'bg-bg text-fg-muted' : 'bg-bg-elevated-hover text-fg',
+            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border font-mono text-[11px] font-semibold',
+            isSystem
+              ? 'border-border bg-bg-inset text-fg-muted'
+              : 'border-border-strong bg-bg-inset text-fg',
           )}
         >
           {initials}
@@ -225,7 +229,7 @@ function TimelineRow({
                 description.tone === 'danger' && 'text-danger',
                 description.tone === 'warn' && 'text-warn',
                 description.tone === 'success' && 'text-success',
-                !description.tone && 'text-fg',
+                !description.tone && 'text-accent',
               )}
             >
               {description.subject}
@@ -234,7 +238,7 @@ function TimelineRow({
         </div>
 
         <span
-          className="shrink-0 text-[11px] tabular-nums text-fg-subtle"
+          className="shrink-0 font-mono text-[11px] tabular text-fg-subtle"
           title={new Date(entry.ts).toLocaleString()}
         >
           {relativeTime(entry.ts)}
@@ -281,7 +285,7 @@ function DetailRow({
 }) {
   return (
     <div className="flex gap-3 py-1">
-      <span className="w-20 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle pt-0.5">
+      <span className="w-20 shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle pt-1">
         {label}
       </span>
       <div className="flex-1 min-w-0">{children}</div>

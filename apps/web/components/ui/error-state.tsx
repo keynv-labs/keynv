@@ -41,27 +41,40 @@ export function ErrorState({
   className,
 }: Props) {
   const Icon = VARIANT_ICON[variant];
+  const variantBgClass =
+    variant === 'error'
+      ? 'border-danger-soft-border bg-danger-soft'
+      : variant === 'forbidden'
+        ? 'border-warn-soft-border bg-warn-soft'
+        : 'border-border bg-bg-elevated';
   return (
-    <div className={cn('flex min-h-[60vh] items-center justify-center p-6', className)}>
-      <div className="w-full max-w-md text-center">
+    <div
+      className={cn(
+        'relative flex min-h-[60vh] items-center justify-center p-6 overflow-hidden',
+        className,
+      )}
+    >
+      <div aria-hidden className="absolute inset-0 bg-grid bg-grid-fade opacity-30" />
+      <div className="relative w-full max-w-md text-center">
         <div
           className={cn(
-            'mx-auto inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-bg-elevated',
+            'mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md border',
+            variantBgClass,
             VARIANT_TONE[variant],
           )}
         >
-          <Icon size={20} strokeWidth={2} />
+          <Icon size={22} strokeWidth={2} />
         </div>
-        <h1 className="mt-4 text-xl font-semibold tracking-tight text-fg">{title}</h1>
-        <div className="mt-2 text-sm text-fg-muted leading-relaxed">{description}</div>
+        <h1 className="mt-5 display text-2xl tracking-tight text-fg">{title}</h1>
+        <div className="mt-3 text-sm text-fg-muted leading-relaxed">{description}</div>
         {digest ? (
-          <div className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-2.5 py-1 font-mono text-[11px] text-fg-subtle">
-            <ScrollText size={11} strokeWidth={2} />
+          <div className="mt-5 inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-inset px-2.5 py-1 font-mono text-[11px] text-fg-subtle tabular">
+            <ScrollText size={11} strokeWidth={2} className="text-accent" />
             ref {digest}
           </div>
         ) : null}
         {actions ? (
-          <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">{actions}</div>
+          <div className="mt-7 flex items-center justify-center gap-2 flex-wrap">{actions}</div>
         ) : null}
       </div>
     </div>

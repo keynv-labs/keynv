@@ -17,7 +17,7 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
       <div className="flex-1 min-w-0 flex flex-col">
         <MobileTopBar email={session.email} role={session.org_role} />
         <main id="main" className="flex-1 min-w-0">
-          <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">{children}</div>
+          <div className="mx-auto max-w-6xl px-4 py-7 md:px-8 md:py-10">{children}</div>
         </main>
       </div>
       <AppPalette />

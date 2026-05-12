@@ -33,10 +33,11 @@ export function PasswordInput({ className, capsLockWarning = true, onKeyDown, ..
         onKeyDown={handleKeyDown}
         aria-describedby={capsLockWarning && capsOn ? warningId : undefined}
         className={cn(
-          'h-8 w-full rounded-md border border-border bg-bg pl-2.5 pr-9 text-sm text-fg',
+          'h-9 w-full rounded-md border border-border bg-bg-inset pl-3 pr-10 text-sm text-fg',
           'placeholder:text-fg-subtle',
           'transition-colors duration-fast ease-snap',
           'hover:border-border-strong',
+          'focus:border-border-bright focus:bg-bg',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className,
         )}
@@ -46,13 +47,17 @@ export function PasswordInput({ className, capsLockWarning = true, onKeyDown, ..
         type="button"
         onClick={() => setVisible((v) => !v)}
         aria-label={visible ? 'Hide password' : 'Show password'}
-        className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
+        className="absolute right-1.5 top-[18px] -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded text-fg-subtle hover:text-fg hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
         tabIndex={-1}
       >
         {visible ? <EyeOff size={13} strokeWidth={2} /> : <Eye size={13} strokeWidth={2} />}
       </button>
       {capsLockWarning && capsOn ? (
-        <output id={warningId} className="mt-1 block text-[11px] text-warn" aria-live="polite">
+        <output
+          id={warningId}
+          className="mt-1.5 block font-mono text-[10px] uppercase tracking-[0.14em] text-warn"
+          aria-live="polite"
+        >
           Caps Lock is on
         </output>
       ) : null}

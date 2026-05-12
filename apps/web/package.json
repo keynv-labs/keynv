@@ -22,6 +22,7 @@
     "@zxcvbn-ts/language-en": "^3.0.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
+    "geist": "^1.7.0",
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
     "react": "^19.0.0",

@@ -1,6 +1,7 @@
 import { type AuditEntry, AuditTimeline } from '@/components/audit/audit-timeline';
 import { ChainBanner } from '@/components/audit/chain-banner';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { PageHeader } from '@/components/layout/page-header';
 import { api } from '@/lib/api';
 
 export default async function GlobalAuditPage({
@@ -14,15 +15,14 @@ export default async function GlobalAuditPage({
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <Breadcrumb segments={[{ label: 'Audit log' }]} />
 
-      <header>
-        <h1 className="text-[22px] font-semibold tracking-tight">Audit log</h1>
-        <p className="text-sm text-fg-muted mt-1">
-          Every operation, hash-chained. Verify integrity any time.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="audit · hash-chained"
+        title="Audit log"
+        description="Every operation, hash-chained. Verify integrity any time."
+      />
 
       <ChainBanner />
 

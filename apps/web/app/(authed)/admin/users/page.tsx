@@ -1,4 +1,5 @@
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { PageHeader } from '@/components/layout/page-header';
 import { api } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { UsersClient } from './users-client';
@@ -17,16 +18,14 @@ export default async function AdminUsersPage() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <Breadcrumb segments={[{ label: 'Admin' }, { label: 'Users' }]} />
 
-      <header>
-        <h1 className="text-[22px] font-semibold tracking-tight">Users</h1>
-        <p className="text-sm text-fg-muted mt-1">
-          Org members and their org-level role. Project-level membership is managed inside each
-          project.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="admin · org membership"
+        title="Users"
+        description="Org members and their org-level role. Project-level membership is managed inside each project."
+      />
 
       <UsersClient users={users} currentUserId={session?.user_id ?? ''} />
     </div>

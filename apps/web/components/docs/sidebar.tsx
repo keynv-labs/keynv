@@ -10,11 +10,11 @@ export function DocsSidebar() {
   return (
     <nav aria-label="Docs navigation" className="text-sm">
       {DOC_REGISTRY.map((section) => (
-        <div key={section.section} className="mb-5">
-          <div className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+        <div key={section.section} className="mb-6">
+          <div className="px-2 mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
             {section.section}
           </div>
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-px">
             {section.pages.map((page) => {
               const href = `/docs/${page.slug}`;
               const active = pathname === href;
@@ -24,12 +24,18 @@ export function DocsSidebar() {
                     href={{ pathname: href } as never}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-fast ease-snap',
+                      'group relative flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-fast ease-snap',
                       active
                         ? 'bg-bg-elevated-hover text-fg'
                         : 'text-fg-muted hover:bg-bg-elevated-hover hover:text-fg',
                     )}
                   >
+                    {active ? (
+                      <span
+                        aria-hidden
+                        className="absolute -left-2.5 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-r bg-accent"
+                      />
+                    ) : null}
                     {page.title}
                   </Link>
                 </li>

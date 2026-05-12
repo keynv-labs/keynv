@@ -35,9 +35,11 @@ export function RouteTabs({ tabs }: { tabs: RouteTab[] }) {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'inline-flex items-center px-3 py-2.5 text-sm whitespace-nowrap',
-                  'border-b-2 -mb-px',
+                  'border-b-2 -mb-px font-medium',
                   'transition-colors duration-fast ease-snap',
-                  active ? 'border-fg text-fg' : 'border-transparent text-fg-muted hover:text-fg',
+                  active
+                    ? 'border-accent text-fg'
+                    : 'border-transparent text-fg-muted hover:text-fg hover:border-border-strong',
                 )}
               >
                 {tab.label}

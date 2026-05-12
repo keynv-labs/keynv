@@ -56,7 +56,7 @@ interface OrgUser {
 }
 
 const roleTone = (role: string) => {
-  if (role === 'owner') return 'warn' as const;
+  if (role === 'owner') return 'accent' as const;
   if (role === 'admin') return 'success' as const;
   if (role === 'reader') return 'neutral' as const;
   return 'neutral' as const;
@@ -110,8 +110,9 @@ export function UsersClient({
           />
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <span className="text-xs text-fg-subtle tabular-nums">
-            {filtered.length} of {users.length}
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+            <span className="text-fg tabular">{filtered.length}</span> of{' '}
+            <span className="tabular">{users.length}</span>
           </span>
           <InviteUserDialog />
         </div>
@@ -130,7 +131,7 @@ export function UsersClient({
             >
               <span
                 aria-hidden
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-elevated-hover text-[12px] font-semibold text-fg"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border-strong bg-bg-inset font-mono text-[12px] font-semibold text-fg"
               >
                 {u.email.slice(0, 2).toUpperCase()}
               </span>
@@ -139,11 +140,13 @@ export function UsersClient({
                 <div className="text-sm text-fg truncate">
                   {u.email}
                   {u.id === currentUserId ? (
-                    <span className="ml-2 text-[11px] text-fg-subtle">(you)</span>
+                    <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                      · you
+                    </span>
                   ) : null}
                 </div>
-                <div className="text-[11px] text-fg-subtle mt-0.5">
-                  Joined {formatRelative(u.created_at)}
+                <div className="text-[11px] text-fg-subtle mt-0.5 font-mono tabular">
+                  joined {formatRelative(u.created_at)}
                 </div>
               </div>
 
@@ -357,7 +360,7 @@ function InviteUserDialog() {
             <select
               name="org_role"
               defaultValue="developer"
-              className="block h-8 w-full rounded-md border border-border bg-bg px-2.5 text-sm text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+              className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
             >
               <option value="admin">Admin</option>
               <option value="developer">Developer</option>
@@ -365,7 +368,11 @@ function InviteUserDialog() {
             </select>
           </Field>
 
-          {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+          {state.error ? (
+            <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
+              {state.error}
+            </p>
+          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
@@ -398,7 +405,7 @@ function RemoveUserDialog({
         <div className="flex items-start gap-3">
           <span
             aria-hidden
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--color-danger)_14%,transparent)]"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-danger-soft-border bg-danger-soft"
           >
             <Trash2 size={16} className="text-danger" strokeWidth={2} />
           </span>
@@ -449,7 +456,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

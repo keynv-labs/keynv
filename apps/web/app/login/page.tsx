@@ -1,3 +1,4 @@
+import { Logomark } from '@/components/brand/logomark';
 import { SkipLink } from '@/components/ui/skip-link';
 import { getCapabilities } from '@/lib/capabilities';
 import Link from 'next/link';
@@ -15,21 +16,32 @@ export default async function LoginPage({
   return (
     <>
       <SkipLink />
-      <main id="main" className="flex min-h-screen items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-8">
-            <div className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-md bg-accent text-fg-on-accent text-base font-bold">
-              k
+      <main
+        id="main"
+        className="relative flex min-h-screen items-center justify-center p-6 overflow-hidden"
+      >
+        <div aria-hidden className="absolute inset-0 bg-grid bg-grid-fade opacity-40" />
+        <div aria-hidden className="absolute inset-0 bg-amber-glow pointer-events-none" />
+
+        <div className="relative w-full max-w-sm">
+          <div className="text-center mb-9 animate-hero-rise">
+            <Link href={{ pathname: '/' }} className="inline-flex">
+              <Logomark size={36} iconOnly />
+            </Link>
+            <div className="display mt-4 text-2xl tracking-tight">keynv</div>
+            <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle">
+              self-hosted · ai-safe by design
             </div>
-            <div className="text-2xl font-semibold tracking-tight mt-3">keynv</div>
-            <div className="text-xs text-fg-muted mt-1">Self-hosted secrets, AI-safe by design</div>
           </div>
 
-          <div className="rounded-xl border border-border bg-bg-elevated p-5">
-            <h1 className="text-base font-semibold text-fg">Sign in</h1>
-            <p className="text-sm text-fg-muted mt-1">Enter your team credentials to continue.</p>
+          <div
+            className="rounded-xl border border-border bg-bg-elevated p-6 shadow-[0_24px_64px_-24px_rgba(0,0,0,0.6)] animate-hero-rise"
+            style={{ animationDelay: '80ms' }}
+          >
+            <h1 className="display text-lg tracking-tight text-fg">Sign in</h1>
+            <p className="text-sm text-fg-muted mt-1.5">Enter your team credentials to continue.</p>
             {params.reason === 'registration_disabled' ? (
-              <p className="mt-3 rounded-md border border-border bg-bg-overlay px-3 py-2 text-[11px] text-fg-muted">
+              <p className="mt-4 rounded-md border border-warn-soft-border bg-warn-soft px-3 py-2 text-[11px] text-warn">
                 Public signup is disabled on this instance. Ask an admin to invite you.
               </p>
             ) : null}
@@ -37,9 +49,12 @@ export default async function LoginPage({
           </div>
 
           {publicSignup ? (
-            <p className="text-center text-xs text-fg-muted mt-4">
+            <p
+              className="text-center text-xs text-fg-muted mt-5 animate-hero-rise"
+              style={{ animationDelay: '160ms' }}
+            >
               New to keynv?{' '}
-              <Link className="text-fg hover:underline" href="/register">
+              <Link className="text-accent hover:underline" href="/register">
                 Create an account
               </Link>
             </p>
