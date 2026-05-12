@@ -1,7 +1,7 @@
-import { Button } from '@/components/ui/button';
+import { Stamp } from '@/components/dossier/stamp';
 import { SkipLink } from '@/components/ui/skip-link';
 import { type ChangelogSection, parseChangelog, readRepoFile } from '@/lib/markdown';
-import { ArrowRight, Github, Rss } from 'lucide-react';
+import { ArrowLeft, Github, Rss } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -34,22 +34,26 @@ export default async function ChangelogPage() {
   return (
     <div className="newsprint min-h-screen flex flex-col">
       <SkipLink />
-      <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
-        <div className="mx-auto max-w-3xl px-4 md:px-6 h-14 flex items-center gap-4">
+      <header className="border-b-2 border-fg/90">
+        <div className="border-b border-border">
+          <div className="mx-auto max-w-3xl px-4 md:px-6 py-2 flex items-center justify-between gap-4 text-[10px] font-mono uppercase tracking-[0.22em] text-fg-muted">
+            <span>VOL. I · CHANGELOG</span>
+            <span className="hidden sm:inline">PRESS LOG</span>
+            <span>keynv.dev</span>
+          </div>
+        </div>
+        <div className="mx-auto max-w-3xl px-4 md:px-6 py-4 flex items-center justify-between gap-4">
           <Link
             href={{ pathname: '/' }}
-            className="flex items-center gap-2 font-semibold tracking-tight text-fg"
+            className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-fg-muted hover:text-fg"
           >
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[11px] font-bold">
-              k
-            </span>
-            <span>keynv</span>
+            <ArrowLeft size={13} strokeWidth={2} />
+            Home
           </Link>
-          <span className="text-sm text-fg-muted">/ Changelog</span>
-          <div className="ml-auto flex items-center gap-2">
+          <nav className="flex items-center gap-4 text-[13px] text-fg-muted">
             <Link
               href={{ pathname: '/changelog/rss.xml' }}
-              className="text-fg-muted hover:text-fg inline-flex items-center gap-1.5 text-sm"
+              className="hover:text-fg inline-flex items-center gap-1.5"
             >
               <Rss size={13} strokeWidth={2} />
               RSS
@@ -58,44 +62,40 @@ export default async function ChangelogPage() {
               href="https://github.com/keynv-labs/keynv/blob/main/CHANGELOG.md"
               target="_blank"
               rel="noreferrer"
-              className="text-fg-muted hover:text-fg inline-flex items-center gap-1.5 text-sm"
+              className="hover:text-fg inline-flex items-center gap-1.5"
             >
               <Github size={13} strokeWidth={2} />
               Source
             </a>
-          </div>
+          </nav>
         </div>
       </header>
 
       <main id="main" className="flex-1">
         <div className="mx-auto max-w-3xl px-4 md:px-6 py-12 md:py-16">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight">
+          <Stamp parts={['CHANGELOG', 'RELEASE LOG']} />
+          <h1 className="font-display text-[clamp(2.75rem,6vw,4.5rem)] font-medium tracking-[-0.02em] leading-[0.98] mt-5">
             {TITLE}
           </h1>
-          <p className="mt-3 text-base text-fg-muted leading-relaxed max-w-2xl">{DESCRIPTION}</p>
+          <p className="font-sans text-[18px] leading-[1.6] text-fg-muted mt-5 max-w-[60ch]">
+            {DESCRIPTION}
+          </p>
 
           {intro ? (
-            <div className="mt-6 rounded-lg border border-border bg-bg-elevated px-5 py-4">
-              <Prose markdown={intro} />
+            <div className="mt-8 border-l-4 border-fg pl-5 py-1">
+              <ProseSmall markdown={intro} />
             </div>
           ) : null}
 
-          <ol className="mt-12 space-y-10">
+          <ol className="mt-16 space-y-16">
             {sections.map((s) => (
               <Section key={s.anchor} section={s} />
             ))}
           </ol>
 
-          <div className="mt-16 border-t border-border pt-8 flex items-center justify-between gap-4 flex-wrap">
-            <p className="text-sm text-fg-muted">
-              Want the firehose? <span className="text-fg">Watch the repo on GitHub.</span>
-            </p>
-            <Link href={{ pathname: '/' }}>
-              <Button variant="secondary" className="gap-1.5">
-                Back home
-                <ArrowRight size={13} strokeWidth={2.25} />
-              </Button>
-            </Link>
+          <div className="mt-20 border-t-2 border-fg pt-6 flex items-center justify-between gap-4 flex-wrap font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle">
+            <span>END OF LOG · {new Date().toISOString().slice(0, 10)}</span>
+            <span>Want the firehose? Watch on GitHub.</span>
           </div>
         </div>
       </main>
@@ -106,26 +106,24 @@ export default async function ChangelogPage() {
 function Section({ section }: { section: ChangelogSection }) {
   const isUnreleased = section.version.toLowerCase() === 'unreleased';
   return (
-    <li id={section.anchor} className="scroll-mt-20">
-      <div className="flex items-baseline gap-3 flex-wrap">
-        <h2 className="text-xl font-semibold tracking-tight text-fg">
+    <li id={section.anchor} className="scroll-mt-24">
+      <header className="border-t-2 border-fg pt-5">
+        <Stamp
+          parts={[
+            isUnreleased ? 'STATUS — IN PROGRESS' : 'STATUS — RELEASED',
+            section.date ? `DATE — ${section.date}` : null,
+          ]}
+        />
+        <h2 className="font-display text-[clamp(2rem,4vw,3rem)] font-medium tracking-[-0.02em] leading-[1.0] mt-3">
           <Link
             href={{ pathname: '/changelog', hash: section.anchor } as never}
-            className="hover:underline"
+            className="hover:underline underline-offset-4 decoration-fg/40"
           >
             {section.version}
           </Link>
         </h2>
-        {section.date ? (
-          <time className="text-sm font-mono text-fg-subtle">{section.date}</time>
-        ) : null}
-        {isUnreleased ? (
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-warn">
-            in progress
-          </span>
-        ) : null}
-      </div>
-      <div className="mt-3">
+      </header>
+      <div className="mt-5">
         <Prose markdown={section.bodyMarkdown} />
       </div>
     </li>
@@ -134,7 +132,31 @@ function Section({ section }: { section: ChangelogSection }) {
 
 function Prose({ markdown }: { markdown: string }) {
   return (
-    <div className="space-y-3 text-sm text-fg-muted leading-relaxed [&_h3]:text-fg [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-1 [&_h4]:text-fg [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:mt-4 [&_h4]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_li]:leading-relaxed [&_a]:text-fg [&_a]:underline [&_a]:decoration-fg-subtle hover:[&_a]:decoration-fg [&_code]:font-mono [&_code]:text-fg [&_code]:bg-bg-elevated [&_code]:border [&_code]:border-border [&_code]:rounded [&_code]:px-1 [&_code]:py-px [&_code]:text-[0.9em] [&_strong]:text-fg [&_strong]:font-semibold [&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-3 [&_blockquote]:text-fg-subtle">
+    <div
+      className={[
+        'font-sans text-[17px] leading-[1.7] text-fg-muted',
+        '[&_h3]:font-display [&_h3]:text-fg [&_h3]:text-[22px] [&_h3]:font-medium [&_h3]:tracking-[-0.01em] [&_h3]:leading-tight [&_h3]:mt-8 [&_h3]:mb-2',
+        '[&_h4]:font-mono [&_h4]:text-fg [&_h4]:text-[11px] [&_h4]:font-semibold [&_h4]:uppercase [&_h4]:tracking-[0.22em] [&_h4]:mt-6 [&_h4]:mb-2',
+        '[&_p]:my-3',
+        '[&_ul]:list-none [&_ul]:pl-0 [&_ul]:my-3 [&_ul]:space-y-2 [&_ul>li]:relative [&_ul>li]:pl-5 [&_ul>li]:before:content-["§"] [&_ul>li]:before:absolute [&_ul>li]:before:left-0 [&_ul>li]:before:text-fg-subtle [&_ul>li]:before:font-mono [&_ul>li]:before:text-sm',
+        '[&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_ol]:space-y-2 [&_ol]:marker:text-fg-subtle [&_ol]:marker:font-mono',
+        '[&_li]:leading-[1.65]',
+        '[&_a]:text-fg [&_a]:underline [&_a]:decoration-fg-subtle [&_a]:underline-offset-[3px] hover:[&_a]:decoration-fg',
+        '[&_code]:font-mono [&_code]:text-fg [&_code]:bg-bg-elevated [&_code]:border [&_code]:border-border [&_code]:rounded-sm [&_code]:px-1 [&_code]:py-px [&_code]:text-[0.88em]',
+        '[&_pre]:my-5 [&_pre]:border [&_pre]:border-fg/40 [&_pre]:bg-bg-overlay [&_pre]:p-4 [&_pre]:overflow-x-auto',
+        '[&_strong]:text-fg [&_strong]:font-semibold',
+        '[&_em]:italic [&_em]:font-display',
+        '[&_blockquote]:my-5 [&_blockquote]:border-l-4 [&_blockquote]:border-fg [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-fg [&_blockquote]:font-display',
+      ].join(' ')}
+    >
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+    </div>
+  );
+}
+
+function ProseSmall({ markdown }: { markdown: string }) {
+  return (
+    <div className="font-sans italic text-[15px] leading-[1.55] text-fg-muted [&_p]:my-1 [&_a]:underline">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
     </div>
   );

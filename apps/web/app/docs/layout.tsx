@@ -8,19 +8,38 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
     <div className="newsprint min-h-screen flex flex-col">
       <SkipLink />
-      <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
-        <div className="mx-auto max-w-6xl px-4 md:px-6 h-14 flex items-center gap-4">
-          <Link
-            href={{ pathname: '/' }}
-            className="flex items-center gap-2 font-semibold tracking-tight text-fg"
-          >
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[11px] font-bold">
+      <header className="border-b-2 border-fg/90">
+        <div className="border-b border-border">
+          <div className="mx-auto max-w-6xl px-4 md:px-6 py-2 flex items-center justify-between gap-4 text-[10px] font-mono uppercase tracking-[0.22em] text-fg-muted">
+            <span>VOL. I · DOCUMENTATION</span>
+            <span className="hidden sm:inline">PUBLIC RECORD</span>
+            <span>keynv.dev</span>
+          </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-4 md:px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <Link href={{ pathname: '/' }} className="flex items-baseline gap-2">
+            <span
+              aria-hidden
+              className="inline-flex h-8 w-8 items-center justify-center bg-fg text-bg font-display font-medium text-xl leading-none shrink-0"
+              style={{ boxShadow: '3px 3px 0 0 var(--color-highlight)' }}
+            >
               k
             </span>
-            <span>keynv</span>
+            <span className="font-display text-3xl font-medium tracking-tight">keynv</span>
+            <span className="text-fg-subtle mx-2" aria-hidden>
+              /
+            </span>
+            <span className="font-display text-3xl font-medium tracking-tight italic text-fg-muted">
+              Documentation
+            </span>
           </Link>
-          <span className="text-sm text-fg-muted">/ Docs</span>
-          <div className="ml-auto flex items-center gap-4 text-sm text-fg-muted">
+          <nav className="flex items-center gap-5 text-[13px] text-fg-muted">
+            <Link
+              href={{ pathname: '/' }}
+              className="hover:text-fg transition-colors duration-fast ease-snap"
+            >
+              Home
+            </Link>
             <Link
               href={{ pathname: '/changelog' }}
               className="hover:text-fg transition-colors duration-fast ease-snap"
@@ -36,12 +55,12 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
               <Github size={13} strokeWidth={2} />
               GitHub
             </a>
-          </div>
+          </nav>
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl w-full flex-1 flex gap-8 px-4 md:px-6 py-8">
-        <aside className="hidden md:block w-60 shrink-0 sticky top-20 self-start">
+      <div className="mx-auto max-w-6xl w-full flex-1 flex gap-10 px-4 md:px-6 py-10">
+        <aside className="hidden md:block w-56 shrink-0 sticky top-20 self-start">
           <DocsSidebar />
         </aside>
         <main id="main" className="flex-1 min-w-0">
