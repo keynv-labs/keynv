@@ -63,15 +63,15 @@ export default async function AccountProfilePage() {
 
       <Card className="opacity-70">
         <CardTitle className="flex-wrap">
-          MFA
+          Two-factor authentication
           <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle border border-border rounded-sm px-1.5 py-0.5">
-            phase 5+
+            on the roadmap
           </span>
         </CardTitle>
         <p className="text-sm text-fg-muted -mt-1 flex items-start gap-2">
           <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-fg-subtle" />
-          TOTP enrollment ships in Phase 5 hardening. For now your account is protected by the owner
-          password and rate-limited login.
+          TOTP enrollment is on the way. Until then your account is protected by your password and
+          rate-limited login.
         </p>
       </Card>
     </div>

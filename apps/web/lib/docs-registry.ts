@@ -90,7 +90,8 @@ export const DOC_REGISTRY: ReadonlyArray<DocSection> = [
         slug: 'decisions/license-choice',
         file: 'docs/decisions/0001-license-choice.md',
         title: 'ADR-0001 · License choice',
-        summary: 'Why keynv is source-available now and MIT after Phase 5.',
+        summary:
+          'Why keynv is source-available today and MIT-licensed once the public API stabilizes.',
       },
     ],
   },

@@ -159,7 +159,7 @@ function Hero({ ctx }: { ctx: CtaContext }) {
         <div className="animate-hero-rise">
           <Badge tone="accent" className="mx-auto">
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-accent animate-amber-pulse" />
-            Phases 1–3 shipping · Phase 4 in progress
+            Public beta · self-host today
           </Badge>
         </div>
 
@@ -681,14 +681,14 @@ function Pricing({ ctx }: { ctx: CtaContext }) {
         <div className="display-eyebrow text-center">05 · pricing</div>
         <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
           Free to self-host, forever.{' '}
-          <span className="text-fg-muted">Managed tier ships with Phase 5.</span>
+          <span className="text-fg-muted">Managed tier is on the way.</span>
         </h2>
 
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           <PriceCard
             tier="Self-hosted"
             price="Free"
-            priceSub="MIT-when-Phase-5"
+            priceSub="MIT license planned"
             description="The whole platform, on your infra. Single binary + SQLite + Litestream."
             features={[
               'Unlimited projects, secrets, members',
@@ -722,7 +722,7 @@ function Pricing({ ctx }: { ctx: CtaContext }) {
           <PriceCard
             tier="Managed"
             price="TBD"
-            priceSub="Phase 5 · waitlist"
+            priceSub="waitlist open"
             highlight
             description="We run it for your team. Same binary, hosted region of your choice, 99.9% SLA."
             features={[
@@ -744,7 +744,7 @@ function Pricing({ ctx }: { ctx: CtaContext }) {
           <PriceCard
             tier="Enterprise"
             price="Custom"
-            priceSub="Phase 6"
+            priceSub="coming soon"
             description="HSM/KMS-backed KEK, SSO, on-prem audit export, named architect."
             features={[
               'AWS KMS / GCP KMS / Vault Transit KEK',
@@ -895,8 +895,8 @@ function Footer() {
           <div>
             <Logomark size={26} wordmarkClassName="text-base" />
             <p className="mt-4 leading-relaxed max-w-sm">
-              Self-hosted, source-available secrets manager built for the AI-coding era. Phase 4 in
-              progress; treat as not-yet-OSI-licensed until Phase 5 ships.
+              Self-hosted, source-available secrets manager built for the AI-coding era. In public
+              beta — source-available now, full MIT license once the public API stabilizes.
             </p>
             <div className="mt-5">
               <StatusPill />

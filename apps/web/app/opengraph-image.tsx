@@ -155,7 +155,7 @@ export default async function OpengraphImage() {
               background: SUCCESS,
             }}
           />
-          phases 1–3 shipping
+          public beta
         </div>
       </div>
 

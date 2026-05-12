@@ -301,8 +301,8 @@ function InviteUserDialog() {
       <DialogContent>
         <DialogTitle>Invite user</DialogTitle>
         <DialogDescription>
-          Phase 1 doesn&rsquo;t have an email-invite flow yet. Share this temporary password with
-          the new user out-of-band; they change it on first login.
+          Email invitations are on the roadmap. For now, share this temporary password with the new
+          user out-of-band; they change it on first login.
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
