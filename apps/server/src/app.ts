@@ -8,6 +8,7 @@ import { authRoutes } from './routes/auth.js';
 import { cliTokenRoutes } from './routes/cli-tokens.js';
 import { healthRoute } from './routes/health.js';
 import { memberRoutes } from './routes/members.js';
+import { onboardingRoutes } from './routes/onboarding.js';
 import { projectRoutes } from './routes/projects.js';
 import { secretRoutes } from './routes/secrets.js';
 import { userRoutes } from './routes/users.js';
@@ -68,6 +69,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route('/v1/projects', secretRoutes(deps));
   app.route('/v1/audit', auditRoutes(deps));
   app.route('/v1/cli-tokens', cliTokenRoutes(deps));
+  app.route('/v1/onboarding', onboardingRoutes(deps));
   // approvalRoutes mounts /:projectId/approvals/* on the same prefix.
   app.route('/v1/projects', approvalRoutes(deps));
 

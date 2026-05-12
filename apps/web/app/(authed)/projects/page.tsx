@@ -1,8 +1,11 @@
 import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { OnboardingChecklist } from '@/components/onboarding/checklist';
 import { Badge, envTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
+import { type OnboardingStatus, isOnboardingComplete } from '@/lib/onboarding';
+import { fetchOnboardingStatus } from '@/lib/onboarding-server';
 import { getSession } from '@/lib/session';
 import { ArrowUpRight, Plus, Terminal } from 'lucide-react';
 import Link from 'next/link';
@@ -93,10 +96,15 @@ export default async function ProjectsPage() {
 }
 
 async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
-  const projects = await loadProjects();
+  const [projects, onboarding] = await Promise.all([loadProjects(), safeFetchOnboarding()]);
+  const showChecklist = onboarding !== null && !isOnboardingComplete(onboarding);
 
   if (projects.length === 0) {
-    return <EmptyState canCreate={canCreate} />;
+    return showChecklist ? (
+      <OnboardingChecklist initialStatus={onboarding} />
+    ) : (
+      <EmptyState canCreate={canCreate} />
+    );
   }
 
   const totalSecrets = projects.reduce((sum, p) => sum + p.secret_count, 0);
@@ -104,6 +112,8 @@ async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
 
   return (
     <>
+      {showChecklist ? <OnboardingChecklist initialStatus={onboarding} compact /> : null}
+
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <RollupStat label="Projects" value={projects.length} />
         <RollupStat label="Environments" value={totalEnvs} />
@@ -175,6 +185,17 @@ function RollupStat({ label, value }: { label: string; value: number }) {
       </div>
     </div>
   );
+}
+
+async function safeFetchOnboarding(): Promise<OnboardingStatus | null> {
+  // Older server versions don't have /v1/onboarding/status. The dashboard
+  // must not break for self-host instances that pin to an earlier
+  // release — fall back to "no checklist" if the endpoint 404s.
+  try {
+    return await fetchOnboardingStatus();
+  } catch {
+    return null;
+  }
 }
 
 function ProjectsSkeleton() {
