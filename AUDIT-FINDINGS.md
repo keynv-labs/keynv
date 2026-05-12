@@ -195,10 +195,7 @@ known-secret-shaped patterns.
 - **M5.** No `PATCH /v1/users/:id/org-role` route exists despite
   `docs/06:69-72` promising it. Drift; implement or amend doc before
   Phase 4 web UI starts depending on the docs.
-- **M6.** `packages/integrations/src/file-deny-list.ts:24-27`: paths like
-  `.aws/credentials` won't match the user's home (`~/.aws/credentials`)
-  unless integrations expand them. Each integration's own pattern syntax
-  should be tested for that.
+- **M6.** File deny-list patterns: `KEYNV_FILE_DENY_PATTERNS` extended with `**/`-prefixed variants (cloud creds, kube/config, docker/config) so deny-engines anchored at the project root still match `~/.aws/credentials`. (Resolved: `packages/integrations` was removed in 0.1.0-rc.8; `keynv init` replaces per-agent installers.)
 
 ## CONFIRMED OK — load-bearing primitives
 

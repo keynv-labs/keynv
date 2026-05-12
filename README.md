@@ -89,8 +89,7 @@ Same vault, two surfaces:
 - **Team secrets manager** — encrypted SQLite vault, RBAC, append-only
   hash-chained audit, CLI for daily ops, web UI for team leads.
 - **AI-safety layer** — `keynv exec` shell wrapper, `keynv-mcp` MCP server,
-  output redactor, per-agent installers (Claude Code · Cursor · Codex ·
-  OpenCode · Aider).
+  output redactor, `keynv init` for agent onboarding.
 
 You decide how aggressively to lock each agent. They share the vault.
 

@@ -65,8 +65,8 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
   single-use reference token; the resolved value never crosses the MCP boundary.
 - Output redactor (`packages/redactor`): pattern bank (50+ vendor regex rules) +
   Shannon-entropy fallback. Streaming + batch APIs.
-- Per-agent integration installers (`packages/integrations`): Claude Code, Cursor,
-  OpenCode, Codex, Aider — each writes the right hooks, ignore lists, MCP config.
+- Per-agent onboarding via `keynv init`: scans existing `.env` files, migrates
+  secrets to vault, writes `.keynv.env` with alias references only. Safe to commit.
 
 #### Connection testers (Phase 3)
 - `packages/testers` adapter pattern. Built-in: Postgres, MySQL, Redis, MongoDB,

@@ -244,7 +244,7 @@ highlighting on long examples.
 6. **Important content additions** (creates the docs that today are missing):
    - `docs/quickstart.md` — "5-minute getting started" (NEW)
    - `docs/cli-reference.md` — generated from clipanion definitions (can hand-write v1)
-   - `docs/integrations/claude-code.md` — `keynv install claude-code` walkthrough
+   - `docs/integrations/claude-code.md` — `keynv init` walkthrough for AI agents
    - `docs/integrations/cursor.md` — same for Cursor
    - `docs/faq.md` — Vault vs keynv, self-host vs SaaS, GDPR, etc.
    - `docs/migration/doppler.md`, `docs/migration/1password.md` — conversion levers
