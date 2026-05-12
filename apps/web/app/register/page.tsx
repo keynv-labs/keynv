@@ -1,12 +1,7 @@
-import { api } from '@/lib/api';
+import { getCapabilities } from '@/lib/capabilities';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { RegisterForm } from './form';
-
-interface HealthResponse {
-  ok: boolean;
-  capabilities?: { public_registration?: boolean };
-}
 
 export default async function RegisterPage({
   searchParams,
@@ -16,23 +11,12 @@ export default async function RegisterPage({
   const params = await searchParams;
   const nextParam = params.next ?? '/projects';
 
-  // Hit /v1/health to check whether this instance opted into public
-  // registration. Self-host deployments default to off; keynv.dev sets
-  // KEYNV_PUBLIC_REGISTRATION=true. If the flag is off we redirect to
-  // /login with a query string so the login page can show a banner.
-  let enabled = false;
-  try {
-    const health = await api<HealthResponse>('/v1/health', { authed: false });
-    enabled = health.capabilities?.public_registration === true;
-  } catch {
-    // If the health probe itself fails the server is unreachable —
-    // showing the form lets the user discover that fact via the
-    // submit-time error rather than a misleading "registration disabled"
-    // message. Better to err toward letting them try.
-    enabled = true;
-  }
-
-  if (!enabled) {
+  // Self-host deployments default to no public signup. keynv.dev sets
+  // KEYNV_PUBLIC_REGISTRATION=true. If a transient outage prevents us
+  // from reading the flag we err toward rendering the form so the user
+  // hits a real submit-time error rather than a misleading "disabled".
+  const { publicSignup } = await getCapabilities({ fallback: { publicSignup: true } });
+  if (!publicSignup) {
     redirect('/login?reason=registration_disabled');
   }
 

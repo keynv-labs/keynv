@@ -1,11 +1,6 @@
-import { api } from '@/lib/api';
+import { getCapabilities } from '@/lib/capabilities';
 import Link from 'next/link';
 import { LoginForm } from './form';
-
-interface HealthResponse {
-  ok: boolean;
-  capabilities?: { public_registration?: boolean };
-}
 
 export default async function LoginPage({
   searchParams,
@@ -14,18 +9,7 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const nextParam = params.next ?? '/projects';
-
-  // Hide the "Sign up" link on self-host instances that didn't enable
-  // public registration. The /v1/health probe is cheap and unauthed.
-  let publicSignup = false;
-  try {
-    const health = await api<HealthResponse>('/v1/health', { authed: false });
-    publicSignup = health.capabilities?.public_registration === true;
-  } catch {
-    // Health probe failed — keep the link hidden so we don't send a
-    // user to a /register that will redirect them right back here.
-    publicSignup = false;
-  }
+  const { publicSignup } = await getCapabilities();
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">

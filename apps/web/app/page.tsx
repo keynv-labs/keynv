@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getCapabilities } from '@/lib/capabilities';
 import { getSession } from '@/lib/session';
 import {
   ArrowRight,
@@ -20,19 +21,24 @@ export const metadata: Metadata = {
     'Self-hosted vault for your team’s API keys, DB passwords, and SSH credentials. Reference them by alias — your AI coding agent sees the alias literal, never the value.',
 };
 
+interface CtaContext {
+  isAuthed: boolean;
+  publicSignup: boolean;
+}
+
 export default async function LandingPage() {
-  const session = await getSession();
-  const isAuthed = Boolean(session);
+  const [session, { publicSignup }] = await Promise.all([getSession(), getCapabilities()]);
+  const ctx: CtaContext = { isAuthed: Boolean(session), publicSignup };
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
-      <TopNav isAuthed={isAuthed} />
+      <TopNav ctx={ctx} />
       <main className="flex-1">
-        <Hero isAuthed={isAuthed} />
+        <Hero ctx={ctx} />
         <Problem />
         <Pillars />
         <HowItWorks />
-        <BottomCta isAuthed={isAuthed} />
+        <BottomCta ctx={ctx} />
       </main>
       <Footer />
     </div>
@@ -41,7 +47,7 @@ export default async function LandingPage() {
 
 // ─── TOP NAV ─────────────────────────────────────────────────────────────────
 
-function TopNav({ isAuthed }: { isAuthed: boolean }) {
+function TopNav({ ctx }: { ctx: CtaContext }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
       <div className="mx-auto max-w-6xl px-4 md:px-6 h-14 flex items-center gap-4">
@@ -76,14 +82,29 @@ function TopNav({ isAuthed }: { isAuthed: boolean }) {
           </a>
         </nav>
 
-        <div className="ml-auto">
-          {isAuthed ? (
+        <div className="ml-auto flex items-center gap-2">
+          {ctx.isAuthed ? (
             <Link href={{ pathname: '/projects' }}>
               <Button className="gap-1.5">
                 Open dashboard
                 <ArrowRight size={13} strokeWidth={2.25} />
               </Button>
             </Link>
+          ) : ctx.publicSignup ? (
+            <>
+              <Link
+                href={{ pathname: '/login' }}
+                className="text-sm text-fg-muted hover:text-fg transition-colors duration-fast ease-snap px-2"
+              >
+                Sign in
+              </Link>
+              <Link href={{ pathname: '/register' }}>
+                <Button className="gap-1.5">
+                  Get started
+                  <ArrowRight size={13} strokeWidth={2.25} />
+                </Button>
+              </Link>
+            </>
           ) : (
             <Link href={{ pathname: '/login' }}>
               <Button>Sign in</Button>
@@ -97,7 +118,7 @@ function TopNav({ isAuthed }: { isAuthed: boolean }) {
 
 // ─── HERO ────────────────────────────────────────────────────────────────────
 
-function Hero({ isAuthed }: { isAuthed: boolean }) {
+function Hero({ ctx }: { ctx: CtaContext }) {
   return (
     <section className="relative overflow-hidden border-b border-border">
       <GridBackdrop />
@@ -116,14 +137,26 @@ function Hero({ isAuthed }: { isAuthed: boolean }) {
           the value.
         </p>
 
-        <div className="mt-8 flex items-center justify-center gap-3">
-          {isAuthed ? (
+        <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
+          {ctx.isAuthed ? (
             <Link href={{ pathname: '/projects' }}>
               <Button className="gap-1.5">
                 Open dashboard
                 <ArrowRight size={13} strokeWidth={2.25} />
               </Button>
             </Link>
+          ) : ctx.publicSignup ? (
+            <>
+              <Link href={{ pathname: '/register' }}>
+                <Button className="gap-1.5">
+                  Get started — it&rsquo;s free
+                  <ArrowRight size={13} strokeWidth={2.25} />
+                </Button>
+              </Link>
+              <Link href={{ pathname: '/login' }}>
+                <Button variant="secondary">Sign in</Button>
+              </Link>
+            </>
           ) : (
             <Link href={{ pathname: '/login' }}>
               <Button className="gap-1.5">
@@ -139,6 +172,12 @@ function Hero({ isAuthed }: { isAuthed: boolean }) {
             </Button>
           </a>
         </div>
+
+        {!ctx.isAuthed && ctx.publicSignup ? (
+          <p className="mt-4 text-xs text-fg-subtle">
+            No credit card required. Self-host with the same binary anytime.
+          </p>
+        ) : null}
 
         <CodeFrame />
       </div>
@@ -426,7 +465,7 @@ function Step({
 
 // ─── BOTTOM CTA ──────────────────────────────────────────────────────────────
 
-function BottomCta({ isAuthed }: { isAuthed: boolean }) {
+function BottomCta({ ctx }: { ctx: CtaContext }) {
   return (
     <section className="border-b border-border">
       <div className="mx-auto max-w-3xl px-4 md:px-6 py-16 md:py-20 text-center">
@@ -438,10 +477,17 @@ function BottomCta({ isAuthed }: { isAuthed: boolean }) {
           ships.
         </p>
         <div className="mt-7 flex items-center justify-center gap-3 flex-wrap">
-          {isAuthed ? (
+          {ctx.isAuthed ? (
             <Link href={{ pathname: '/projects' }}>
               <Button className="gap-1.5">
                 Open dashboard
+                <ArrowRight size={13} strokeWidth={2.25} />
+              </Button>
+            </Link>
+          ) : ctx.publicSignup ? (
+            <Link href={{ pathname: '/register' }}>
+              <Button className="gap-1.5">
+                Create your account
                 <ArrowRight size={13} strokeWidth={2.25} />
               </Button>
             </Link>
