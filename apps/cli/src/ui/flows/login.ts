@@ -14,7 +14,7 @@ export async function runLoginFlow(
 ): Promise<boolean> {
   const server = options.server ?? DEFAULT_SERVER_URL;
   const s = spinner();
-  s.start('Opening browser for keynv login');
+  s.start('Waiting for authorization');
   let creds: Credentials;
   try {
     creds = await runBrowserAuth(server);
