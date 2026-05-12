@@ -559,6 +559,20 @@ function Footer() {
           progress; treat as not-yet-OSI-licensed until Phase 5 ships.
         </p>
         <div className="ml-auto flex items-center gap-5">
+          <Link
+            href={{ pathname: '/changelog' }}
+            className="hover:text-fg transition-colors duration-fast ease-snap"
+          >
+            Changelog
+          </Link>
+          <a
+            href="https://github.com/keynv-labs/keynv/tree/main/docs"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-fg transition-colors duration-fast ease-snap"
+          >
+            Docs
+          </a>
           <a
             href="https://github.com/keynv-labs/keynv"
             target="_blank"
@@ -567,14 +581,6 @@ function Footer() {
           >
             <Github size={12} strokeWidth={2} />
             keynv-labs/keynv
-          </a>
-          <a
-            href="https://github.com/keynv-labs/keynv/tree/main/docs"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            Docs
           </a>
         </div>
       </div>
