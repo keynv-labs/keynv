@@ -1,3 +1,6 @@
+import { InstallTabs } from '@/components/install-tabs';
+import { GithubStars } from '@/components/trust/github-stars';
+import { StatusPill } from '@/components/trust/status-pill';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getCapabilities } from '@/lib/capabilities';
@@ -68,6 +71,7 @@ export default async function LandingPage() {
         <Problem />
         <Pillars />
         <HowItWorks />
+        <InstallTabs />
         <BottomCta ctx={ctx} />
       </main>
       <Footer />
@@ -110,15 +114,7 @@ function TopNav({ ctx }: { ctx: CtaContext }) {
           >
             Changelog
           </Link>
-          <a
-            href="https://github.com/keynv-labs/keynv"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-fg transition-colors duration-fast ease-snap inline-flex items-center gap-1.5"
-          >
-            <Github size={13} strokeWidth={2} />
-            GitHub
-          </a>
+          <GithubStars />
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
@@ -556,41 +552,111 @@ function BottomCta({ ctx }: { ctx: CtaContext }) {
 function Footer() {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-8 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 text-xs text-fg-muted">
-        <div className="flex items-center gap-2 text-fg">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[10px] font-bold">
-            k
-          </span>
-          <span className="font-semibold tracking-tight">keynv</span>
+      <div className="mx-auto max-w-6xl px-4 md:px-6 py-10">
+        <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr] text-xs text-fg-muted">
+          <div>
+            <div className="flex items-center gap-2 text-fg">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[10px] font-bold">
+                k
+              </span>
+              <span className="font-semibold tracking-tight">keynv</span>
+            </div>
+            <p className="mt-3 leading-relaxed max-w-sm">
+              Self-hosted, source-available secrets manager built for the AI-coding era. Phase 4 in
+              progress; treat as not-yet-OSI-licensed until Phase 5 ships.
+            </p>
+            <div className="mt-4">
+              <StatusPill />
+            </div>
+          </div>
+
+          <FooterColumn title="Product">
+            <FooterLink href="/docs">Docs</FooterLink>
+            <FooterLink href="/changelog">Changelog</FooterLink>
+            <FooterLink href="/docs/quickstart">Quickstart</FooterLink>
+            <FooterLink href="/docs/roadmap">Roadmap</FooterLink>
+          </FooterColumn>
+
+          <FooterColumn title="Security">
+            <FooterLink href="/docs/threat-model">Threat model</FooterLink>
+            <FooterLink href="/docs/encryption-design">Encryption design</FooterLink>
+            <FooterLink external href="https://github.com/keynv-labs/keynv/blob/main/SECURITY.md">
+              Responsible disclosure
+            </FooterLink>
+          </FooterColumn>
+
+          <FooterColumn title="Community">
+            <FooterLink external href="https://github.com/keynv-labs/keynv">
+              <Github size={11} strokeWidth={2} className="inline-block mr-1 -mt-px" />
+              GitHub
+            </FooterLink>
+            <FooterLink external href="https://github.com/keynv-labs/keynv/issues">
+              Issues
+            </FooterLink>
+            <FooterLink external href="https://github.com/keynv-labs/keynv/discussions">
+              Discussions
+            </FooterLink>
+            <FooterLink href="/changelog/rss.xml">RSS</FooterLink>
+          </FooterColumn>
         </div>
-        <p className="leading-relaxed max-w-md">
-          Self-hosted, source-available secrets manager built for the AI-coding era. Phase 4 in
-          progress; treat as not-yet-OSI-licensed until Phase 5 ships.
-        </p>
-        <div className="ml-auto flex items-center gap-5">
-          <Link
-            href={{ pathname: '/changelog' }}
-            className="hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            Changelog
-          </Link>
-          <Link
-            href={{ pathname: '/docs' }}
-            className="hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            Docs
-          </Link>
-          <a
-            href="https://github.com/keynv-labs/keynv"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            <Github size={12} strokeWidth={2} />
-            keynv-labs/keynv
-          </a>
+
+        <div className="mt-10 pt-6 border-t border-border flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-[11px] text-fg-subtle">
+          <span>
+            Public beta · SOC2 readiness on the roadmap for H2 2026 — see{' '}
+            <Link href={{ pathname: '/docs/threat-model' }} className="text-fg-muted hover:text-fg">
+              what we defend against today
+            </Link>
+            .
+          </span>
+          <span>© {new Date().getFullYear()} keynv labs</span>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+        {title}
+      </div>
+      <ul className="mt-3 space-y-2">{children}</ul>
+    </div>
+  );
+}
+
+function FooterLink({
+  href,
+  external,
+  children,
+}: {
+  href: string;
+  external?: boolean;
+  children: React.ReactNode;
+}) {
+  if (external) {
+    return (
+      <li>
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="hover:text-fg transition-colors duration-fast ease-snap"
+        >
+          {children}
+        </a>
+      </li>
+    );
+  }
+  return (
+    <li>
+      <Link
+        href={{ pathname: href } as never}
+        className="hover:text-fg transition-colors duration-fast ease-snap"
+      >
+        {children}
+      </Link>
+    </li>
   );
 }
