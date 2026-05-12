@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn';
 import {
   Activity,
   FolderKanban,
+  Inbox,
   LogOut,
   ScrollText,
   Settings,
@@ -47,6 +48,13 @@ function buildGroups(role: string): NavGroup[] {
           icon: FolderKanban,
           shortcut: 'g p',
           match: (p) => p === '/projects' || p.startsWith('/projects/'),
+        },
+        {
+          href: '/inbox',
+          label: 'Inbox',
+          icon: Inbox,
+          shortcut: 'g i',
+          match: (p) => p === '/inbox',
         },
         {
           href: '/audit',

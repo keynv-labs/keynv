@@ -142,9 +142,13 @@ async function ActivityContent() {
             title="awaiting your review"
             count={pendingItems.length}
             actions={
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-warn">
-                · production access
-              </span>
+              <Link
+                href={{ pathname: '/inbox' }}
+                className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap"
+              >
+                full inbox
+                <ArrowUpRight size={11} strokeWidth={2} />
+              </Link>
             }
           />
           <ul className="rounded-lg border border-warn-soft-border bg-warn-soft/30 divide-y divide-border overflow-hidden">
@@ -179,8 +183,14 @@ async function ActivityContent() {
             ))}
           </ul>
           {pendingItems.length > 6 ? (
-            <div className="mt-2 text-right font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-              +{pendingItems.length - 6} more in project queues
+            <div className="mt-2 text-right">
+              <Link
+                href={{ pathname: '/inbox' }}
+                className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle hover:text-accent transition-colors duration-fast ease-snap"
+              >
+                +{pendingItems.length - 6} more · open inbox
+                <ArrowUpRight size={11} strokeWidth={2} />
+              </Link>
             </div>
           ) : null}
         </section>

@@ -7,6 +7,7 @@ import { Command } from 'cmdk';
 import {
   Activity,
   FolderKanban,
+  Inbox,
   LogOut,
   Plus,
   ScrollText,
@@ -82,6 +83,9 @@ export function AppPalette() {
         } else if (e.key === 'p') {
           e.preventDefault();
           router.push('/projects');
+        } else if (e.key === 'i') {
+          e.preventDefault();
+          router.push('/inbox');
         } else if (e.key === 'a') {
           e.preventDefault();
           router.push('/audit');
@@ -168,6 +172,13 @@ export function AppPalette() {
                     keywords={['projects', 'list', 'all']}
                     hint="g p"
                     onSelect={() => closeAndGo('/projects')}
+                  />
+                  <PaletteItem
+                    icon={<Inbox size={14} strokeWidth={2} />}
+                    label="Inbox"
+                    keywords={['inbox', 'approvals', 'pending', 'queue', 'review']}
+                    hint="g i"
+                    onSelect={() => closeAndGo('/inbox')}
                   />
                   <PaletteItem
                     icon={<ScrollText size={14} strokeWidth={2} />}
@@ -297,6 +308,9 @@ function GPrefixHint() {
       <span className="mx-2 text-fg-subtle">·</span>
       <span className="font-mono text-fg">p</span>
       <span className="text-fg-muted"> projects</span>
+      <span className="mx-2 text-fg-subtle">·</span>
+      <span className="font-mono text-fg">i</span>
+      <span className="text-fg-muted"> inbox</span>
       <span className="mx-2 text-fg-subtle">·</span>
       <span className="font-mono text-fg">a</span>
       <span className="text-fg-muted"> audit</span>
