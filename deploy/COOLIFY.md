@@ -6,8 +6,13 @@ talks to it over HTTPS; encrypted secrets live in a persistent SQLite file.
 |              |                                                              |
 | ------------ | ------------------------------------------------------------ |
 | **Time**     | ~15 minutes — most of it waiting on the first Docker build   |
-| **Result**   | `https://keynv.<your-domain>` answering CLI logins           |
-| **You need** | A Coolify v4+ instance, a subdomain, and `openssl` on a Mac/Linux box |
+| **Result**   | `https://api.<your-domain>` answering CLI logins; optional web dashboard at `https://<your-domain>` |
+| **You need** | A Coolify v4+ instance, a subdomain (or two — one for API, one for the web UI), and `openssl` on a Mac/Linux box |
+
+> [!NOTE]
+> This guide deploys the **API server** first (the CLI's only hard dependency).
+> Step 9 at the end walks through adding the **web dashboard** as a second
+> Coolify resource — skip it if you only use the CLI.
 
 ---
 
@@ -58,7 +63,7 @@ load-bearing for the deploy.
 |---|---|
 | **Coolify** | v4+ instance you can sign into |
 | **Server** | 1 vCPU · 1 GB RAM · 10 GB free disk (less is fine at runtime; build is the spike) |
-| **DNS** | A subdomain `keynv.<your-domain>` with an `A` record pointing at the Coolify server's public IP |
+| **DNS** | An `A` record for `api.<your-domain>` pointing at the Coolify server's public IP. Add a second `A` for `<your-domain>` (apex) if you also want the web dashboard from Step 9. Cloudflare users: leave the proxy (orange cloud) OFF until Let's Encrypt issues the certs. |
 | **Repo access** | This repo reachable from Coolify (public works; private repos need a connected GitHub source) |
 
 ---
@@ -110,6 +115,7 @@ In the resource's **Environment Variables** tab:
 | `KEYNV_BOOTSTRAP_OWNER_EMAIL` | your login email | — | First user account auto-bootstrap creates |
 | `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | `openssl rand -base64 24` from Step 1 | ✓ | Your `keynv login` password (Argon2id-hashed). 12+ chars |
 | `KEYNV_BOOTSTRAP_ORG_NAME` | e.g. `acme` | — | Org name attached to the owner. Optional, defaults to `default` |
+| `KEYNV_PUBLIC_REGISTRATION` | `true` (Cloud) / `false` (self-host) | — | Opens `POST /v1/auth/register` so anyone can sign up. Leave `false`/blank unless you're running a public Cloud-style instance |
 | `KEYNV_LOG_LEVEL` | `info` | — | Set to `debug` while troubleshooting |
 
 ### How the BOOTSTRAP_* vars work
@@ -133,11 +139,11 @@ The server checks for `/data/master.key` on every start.
 
 In the resource's **Domains** tab:
 
-- **Domain:** `https://keynv.<your-domain>`
+- **Domain:** `https://api.<your-domain>`
 - **Port:** `8080` (the container's exposed port)
 
 Coolify's reverse proxy provisions a Let's Encrypt cert automatically. If the
-DNS `A` record for `keynv.<your-domain>` isn't already pointing at the Coolify
+DNS `A` record for `api.<your-domain>` isn't already pointing at the Coolify
 server, add it now — TLS provisioning fails until DNS resolves.
 
 ---
@@ -152,7 +158,7 @@ Click **Deploy**. Coolify will:
 4. Auto-bootstrap fires (master.key missing, vars set) → key generated, migrations applied, org + owner inserted
 5. Server starts listening on `:8080`
 6. Healthcheck (`GET /v1/health` → 200) flips green
-7. Reverse proxy routes `https://keynv.<your-domain>` → container `:8080`
+7. Reverse proxy routes `https://api.<your-domain>` → container `:8080`
 
 You should see this in the deploy log:
 
@@ -208,7 +214,7 @@ decrypting secrets.
 From your laptop:
 
 ```bash
-curl https://keynv.<your-domain>/v1/health
+curl https://api.<your-domain>/v1/health
 # {"ok":true,"version":"...","db":"ok"}
 ```
 
@@ -228,7 +234,7 @@ Coolify confirms it.
 On your laptop:
 
 ```bash
-keynv config set server-url https://keynv.<your-domain>
+keynv config set server-url https://api.<your-domain>
 keynv login --email you@example.com
 # paste the owner password from Step 1
 
@@ -241,6 +247,55 @@ keynv secret get @demo.dev.test
 
 All three commands working means the deployment is done. Start using it for
 real secrets.
+
+---
+
+## Step 9 — Deploy the web dashboard (optional)
+
+The web UI is its own Coolify resource, separate from the API server. Skip
+this if you only use the CLI. The web app holds no state — it just talks to
+`api.<your-domain>` over HTTPS the same way the CLI does.
+
+### DNS
+
+Add an `A` record for the apex you'll serve the dashboard from (e.g.
+`<your-domain>` → Coolify server IP). Cloudflare proxy off until Let's Encrypt
+issues the cert.
+
+### Coolify resource
+
+1. **Project → New Resource → Docker Compose Empty** (or _From Git_ if you
+   want auto-redeploy on push).
+2. **Source:** same repo, branch `main`.
+3. **Compose file path:** `deploy/coolify-web.yml`.
+4. **Environment Variables:**
+
+   | Key | Value | Mark as secret? | Why it matters |
+   |---|---|:-:|---|
+   | `KEYNV_SERVER_URL` | `https://api.<your-domain>` (from Step 4) | — | Where the web container fetches the API |
+   | `KEYNV_WEB_SESSION_SECRET` | `openssl rand -base64 48` | ✓ | Encrypts the session cookie that wraps the user's access token |
+
+5. **Domains:** `https://<your-domain>` → container port `3000`.
+6. **Deploy.** First build is 3–5 min (Next.js standalone compile).
+
+### Verify
+
+```bash
+# Healthcheck — login page renders
+curl -I https://<your-domain>/login    # → 200
+
+# Open in a browser
+open https://<your-domain>
+```
+
+If `KEYNV_PUBLIC_REGISTRATION=true` was set on the **server** resource, the
+`/register` route is live and anyone can sign up. Otherwise log in with the
+owner account from Step 1 and invite users from `/admin/users`.
+
+> [!TIP]
+> The web resource shares no volumes or network with the server resource.
+> Redeploying one doesn't restart the other — useful when iterating on the
+> dashboard without nudging a live API.
 
 ---
 
@@ -282,7 +337,7 @@ Two options, both add later:
 | Server crash-loops on first deploy | Bootstrap env vars missing or password under 12 chars | Re-check Step 3, redeploy |
 | `KEYNV_JWT_SECRET: String must contain at least 32 character(s)` | JWT secret too short | Use `openssl rand -base64 48`, redeploy |
 | `/v1/health` returns 500 with `"db":"error"` | Volume not persisted between restarts | Confirm the `keynv-data` volume is mounted at `/data` in the Coolify resource UI |
-| TLS cert provisioning fails | DNS not propagated | Wait 5–30 minutes, then `dig keynv.<your-domain>` to confirm the `A` record resolves to the Coolify IP |
+| TLS cert provisioning fails | DNS not propagated, or Cloudflare proxy is on | Wait 5–30 minutes, then `dig api.<your-domain>` to confirm the `A` record resolves to the Coolify IP. If using Cloudflare, set the record to DNS-only (grey cloud) until the cert issues |
 | Build runs out of memory | better-sqlite3 + argon2 native compile is RAM-hungry | Bump build-time RAM to ≥ 1 GB; runtime needs only ~256 MB |
 | Login returns 401 with the right password | Wrong owner email recorded, or DB / env mismatch | Coolify Terminal: `sqlite3 /data/keynv.db 'SELECT email FROM users'`. If the email is wrong, the only clean fix is to wipe `/data/*` and redeploy — this loses all data |
 
@@ -291,9 +346,6 @@ Two options, both add later:
 <details>
 <summary><b>What this guide deliberately doesn't cover</b></summary>
 
-- **Web UI** — `apps/web` isn't Docker-ready yet (no `output: 'standalone'`,
-  no Dockerfile). The CLI is the supported interface for now; a second
-  Coolify resource for the UI ships once it's ready.
 - **HA / multi-region** — single container, single SQLite. Comfortably
   handles a 15-person team. Beyond ~50 users, see the Phase 6 Postgres
   adapter plan in [`docs/ROADMAP.md`](../docs/ROADMAP.md) (Phase 6).

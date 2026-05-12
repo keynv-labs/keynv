@@ -19,6 +19,7 @@ export interface AppDeps {
   jwtSecret: string;
   accessTtlS: number;
   refreshTtlS: number;
+  webUrl?: string | undefined;
   getKek: () => Uint8Array;
   version: string;
   /**

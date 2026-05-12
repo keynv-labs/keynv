@@ -1230,6 +1230,99 @@ describe('Public registration — POST /v1/auth/register', () => {
   });
 });
 
+describe('CLI browser auth — /v1/auth/cli/browser/*', () => {
+  it('starts pending, authorizes in the browser session, then returns a usable JWT pair', async () => {
+    const start = await harness.app.request('http://localhost/v1/auth/cli/browser/start', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ device_name: 'test-terminal' }),
+    });
+    expect(start.status).toBe(201);
+    const started = (await start.json()) as {
+      device_code: string;
+      user_code: string;
+      verification_uri: string;
+      verification_uri_complete: string;
+    };
+    expect(started.device_code.length).toBeGreaterThan(16);
+    expect(started.user_code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    expect(started.verification_uri).toBe('http://localhost/cli/authorize');
+    expect(started.verification_uri_complete).toContain(encodeURIComponent(started.user_code));
+
+    const pending = await harness.app.request('http://localhost/v1/auth/cli/browser/poll', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ device_code: started.device_code }),
+    });
+    expect(pending.status).toBe(202);
+    const pendingBody = (await pending.json()) as { status: string };
+    expect(pendingBody.status).toBe('pending');
+
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const authorize = await harness.app.request('http://localhost/v1/auth/cli/browser/authorize', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${ownerToken}`,
+      },
+      body: JSON.stringify({ user_code: started.user_code }),
+    });
+    expect(authorize.status).toBe(204);
+
+    const poll = await harness.app.request('http://localhost/v1/auth/cli/browser/poll', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ device_code: started.device_code }),
+    });
+    expect(poll.status).toBe(200);
+    const session = (await poll.json()) as {
+      access_token: string;
+      refresh_token: string;
+      user: { email: string };
+    };
+    expect(session.user.email).toBe(harness.ownerEmail);
+    expect(session.refresh_token.length).toBeGreaterThan(16);
+
+    const me = await harness.app.request('http://localhost/v1/whoami', {
+      headers: { authorization: `Bearer ${session.access_token}` },
+    });
+    expect(me.status).toBe(200);
+    const meBody = (await me.json()) as { email: string };
+    expect(meBody.email).toBe(harness.ownerEmail);
+  });
+
+  it('rejects reused device codes after a successful poll', async () => {
+    const start = await harness.app.request('http://localhost/v1/auth/cli/browser/start', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const started = (await start.json()) as { device_code: string; user_code: string };
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+
+    await harness.app.request('http://localhost/v1/auth/cli/browser/authorize', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ user_code: started.user_code }),
+    });
+    const firstPoll = await harness.app.request('http://localhost/v1/auth/cli/browser/poll', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ device_code: started.device_code }),
+    });
+    expect(firstPoll.status).toBe(200);
+
+    const secondPoll = await harness.app.request('http://localhost/v1/auth/cli/browser/poll', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ device_code: started.device_code }),
+    });
+    expect(secondPoll.status).toBe(400);
+    const body = (await secondPoll.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('validation.failed');
+  });
+});
+
 describe('Health — capabilities', () => {
   it('exposes public_registration capability flag', async () => {
     const off = await makeHarness();

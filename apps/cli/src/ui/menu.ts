@@ -1,4 +1,4 @@
-import { cancel, intro, isCancel, log, outro, select } from '@clack/prompts';
+import { cancel, confirm, intro, isCancel, log, outro, select } from '@clack/prompts';
 import { ApiClient } from '../client/http.js';
 import { clearCredentials } from '../client/store.js';
 import { VERSION } from '../version.js';
@@ -18,6 +18,7 @@ export async function runMenu(): Promise<number> {
 
   const client = new ApiClient();
   await client.ensureHydrated();
+  let didLogin = false;
 
   if (!client.isLoggedIn) {
     log.info('Not logged in.');
@@ -27,6 +28,7 @@ export async function runMenu(): Promise<number> {
         outro('Login cancelled.');
         return 1;
       }
+      didLogin = true;
     } catch (err) {
       if (err instanceof UserCancelled) {
         cancel('Login cancelled.');
@@ -37,6 +39,17 @@ export async function runMenu(): Promise<number> {
   } else {
     const u = client.currentUser;
     if (u) log.message(`${u.email} (${u.org_role}) @ ${u.server_url}`);
+  }
+
+  if (didLogin) {
+    const setup = await confirm({
+      message: 'Set up this project now?',
+      initialValue: true,
+    });
+    if (!isCancel(setup) && setup) {
+      const { runInitFlow } = await import('./flows/init.js');
+      await runInitFlow(client, { cwd: process.cwd(), dryRun: false, noScripts: false });
+    }
   }
 
   while (true) {

@@ -18,6 +18,7 @@ async function main(): Promise<void> {
     jwtSecret: env.KEYNV_JWT_SECRET,
     accessTtlS: env.KEYNV_ACCESS_TOKEN_TTL_S,
     refreshTtlS: env.KEYNV_REFRESH_TOKEN_TTL_S,
+    webUrl: env.KEYNV_WEB_URL,
     getKek: () => kek,
     version: VERSION,
     rateLimitPerMinute: env.KEYNV_RATE_LIMIT_PER_MINUTE,

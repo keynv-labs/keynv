@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -16,6 +17,7 @@ import { ipRateLimitMiddleware } from '../lib/rate-limit.js';
 interface AuthDeps {
   db: Db;
   jwtSecret: string;
+  webUrl?: string | undefined;
   rateLimitPerMinute?: number | undefined;
   accessTtlS: number;
   refreshTtlS: number;
@@ -52,6 +54,18 @@ const ChangePasswordBody = z.object({
   new_password: z.string().min(12).max(256),
 });
 
+const BrowserStartBody = z.object({
+  device_name: z.string().min(1).max(120).optional(),
+});
+
+const BrowserPollBody = z.object({
+  device_code: z.string().min(16).max(256),
+});
+
+const BrowserAuthorizeBody = z.object({
+  user_code: z.string().min(8).max(32),
+});
+
 const RegisterBody = z.object({
   email: z.string().email().max(254),
   password: z.string().min(12).max(256),
@@ -59,6 +73,34 @@ const RegisterBody = z.object({
   // Two orgs may share a display name without trouble.
   org_name: z.string().min(1).max(64),
 });
+
+const BROWSER_AUTH_TTL_S = 10 * 60;
+const BROWSER_AUTH_INTERVAL_S = 2;
+const USER_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function hashCode(raw: string): string {
+  return createHash('sha256').update(raw, 'utf8').digest('hex');
+}
+
+function newDeviceCode(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+function newUserCode(): string {
+  const bytes = randomBytes(8);
+  const chars = Array.from(bytes, (byte) => USER_CODE_ALPHABET[byte % USER_CODE_ALPHABET.length]);
+  return `${chars.slice(0, 4).join('')}-${chars.slice(4).join('')}`;
+}
+
+function normalizeUserCode(raw: string): string {
+  return raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+}
+
+function browserAuthorizeUrl(base: string, userCode: string): string {
+  const url = new URL('/cli/authorize', base);
+  url.searchParams.set('code', userCode);
+  return url.toString();
+}
 
 export function authRoutes(deps: AuthDeps): Hono {
   const r = new Hono();
@@ -148,6 +190,102 @@ export function authRoutes(deps: AuthDeps): Hono {
       );
     },
   );
+
+  r.post('/cli/browser/start', async (c) => {
+    const parsed = BrowserStartBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid browser auth body.');
+
+    const deviceCode = newDeviceCode();
+    const userCode = newUserCode();
+    const expiresAt = new Date(Date.now() + BROWSER_AUTH_TTL_S * 1000).toISOString();
+    const verificationUri = new URL('/cli/authorize', deps.webUrl ?? new URL(c.req.url).origin);
+
+    await deps.db.insert(schema.cli_auth_flows).values({
+      device_code_hash: hashCode(deviceCode),
+      user_code_hash: hashCode(normalizeUserCode(userCode)),
+      device_name: parsed.data.device_name ?? null,
+      expires_at: expiresAt,
+    });
+
+    return c.json(
+      {
+        device_code: deviceCode,
+        user_code: userCode,
+        verification_uri: verificationUri.toString(),
+        verification_uri_complete: browserAuthorizeUrl(verificationUri.toString(), userCode),
+        expires_in: BROWSER_AUTH_TTL_S,
+        interval: BROWSER_AUTH_INTERVAL_S,
+      },
+      201,
+    );
+  });
+
+  r.post('/cli/browser/poll', async (c) => {
+    const parsed = BrowserPollBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success)
+      return jsonError(c, 'validation.failed', 'Invalid browser auth poll body.');
+
+    const rows = await deps.db
+      .select()
+      .from(schema.cli_auth_flows)
+      .where(eq(schema.cli_auth_flows.device_code_hash, hashCode(parsed.data.device_code)))
+      .limit(1);
+    const flow = rows[0];
+    if (!flow) return jsonError(c, 'validation.failed', 'Browser auth flow not found.');
+    if (new Date(flow.expires_at).getTime() <= Date.now()) {
+      return jsonError(c, 'validation.failed', 'Browser auth flow expired.');
+    }
+    if (flow.consumed_at)
+      return jsonError(c, 'validation.failed', 'Browser auth flow already used.');
+    if (!flow.authorized_at || !flow.user_id) return c.json({ status: 'pending' }, 202);
+
+    const userRows = await deps.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, flow.user_id))
+      .limit(1);
+    const user = userRows[0];
+    if (!user) return jsonError(c, 'auth.invalid_credentials', 'User not found.');
+
+    await deps.db
+      .update(schema.cli_auth_flows)
+      .set({ consumed_at: new Date().toISOString() })
+      .where(eq(schema.cli_auth_flows.device_code_hash, flow.device_code_hash));
+
+    const access = await signAccessToken(
+      {
+        sub: user.id,
+        email: user.email,
+        org_id: user.org_id,
+        org_role: user.org_role,
+      },
+      { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
+    );
+    const refresh = await issueRefreshToken(deps.db, {
+      user_id: user.id,
+      ttlSeconds: deps.refreshTtlS,
+      device_fingerprint: flow.device_name ?? undefined,
+    });
+
+    await appendAudit(deps.db, {
+      actor_user_id: user.id,
+      actor_agent: readAgent(c),
+      event_type: 'auth.login.allowed',
+      payload: { email: user.email },
+    });
+
+    return c.json({
+      access_token: access,
+      refresh_token: refresh.rawToken,
+      expires_in: deps.accessTtlS,
+      user: {
+        id: user.id,
+        email: user.email,
+        org_id: user.org_id,
+        org_role: user.org_role,
+      },
+    });
+  });
 
   r.post('/login', async (c) => {
     const parsed = LoginBody.safeParse(await c.req.json().catch(() => ({})));
@@ -275,6 +413,38 @@ export function authRoutes(deps: AuthDeps): Hono {
   // require a fresh login since the rotated token is gone.
   const authedSubrouter = new Hono();
   authedSubrouter.use('*', ...authedChain(deps));
+  authedSubrouter.post('/cli/browser/authorize', async (c) => {
+    const me = c.var.user;
+    const parsed = BrowserAuthorizeBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid browser auth code.');
+
+    const rows = await deps.db
+      .select()
+      .from(schema.cli_auth_flows)
+      .where(
+        eq(
+          schema.cli_auth_flows.user_code_hash,
+          hashCode(normalizeUserCode(parsed.data.user_code)),
+        ),
+      )
+      .limit(1);
+    const flow = rows[0];
+    if (!flow) return jsonError(c, 'validation.failed', 'Browser auth flow not found.');
+    if (new Date(flow.expires_at).getTime() <= Date.now()) {
+      return jsonError(c, 'validation.failed', 'Browser auth flow expired.');
+    }
+    if (flow.consumed_at)
+      return jsonError(c, 'validation.failed', 'Browser auth flow already used.');
+    if (flow.authorized_at) return c.body(null, 204);
+
+    await deps.db
+      .update(schema.cli_auth_flows)
+      .set({ user_id: me.id, authorized_at: new Date().toISOString() })
+      .where(eq(schema.cli_auth_flows.device_code_hash, flow.device_code_hash));
+
+    return c.body(null, 204);
+  });
+
   authedSubrouter.post('/password', async (c) => {
     const me = c.var.user;
     const parsed = ChangePasswordBody.safeParse(await c.req.json().catch(() => ({})));

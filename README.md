@@ -108,19 +108,25 @@ open https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md
 open https://github.com/keynv-labs/keynv/blob/main/deploy/README.md
 ```
 
-After the server is up, install the CLI:
+Install the CLI:
 
 ```bash
 npm install -g @keynv/cli
 
-# Run `keynv` with no arguments to enter the interactive menu —
-# arrow-keys for everything, no need to memorize subcommands.
+# Hosted default: opens browser auth, then offers to set up this project.
 keynv
 ```
 
-The first run prompts for server URL + email + password, then drops you into the
-menu. From there you create projects, add environments, and load secrets without
-touching another command.
+The first run opens your browser, stores the session in the OS keychain, then
+asks whether to initialize the current project. Self-hosted instances use the
+same browser flow with an explicit server URL:
+
+```bash
+keynv login --server https://api.keynv.example.com
+```
+
+From the menu you create projects, add environments, and load secrets without
+memorizing subcommands.
 
 If you prefer scripts, the same things work as one-shots:
 

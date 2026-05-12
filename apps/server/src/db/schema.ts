@@ -227,6 +227,28 @@ export const cli_tokens = sqliteTable(
 );
 
 /**
+ * Short-lived browser authorization handshakes started by the CLI.
+ * Raw device/user codes are never persisted; only SHA-256 hashes live here.
+ */
+export const cli_auth_flows = sqliteTable(
+  'cli_auth_flows',
+  {
+    device_code_hash: text('device_code_hash').primaryKey(),
+    user_code_hash: text('user_code_hash').notNull().unique(),
+    user_id: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    device_name: text('device_name'),
+    created_at: text('created_at').notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    expires_at: text('expires_at').notNull(),
+    authorized_at: text('authorized_at'),
+    consumed_at: text('consumed_at'),
+  },
+  (t) => ({
+    by_user_code: index('cli_auth_flows_by_user_code').on(t.user_code_hash),
+    by_expires_at: index('cli_auth_flows_by_expires_at').on(t.expires_at),
+  }),
+);
+
+/**
  * Refresh tokens for the auth flow. Stored as the SHA-256 hash of the
  * raw token; the raw token is sent to the client only once at issue.
  */

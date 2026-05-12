@@ -1,4 +1,6 @@
 import { Command, Option } from 'clipanion';
+import { runBrowserAuth } from '../client/browser-auth.js';
+import { DEFAULT_SERVER_URL } from '../client/defaults.js';
 import { ApiClient } from '../client/http.js';
 import { saveCredentials } from '../client/store.js';
 import { fmtError } from '../ui/format.js';
@@ -12,26 +14,54 @@ interface LoginResponse {
   user: { id: string; email: string; org_id: string; org_role: string };
 }
 
+interface WhoamiResponse {
+  id: string;
+  email: string;
+  org_id: string;
+  org_role: string;
+}
+
 export class LoginCommand extends Command {
   static override paths = [['login']];
   static override usage = Command.Usage({
     description: 'Authenticate against a keynv server.',
     examples: [
-      ['Interactive', '$0 login --server http://localhost:8080'],
+      ['Browser login', '$0 login'],
+      ['Self-hosted browser login', '$0 login --server http://localhost:8080'],
+      ['Headless token login', '$0 login --server http://... --token kt_...'],
       ['Non-interactive', '$0 login --server http://... --email a@b.com --password ...'],
     ],
   });
 
   server = Option.String('--server', { description: 'Server base URL.' });
+  token = Option.String('--token', { description: 'CLI token for headless auth.' });
   email = Option.String('--email', { description: 'Email address.' });
   password = Option.String('--password', {
     description: 'Password (use stdin to avoid argv leak).',
   });
 
   async execute(): Promise<number> {
-    const serverUrl =
-      this.server ?? (await promptLine('server URL [http://localhost:8080]: ')) ?? '';
-    const finalServerUrl = serverUrl.length > 0 ? serverUrl : 'http://localhost:8080';
+    const finalServerUrl = this.server ?? DEFAULT_SERVER_URL;
+
+    if (this.token) {
+      return this.loginWithToken(finalServerUrl, this.token);
+    }
+
+    if (!this.email && !this.password) {
+      this.context.stdout.write(`Opening browser for ${finalServerUrl} ...\n`);
+      try {
+        const creds = await runBrowserAuth(finalServerUrl);
+        await saveCredentials(creds);
+        this.context.stdout.write(`logged in as ${creds.email} (${creds.org_role})\n`);
+        return 0;
+      } catch (err) {
+        this.context.stderr.write(
+          `keynv: ${err instanceof Error ? err.message : 'browser login failed'}\n`,
+        );
+        return 1;
+      }
+    }
+
     const email = this.email ?? (await promptLine('email: '));
     const password = this.password ?? (await promptHidden('password: '));
 
@@ -63,6 +93,7 @@ export class LoginCommand extends Command {
     const data = (await res.json()) as LoginResponse;
     try {
       await saveCredentials({
+        auth_kind: 'session',
         server_url: finalServerUrl,
         user_id: data.user.id,
         email: data.user.email,
@@ -79,6 +110,53 @@ export class LoginCommand extends Command {
       return 1;
     }
     this.context.stdout.write(`logged in as ${data.user.email} (${data.user.org_role})\n`);
+    return 0;
+  }
+
+  private async loginWithToken(serverUrl: string, token: string): Promise<number> {
+    const res = await fetch(new URL('/v1/whoami', serverUrl).toString(), {
+      headers: { authorization: `Bearer ${token}`, 'x-keynv-agent': AGENT },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = `token login failed (${res.status})`;
+      try {
+        const parsed = JSON.parse(text) as { error?: { message?: string; code?: string } };
+        msg = parsed.error?.message ?? msg;
+        this.context.stderr.write(
+          `${fmtError({
+            status: res.status,
+            ...(parsed.error?.code ? { code: parsed.error.code } : {}),
+            message: msg,
+          })}\n`,
+        );
+      } catch {
+        this.context.stderr.write(`keynv: ${msg}\n`);
+      }
+      return 1;
+    }
+
+    const data = (await res.json()) as WhoamiResponse;
+    try {
+      await saveCredentials({
+        auth_kind: 'cli_token',
+        server_url: serverUrl,
+        user_id: data.id,
+        email: data.email,
+        org_id: data.org_id,
+        org_role: data.org_role,
+        access_token: token,
+        refresh_token: '',
+        access_expires_at: '9999-12-31T23:59:59.999Z',
+      });
+    } catch (err) {
+      this.context.stderr.write(
+        `keynv: failed to persist credentials: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+      return 1;
+    }
+    this.context.stdout.write(`logged in as ${data.email} (${data.org_role})\n`);
     return 0;
   }
 }

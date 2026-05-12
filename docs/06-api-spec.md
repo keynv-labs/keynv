@@ -32,6 +32,48 @@ Response 200:
 }
 ```
 
+#### `POST /v1/auth/cli/browser/start`
+
+Starts a short-lived browser authorization flow for the CLI. Raw device and user
+codes are returned once and only SHA-256 hashes are persisted.
+
+Request:
+```json
+{ "device_name": "alice-laptop" }
+```
+Response 201:
+```json
+{
+  "device_code": "<opaque>",
+  "user_code": "ABCD-2345",
+  "verification_uri": "https://keynv.dev/cli/authorize",
+  "verification_uri_complete": "https://keynv.dev/cli/authorize?code=ABCD-2345",
+  "expires_in": 600,
+  "interval": 2
+}
+```
+
+#### `POST /v1/auth/cli/browser/poll`
+
+CLI polling endpoint. While the browser has not approved the flow, response is
+202 `{ "status": "pending" }`. After approval, response 200 matches `/login` and
+the device code is consumed.
+
+Request:
+```json
+{ "device_code": "<opaque>" }
+```
+
+#### `POST /v1/auth/cli/browser/authorize`
+
+Authenticated browser endpoint. Authorizes the pending CLI flow for the current
+web session. Response 204.
+
+Request:
+```json
+{ "user_code": "ABCD-2345" }
+```
+
 #### `POST /v1/auth/refresh`
 
 Request:

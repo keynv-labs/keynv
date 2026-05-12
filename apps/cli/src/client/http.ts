@@ -41,6 +41,8 @@ function buildUrl(base: string, path: string, query?: FetchOptions['query']): st
 }
 
 async function tryRefresh(creds: Credentials): Promise<Credentials | null> {
+  if (creds.auth_kind === 'cli_token' || creds.refresh_token.length === 0) return null;
+
   const res = await fetch(buildUrl(creds.server_url, '/v1/auth/refresh'), {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-keynv-agent': AGENT },

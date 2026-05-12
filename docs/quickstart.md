@@ -31,6 +31,7 @@ Set the environment variables Coolify asks for:
 KEYNV_JWT_SECRET=<openssl rand -base64 48>
 KEYNV_MASTER_KEY=<openssl rand -base64 32>
 KEYNV_PUBLIC_REGISTRATION=false   # opt-in only; off for self-host
+KEYNV_WEB_URL=https://keynv.example.com
 COOLIFY_FQDN=api.keynv.example.com
 ```
 
@@ -70,21 +71,21 @@ owner.
 
 ## 4 · Install the CLI
 
-On your laptop:
+On your laptop, hosted keynv is one command:
 
 ```bash
 npm install -g @keynv/cli
-keynv --version
+keynv
 ```
 
-Log in:
+For your self-hosted server, pass the API URL once:
 
 ```bash
 keynv login --server https://api.keynv.example.com
 ```
 
-The CLI opens a browser tab to authenticate, then stores a refresh
-token in your OS keychain. Verify:
+The CLI opens a browser tab to authenticate, stores the session in your OS
+keychain, then offers to set up the current project. Verify:
 
 ```bash
 keynv whoami

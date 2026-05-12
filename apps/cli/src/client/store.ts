@@ -13,6 +13,7 @@
 import { clearCredentialsFile, loadCredentialsBlob, saveCredentialsBlob } from './secure-store.js';
 
 export interface Credentials {
+  auth_kind?: 'session' | 'cli_token';
   server_url: string;
   user_id: string;
   email: string;

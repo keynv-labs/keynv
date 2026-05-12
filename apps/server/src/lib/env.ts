@@ -5,6 +5,7 @@ const ServerEnv = z.object({
   KEYNV_MASTER_KEY_FILE: z.string().min(1).default('./master.key'),
   KEYNV_JWT_SECRET: z.string().min(32),
   KEYNV_PORT: z.coerce.number().int().min(1).max(65535).default(8080),
+  KEYNV_WEB_URL: z.string().url().optional(),
   KEYNV_ACCESS_TOKEN_TTL_S: z.coerce
     .number()
     .int()
