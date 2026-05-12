@@ -21,9 +21,9 @@ export function RouteTabs({ tabs }: { tabs: RouteTab[] }) {
   return (
     <nav
       aria-label="Section navigation"
-      className="flex border-b border-border -mx-4 px-4 md:-mx-6 md:px-6 overflow-x-auto"
+      className="flex border-b border-border -mx-4 px-4 md:-mx-6 md:px-6 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <ul className="flex items-center gap-0">
+      <ul className="flex min-w-max items-center gap-0">
         {tabs.map((tab) => {
           const active = tab.nested
             ? pathname === tab.href || pathname.startsWith(`${tab.href}/`)

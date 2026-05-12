@@ -93,7 +93,7 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
       {/* ─── Env tabs ────────────────────────────────────────────────────── */}
       <nav
         aria-label="Filter by environment"
-        className="-mx-4 px-4 md:-mx-8 md:px-8 border-b border-border overflow-x-auto"
+        className="-mx-4 px-4 md:-mx-8 md:px-8 border-b border-border overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <ul className="flex items-stretch gap-0 min-w-max">
           <EnvTab
