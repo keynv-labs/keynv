@@ -37,6 +37,13 @@ COPY --from=deps /repo/apps/web/node_modules ./apps/web/node_modules
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web ./apps/web
 
+# Static rendering for /changelog and /docs reads these files at
+# build time via apps/web/lib/markdown.ts → readFile('CHANGELOG.md')
+# and readFile('docs/<page>.md'). The standalone runtime never needs
+# them again because content is baked into the prerendered HTML.
+COPY CHANGELOG.md ./CHANGELOG.md
+COPY docs ./docs
+
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN cd apps/web && pnpm exec next build
