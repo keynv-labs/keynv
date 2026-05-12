@@ -23,19 +23,19 @@ The product itself exists because existing vaults (HashiCorp, Doppler, 1Password
 
 ## Quick start
 
+- [Quickstart guide](${SITE}/docs/quickstart): 15-minute self-host on Coolify
 - [GitHub repository](${REPO}): source, issues, releases
 - [README](${REPO}/blob/main/README.md): positioning, install, first-run
-- [Coolify deploy guide](${REPO}/blob/main/deploy/COOLIFY.md): 15-minute self-host on a single VPS
 - [Sign up on keynv.dev](${SITE}/register): hosted instance (public beta, no credit card)
 
 ## Architecture & docs
 
-- [Architecture overview](${REPO}/blob/main/docs/01-architecture.md): components, data flow, deployment topology
-- [Threat model](${REPO}/blob/main/docs/02-threat-model.md): adversary model, mitigations, residual risks
-- [Encryption design](${REPO}/blob/main/docs/05-encryption-design.md): KEK/DEK envelope, key rotation, recovery
-- [API specification](${REPO}/blob/main/docs/06-api-spec.md): keynv-server HTTP surface (v1)
-- [Roadmap](${REPO}/blob/main/docs/ROADMAP.md): phase tracker (Phase 1–3 shipped, Phase 4 in progress)
-- [Changelog](${REPO}/blob/main/CHANGELOG.md)
+- [Architecture overview](${SITE}/docs/architecture): components, data flow, deployment topology
+- [Threat model](${SITE}/docs/threat-model): adversary model, mitigations, residual risks
+- [Encryption design](${SITE}/docs/encryption-design): KEK/DEK envelope, key rotation, recovery
+- [API specification](${SITE}/docs/api): keynv-server HTTP surface (v1)
+- [Roadmap](${SITE}/docs/roadmap): phase tracker (Phase 1–3 shipped, Phase 4 in progress)
+- [Changelog](${SITE}/changelog): what shipped, when, and why
 
 ## Core concepts
 

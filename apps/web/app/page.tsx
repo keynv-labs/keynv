@@ -98,9 +98,18 @@ function TopNav({ ctx }: { ctx: CtaContext }) {
           >
             How it works
           </a>
-          <a href="#pillars" className="hover:text-fg transition-colors duration-fast ease-snap">
-            Features
-          </a>
+          <Link
+            href={{ pathname: '/docs' }}
+            className="hover:text-fg transition-colors duration-fast ease-snap"
+          >
+            Docs
+          </Link>
+          <Link
+            href={{ pathname: '/changelog' }}
+            className="hover:text-fg transition-colors duration-fast ease-snap"
+          >
+            Changelog
+          </Link>
           <a
             href="https://github.com/keynv-labs/keynv"
             target="_blank"
@@ -565,14 +574,12 @@ function Footer() {
           >
             Changelog
           </Link>
-          <a
-            href="https://github.com/keynv-labs/keynv/tree/main/docs"
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href={{ pathname: '/docs' }}
             className="hover:text-fg transition-colors duration-fast ease-snap"
           >
             Docs
-          </a>
+          </Link>
           <a
             href="https://github.com/keynv-labs/keynv"
             target="_blank"
