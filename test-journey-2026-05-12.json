@@ -1,0 +1,306 @@
+{
+  "journey_id": "keynv-e2e-test-001",
+  "date": "2026-05-12T19:42:00Z",
+  "reviewer": "opencode-agent",
+  "product_url": "https://keynv.dev",
+  "api_url": "https://api.keynv.dev",
+
+  "executive_summary": {
+    "overall_status": "operational_with_issues",
+    "api_version_mismatch": true,
+    "cli_version": "0.1.0-rc.11",
+    "api_reported_version": "0.0.0-phase1",
+    "registration_works": true,
+    "secret_management_works": true,
+    "keynv_exec_works": true,
+    "keynv_init_requires_interactive_terminal": true,
+    "web_dashboard_requires_manual_login": true
+  },
+
+  "test_results": {
+    "registration": {
+      "status": "pass",
+      "endpoint": "POST /v1/auth/register",
+      "request": {
+        "email": "test+opencode001@example.com",
+        "password": "Test123456!@#$",
+        "org_name": "OpenCode Test Org"
+      },
+      "response": {
+        "access_token": "received",
+        "refresh_token": "received",
+        "user": {
+          "id": "u_tfojuu2q8hlvopxha158v",
+          "email": "test+opencode001@example.com",
+          "org_id": "org_jmymypsz09tsf9vo73iss",
+          "org_role": "owner"
+        }
+      },
+      "findings": []
+    },
+    "project_creation": {
+      "status": "pass",
+      "endpoint": "POST /v1/projects",
+      "created_project": {
+        "id": "p_aanuek60gwpnak98submy",
+        "name": "testproject",
+        "environments": [
+          {"name": "dev", "tier": "non-production", "require_approval": false},
+          {"name": "prod", "tier": "production", "require_approval": true}
+        ]
+      },
+      "findings": []
+    },
+    "secret_management": {
+      "status": "pass",
+      "endpoints_tested": [
+        "POST /v1/projects/:id/secrets",
+        "GET /v1/projects/:id/secrets",
+        "GET /v1/projects/:id/secrets/:env/:key"
+      ],
+      "secrets_created": [
+        "@testproject.dev.api_key",
+        "@testproject.dev.database_password"
+      ],
+      "findings": []
+    },
+    "cli_login": {
+      "status": "pass",
+      "command": "keynv login --server https://api.keynv.dev --token <token>",
+      "output": "logged in as test+opencode001@example.com (owner)",
+      "findings": []
+    },
+    "cli_project_operations": {
+      "status": "partial",
+      "commands_tested": [
+        {"command": "keynv whoami", "status": "pass", "output": "user: test+opencode001@example.com, org: org_jmymypsz09tsf9vo73iss, role: owner"},
+        {"command": "keynv project list", "status": "pass", "output": "testproject listed correctly"},
+        {"command": "keynv project describe testproject", "status": "fail", "error": "Project not found - but project list shows it exists"},
+        {"command": "keynv secret list @testproject", "status": "fail", "error": "unknown project: @testproject"},
+        {"command": "keynv secret list @testproject.dev", "status": "fail", "error": "unknown project: @testproject.dev"},
+        {"command": "keynv secret list @testproject.dev.database_password", "status": "fail", "error": "unknown project: @testproject.dev.database_password"},
+        {"command": "keynv secret get @testproject.dev.api_key", "status": "fail", "error": "unknown project: @testproject.dev.api_key"},
+        {"command": "keynv secret create @testproject.dev.another_secret --value test", "status": "pass", "secret_created": true}
+      ],
+      "findings": [
+        {
+          "severity": "high",
+          "type": "bug",
+          "title": "keynv secret list with alias fails to find project",
+          "description": "When using `keynv secret list @project.env`, the CLI cannot find the project. But `keynv project list` shows the project exists. The alias parsing works for secret create/get but not for list.",
+          "location": "CLI secret list command",
+          "issue_url": "related to #10 in GitHub"
+        },
+        {
+          "severity": "high",
+          "type": "bug",
+          "title": "keynv project describe fails for existing project",
+          "description": "`keynv project describe testproject` returns 'Project not found' even though `keynv project list` shows the project. This suggests project name lookup is broken.",
+          "location": "CLI project describe command"
+        }
+      ]
+    },
+    "keynv_exec": {
+      "status": "pass",
+      "command": "keynv exec -- echo 'Testing @testproject.dev.database_password'",
+      "output": "Testing <REDACTED:literal-alias-resolved-value>",
+      "findings": [
+        {
+          "severity": "info",
+          "type": "observation",
+          "title": "Redactor is working",
+          "description": "The alias value was redacted in the output - redactor is functioning correctly"
+        }
+      ]
+    },
+    "keynv_init": {
+      "status": "not_fully_testable",
+      "commands_tested": [
+        {"command": "keynv init --dry-run", "status": "fail", "error": "keynv init requires an interactive terminal. Use the lower-level commands (`keynv project`, `keynv secret`) for scripted setup."}
+      ],
+      "findings": [
+        {
+          "severity": "medium",
+          "type": "UX_issue",
+          "title": "keynv init requires interactive terminal - no scripted migration path",
+          "description": "The help text says 'For scripted migration, use the lower-level `keynv project` and `keynv secret` commands directly' but there's no --yes flag or non-interactive mode. This makes CI/CD integration difficult.",
+          "issue_url": "mentioned in GitHub #11"
+        }
+      ]
+    },
+    "web_dashboard": {
+      "status": "cannot_test_fully",
+      "pages_tested": [
+        {"page": "/projects", "status": "redirects_to_login", "requires": "session_cookie_auth"},
+        {"page": "/login", "status": "renders_correctly"},
+        {"page": "/register", "status": "renders_correctly"}
+      ],
+      "findings": [
+        {
+          "severity": "info",
+          "type": "observation",
+          "title": "Web dashboard uses session cookie auth, not token auth",
+          "description": "Cannot test dashboard with API token - requires browser session. This is correct behavior for security."
+        }
+      ]
+    }
+  },
+
+  "api_discovery": {
+    "health_endpoint": {
+      "url": "GET https://api.keynv.dev/v1/health",
+      "response": {
+        "ok": true,
+        "version": "0.0.0-phase1",
+        "db": "ok",
+        "capabilities": {
+          "public_registration": true
+        }
+      },
+      "issues": [
+        {
+          "severity": "high",
+          "title": "API version mismatch",
+          "description": "API reports version '0.0.0-phase1' but CLI is '0.1.0-rc.11'. The version field appears to be a placeholder or not properly updated."
+        }
+      ]
+    },
+    "endpoints_verified": [
+      "POST /v1/auth/register",
+      "POST /v1/auth/login",
+      "GET /v1/projects",
+      "POST /v1/projects",
+      "POST /v1/projects/:id/secrets",
+      "GET /v1/projects/:id/secrets",
+      "GET /v1/projects/:id/secrets/:env/:key"
+    ]
+  },
+
+  "bugs_found": [
+    {
+      "id": "bug-1",
+      "severity": "high",
+      "title": "keynv secret list fails with alias format",
+      "reproduce": "keynv secret list @testproject",
+      "expected": "Lists secrets in project",
+      "actual": "Error: unknown project: @testproject",
+      "still_reproducible": true
+    },
+    {
+      "id": "bug-2",
+      "severity": "high",
+      "title": "keynv project describe fails for existing project",
+      "reproduce": "keynv project describe testproject (after keynv project list shows it exists)",
+      "expected": "Shows project metadata",
+      "actual": "Error: Project not found",
+      "still_reproducible": true
+    },
+    {
+      "id": "bug-3",
+      "severity": "high",
+      "title": "keynv secret get fails with alias format",
+      "reproduce": "keynv secret get @testproject.dev.api_key",
+      "expected": "Returns secret value",
+      "actual": "Error: unknown project: @testproject.dev.api_key",
+      "still_reproducible": true
+    }
+  ],
+
+  "ux_issues_found": [
+    {
+      "id": "ux-1",
+      "severity": "medium",
+      "title": "keynv init non-interactive mode missing",
+      "description": "keynv init requires interactive terminal. No --yes or scripted mode for CI/CD pipelines. Help text suggests using lower-level commands but these also require interactive flow for some operations."
+    },
+    {
+      "id": "ux-2",
+      "severity": "low",
+      "title": "whoami shows memberships as empty",
+      "description": "keynv whoami shows org_id but memberships array is empty even though user is owner of a project. This matches GitHub issue #10."
+    }
+  ],
+
+  "documentation_issues": [
+    {
+      "severity": "medium",
+      "title": "Docs reference self-host setup for hosted keynv.dev",
+      "description": "Quickstart guide only covers self-host deployment (Coolify, Docker). No specific guide for hosted keynv.dev users. The register page exists but there's no 'get started in 2 minutes' guide for hosted version."
+    },
+    {
+      "severity": "low",
+      "title": "Architecture doc mentions removed command",
+      "description": "docs/01-architecture.md mentions 'install <agent>' command which was removed in 0.1.0-rc.8"
+    }
+  ],
+
+  "positive_observations": [
+    "Registration flow works correctly via API",
+    "Project creation works with environments (dev/prod tiers)",
+    "Secret creation works correctly",
+    "Secret values are returned correctly via API",
+    "keynv exec correctly redacts output",
+    "CLI login with token works correctly",
+    "keynv project list works correctly",
+    "Public registration is enabled on hosted version"
+  ],
+
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Fix secret list/get with alias format",
+      "issue_id": "bug-1, bug-3",
+      "suggestion": "Investigate why alias parsing works for secret create but not for list/get. The project name extraction from alias is failing."
+    },
+    {
+      "priority": "high",
+      "action": "Fix project describe by name",
+      "issue_id": "bug-2",
+      "suggestion": "Project describe should work with project name, not just ID"
+    },
+    {
+      "priority": "medium",
+      "action": "Add non-interactive mode to keynv init",
+      "issue_id": "ux-1",
+      "suggestion": "Add --yes flag for scripted/CI migration. Or ensure all keynv init operations can be done via direct CLI commands without TUI."
+    },
+    {
+      "priority": "medium",
+      "action": "Fix API version field",
+      "issue_id": "api-version-mismatch",
+      "suggestion": "Update the deployed API to report actual version (0.1.0-rc.x)"
+    },
+    {
+      "priority": "low",
+      "action": "Update architecture docs",
+      "issue_id": "docs-architecture-removed-command",
+      "suggestion": "Remove reference to 'install <agent>' command"
+    },
+    {
+      "priority": "low",
+      "action": "Create hosted quickstart guide",
+      "issue_id": "docs-hosted-missing",
+      "suggestion": "Add a 'Hosted keynv.dev quickstart' page that shows registration -> login -> create project -> add secrets flow without deployment steps"
+    }
+  ],
+
+  "github_issues_mapping": {
+    "bug-1": "Related to #10 (keynv whoami shows only email, missing org info) - same alias parsing issue",
+    "bug-2": "New issue - needs to be filed",
+    "bug-3": "Same root cause as bug-1",
+    "ux-1": "Related to #11 (keynv init --dry-run help text unclear)"
+  },
+
+  "test_commands_used": [
+    "curl -X POST https://api.keynv.dev/v1/auth/register",
+    "keynv login --server https://api.keynv.dev --token <token>",
+    "keynv whoami",
+    "keynv project list",
+    "keynv project describe testproject",
+    "keynv secret create @testproject.dev.api_key --value test",
+    "keynv secret list @testproject",
+    "keynv secret get @testproject.dev.api_key",
+    "keynv exec -- echo 'Testing @alias'",
+    "keynv init --dry-run"
+  ]
+}
