@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `keynv project describe <name>` now accepts project name (in addition to ID). Previously only accepted ID.
+- `keynv init` gains `--env-file`, `--project`, `--env`, `--secret` flags for non-interactive/CI usage.
+
 ### Added
 - Public registration endpoint `POST /v1/auth/register` — opt-in via
   `KEYNV_PUBLIC_REGISTRATION=true`. Creates a fresh org + owner user
