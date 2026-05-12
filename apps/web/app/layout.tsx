@@ -1,6 +1,8 @@
 import './globals.css';
+import { ToastFlashHandler } from '@/components/ui/toast-flash-handler';
+import { Toaster } from '@/components/ui/toaster';
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
+import { type ReactNode, Suspense } from 'react';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://keynv.dev'),
@@ -18,7 +20,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        {children}
+        <Toaster />
+        <Suspense fallback={null}>
+          <ToastFlashHandler />
+        </Suspense>
+      </body>
     </html>
   );
 }

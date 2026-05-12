@@ -17,5 +17,5 @@ export async function logoutAction(): Promise<void> {
     }
   }
   await clearSession();
-  redirect('/login');
+  redirect('/login?toast=signed_out');
 }
