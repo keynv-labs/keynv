@@ -22,7 +22,7 @@ export default async function RegisterPage({
   }
 
   return (
-    <>
+    <div className="newsprint min-h-screen">
       <SkipLink />
       <main id="main" className="flex min-h-screen items-center justify-center p-6">
         <div className="w-full max-w-sm">
@@ -50,6 +50,6 @@ export default async function RegisterPage({
           </p>
         </div>
       </main>
-    </>
+    </div>
   );
 }

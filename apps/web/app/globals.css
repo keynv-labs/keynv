@@ -1,7 +1,33 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────────────────────────────
+ * Design tokens — Redacted Dossier
+ *
+ * Two themes share these tokens via CSS-var override:
+ *   - Default (dark): the dashboard. Inherited unless a parent wears
+ *     the `.newsprint` class.
+ *   - .newsprint: the marketing surface, docs, login/register, error
+ *     boundaries — the off-white "released document" identity.
+ *
+ * Tailwind v4 generates utility classes (`bg-bg`, `text-fg-muted`, …)
+ * from the @theme block. Because those utilities resolve through CSS
+ * variables at render time, the same class re-themes itself when its
+ * tree is wrapped in `.newsprint`.
+ * ────────────────────────────────────────────────────────────────── */
+
 @theme {
-  /* Surfaces */
+  /* Typography — variable fonts loaded by next/font in layout.tsx.
+     The *-loaded variables are populated by next/font; we wrap them
+     with literal fallbacks so a CDN miss degrades to a paired serif.
+     `--font-sans` is body text (Newsreader, NOT Inter). The dashboard
+     and marketing both use it; serif texture only reads as serif at
+     editorial sizes (24+). */
+  --font-display: var(--font-display-loaded), "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-body-loaded), "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-mono-loaded), "JetBrains Mono", "SF Mono", "Berkeley Mono", Consolas,
+    monospace;
+
+  /* Surfaces — dark by default (dashboard) */
   --color-bg: #0a0c0f;
   --color-bg-elevated: #13161b;
   --color-bg-elevated-hover: #181c22;
@@ -11,33 +37,25 @@
   --color-border: #23272f;
   --color-border-strong: #2f343d;
 
-  /* Foreground
-   * Contrast targets (WCAG AA, against --color-bg #0a0c0f and
-   * --color-bg-elevated #13161b):
-   *   --color-fg          ≈ 14.0 : 1   AAA normal + large
-   *   --color-fg-muted    ≈ 6.8  : 1   AA normal + AAA large
-   *   --color-fg-subtle   ≈ 4.8  : 1   AA normal (just clears 4.5)
-   * The previous --color-fg-subtle (#5d6470) sat at 3.1 : 1 — fine
-   * for large text only. Bumped to #7a8593 so 11-13 px metadata
-   * labels (timestamps, badges, breadcrumbs) clear AA. Do not push
-   * subtle further than this without re-checking; the design relies
-   * on a clear three-step hierarchy fg > muted > subtle. */
+  /* Foreground — see globals.css history for AA-contrast notes */
   --color-fg: #e9ecf2;
   --color-fg-muted: #9098a4;
   --color-fg-subtle: #7a8593;
   --color-fg-on-accent: #ffffff;
 
-  /* Accent — single primary, used for primary action only (one per view) */
+  /* Primary accent (dashboard) */
   --color-accent: #5b8def;
   --color-accent-hover: #7099f3;
   --color-accent-pressed: #4677d6;
 
-  /* Semantic */
+  /* Cross-theme signals */
   --color-success: #3ec98a;
   --color-warn: #e0a93a;
   --color-danger: #e25555;
+  --color-redact: #0e0e0e; /* the bar colour, near-black, both themes */
+  --color-highlight: #f4d85e; /* FOIA highlighter, both themes */
 
-  /* Environment tier — semantic coloring for dev / staging / prod badges */
+  /* Environment tier — unchanged */
   --color-env-dev-fg: #9098a4;
   --color-env-dev-bg: #21242b;
   --color-env-dev-border: #2f343d;
@@ -48,23 +66,76 @@
   --color-env-prod-bg: #3a1f1f;
   --color-env-prod-border: #6b3030;
 
-  /* Typography */
-  --font-sans: "Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto",
-    sans-serif;
-  --font-mono: "JetBrains Mono", "ui-monospace", "SF Mono", "Menlo", "Consolas", monospace;
-
-  /* Radius */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
 
-  /* Motion */
   --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-snap: cubic-bezier(0.45, 0, 0.55, 1);
   --duration-fast: 120ms;
   --duration-base: 180ms;
   --duration-slow: 240ms;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Newsprint theme — marketing, docs, auth, error surfaces.
+ *
+ * Warm off-white background like aged newsprint. Ink-black text. The
+ * primary accent flips to the FOIA highlighter yellow so call-to-action
+ * buttons read as if someone has gone over them with a marker.
+ *
+ * Contrast targets (against --color-bg #f2efe7):
+ *   --color-fg          ≈ 17.5 : 1   AAA normal + large
+ *   --color-fg-muted    ≈  8.8 : 1   AAA normal + large
+ *   --color-fg-subtle   ≈  4.7 : 1   AA normal (passes 4.5)
+ * ────────────────────────────────────────────────────────────────── */
+.newsprint {
+  --color-bg: #f2efe7;
+  --color-bg-elevated: #ebe7dd;
+  --color-bg-elevated-hover: #e2dccc;
+  --color-bg-overlay: #f7f4ec;
+
+  --color-border: #ccc3ad;
+  --color-border-strong: #9a907a;
+
+  --color-fg: #0e0e0e;
+  --color-fg-muted: #3f3a30;
+  --color-fg-subtle: #76705f;
+  --color-fg-on-accent: #0e0e0e;
+
+  --color-accent: #f4d85e;
+  --color-accent-hover: #f5dc73;
+  --color-accent-pressed: #e6c948;
+
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+/* Inverted blocks inside the newsprint flow — used for dramatic
+   "look how bad this is" interludes (the Problem section, the bottom
+   CTA). High-contrast ink-on-paper flipped to off-white-on-ink, keeps
+   the editorial cadence of a magazine spread. */
+.newsprint-inverted {
+  --color-bg: #0e0e0e;
+  --color-bg-elevated: #1a1a1a;
+  --color-bg-elevated-hover: #232323;
+  --color-bg-overlay: #2a2a2a;
+
+  --color-border: #2c2c2c;
+  --color-border-strong: #444444;
+
+  --color-fg: #f2efe7;
+  --color-fg-muted: #beb6a5;
+  --color-fg-subtle: #8c8675;
+  --color-fg-on-accent: #0e0e0e;
+
+  --color-accent: #f4d85e;
+  --color-accent-hover: #f5dc73;
+  --color-accent-pressed: #e6c948;
+
+  background: var(--color-bg);
+  color: var(--color-fg);
 }
 
 * {
@@ -76,13 +147,13 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: "ss01", "cv11";
   -webkit-font-smoothing: antialiased;
   margin: 0;
 }
 
 a {
-  color: var(--color-fg);
+  color: inherit;
   text-decoration: none;
 }
 
@@ -93,7 +164,65 @@ pre,
   font-size: 0.92em;
 }
 
-/* Subtle scrollbar styling — native scrollbars look broken on dark surfaces */
+/* ──────────────────────────────────────────────────────────────────────
+ * Redaction utilities — keynv's signature visual primitive.
+ *
+ * `.redact` paints a black bar over its content. Width follows the
+ * text's natural metrics so a redacted word displaces exactly the
+ * space the original word would have occupied. Useful both as a
+ * dramatic flourish in the hero and as a literal mask elsewhere.
+ *
+ * `.redact-hover` is the same bar but lifts on pointer hover, in
+ * keeping with FOIA "click to reveal" archives. Long-press is
+ * intentionally not handled — touch users get the same reveal via tap.
+ * ────────────────────────────────────────────────────────────────── */
+.redact {
+  display: inline-block;
+  position: relative;
+  padding: 0 0.15em;
+  background: var(--color-redact);
+  color: transparent;
+  text-shadow: none;
+  user-select: none;
+  border-radius: 2px;
+  /* keep underline-like baseline alignment */
+  transform: translateY(-0.05em);
+}
+
+.redact-hover {
+  cursor: help;
+  transition: background var(--duration-base) var(--ease-snap), color var(--duration-base)
+    var(--ease-snap);
+}
+.redact-hover:hover,
+.redact-hover:focus-visible {
+  background: transparent;
+  color: var(--color-fg);
+  outline: none;
+  text-decoration: underline;
+  text-decoration-color: var(--color-redact);
+  text-underline-offset: 4px;
+}
+
+/* Highlighter — used to draw attention to inline aliases the way a
+   FOIA-released document marks the operative phrase. Keep dosage
+   small; loses authority if everything is highlighted. */
+.highlight {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 55%,
+    var(--color-highlight) 55%,
+    var(--color-highlight) 95%,
+    transparent 95%
+  );
+  padding: 0 0.1em;
+  font-weight: 600;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Scrollbar / focus / motion baseline
+ * ────────────────────────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-strong) transparent;
@@ -114,15 +243,14 @@ pre,
   background: var(--color-fg-subtle);
 }
 
-/* Focus ring — used by interactive primitives via .focus-ring or focus-visible utilities */
 :where(button, a, input, textarea, select, [role="button"], [role="option"]):focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px
-    color-mix(in oklab, var(--color-accent) 50%, transparent);
+    color-mix(in oklab, var(--color-accent) 65%, transparent);
   border-radius: var(--radius-md);
 }
 
-/* List-item enter animation — opacity + 4px translate, 180ms */
+/* List-item enter animation — kept */
 @keyframes list-item-enter {
   from {
     opacity: 0;
@@ -137,7 +265,23 @@ pre,
   animation: list-item-enter var(--duration-base) var(--ease-snap) both;
 }
 
-/* cmdk palette: align with semantic tokens */
+/* Slow ambient "released document" stamp drift — lives on the hero
+   only, looks like a stamp settling into ink. */
+@keyframes stamp-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) rotate(-2deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(-1.2deg);
+  }
+}
+.animate-stamp {
+  animation: stamp-settle var(--duration-slow) var(--ease-snap) both;
+}
+
+/* cmdk palette — unchanged token resolution */
 [cmdk-input] {
   background: transparent;
   outline: none;
