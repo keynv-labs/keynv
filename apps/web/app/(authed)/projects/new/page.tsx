@@ -7,9 +7,7 @@ export default function NewProjectPage() {
       <Breadcrumb segments={[{ label: 'Projects', href: '/projects' }, { label: 'New project' }]} />
 
       <header>
-        <h1 className="font-display text-[32px] font-medium tracking-[-0.01em] leading-tight">
-          New project
-        </h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">New project</h1>
         <p className="text-sm text-fg-muted mt-1">
           A project is a namespace for secrets. Each environment in the project gets its own
           encrypted DEK.

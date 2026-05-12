@@ -18,9 +18,7 @@ export default async function GlobalAuditPage({
       <Breadcrumb segments={[{ label: 'Audit log' }]} />
 
       <header>
-        <h1 className="font-display text-[32px] font-medium tracking-[-0.01em] leading-tight">
-          Audit log
-        </h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">Audit log</h1>
         <p className="text-sm text-fg-muted mt-1">
           Every operation, hash-chained. Verify integrity any time.
         </p>

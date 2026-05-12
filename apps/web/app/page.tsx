@@ -1,15 +1,21 @@
-import { HashChip } from '@/components/dossier/hash-chip';
-import { MarginNote } from '@/components/dossier/margin-note';
-import { RedactedText } from '@/components/dossier/redacted-text';
-import { Stamp } from '@/components/dossier/stamp';
 import { InstallTabs } from '@/components/install-tabs';
 import { GithubStars } from '@/components/trust/github-stars';
 import { StatusPill } from '@/components/trust/status-pill';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SkipLink } from '@/components/ui/skip-link';
 import { getCapabilities } from '@/lib/capabilities';
 import { getSession } from '@/lib/session';
-import { ArrowRight, Github } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileLock,
+  Github,
+  KeyRound,
+  ScrollText,
+  ShieldCheck,
+  Terminal,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -54,52 +60,44 @@ interface CtaContext {
   publicSignup: boolean;
 }
 
-const FILED = new Date().toISOString().slice(0, 10);
-const CASE_NUMBER = '0001';
-
 export default async function LandingPage() {
   const [session, { publicSignup }] = await Promise.all([getSession(), getCapabilities()]);
   const ctx: CtaContext = { isAuthed: Boolean(session), publicSignup };
 
   return (
-    <div className="newsprint min-h-screen flex flex-col">
+    <div className="min-h-screen bg-bg flex flex-col">
       <SkipLink />
-      <Masthead ctx={ctx} />
+      <TopNav ctx={ctx} />
       <main id="main" className="flex-1">
         <Hero ctx={ctx} />
         <Problem />
-        <Exhibits />
-        <Procedure />
-        <Install />
-        <ClosingCta ctx={ctx} />
+        <Pillars />
+        <HowItWorks />
+        <InstallTabs />
+        <BottomCta ctx={ctx} />
       </main>
-      <Colophon />
+      <Footer />
     </div>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────── */
-/* MASTHEAD                                                               */
-/* ────────────────────────────────────────────────────────────────────── */
+// ─── TOP NAV ─────────────────────────────────────────────────────────────────
 
-function Masthead({ ctx }: { ctx: CtaContext }) {
+function TopNav({ ctx }: { ctx: CtaContext }) {
   return (
-    <header className="border-b-2 border-fg/90">
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 md:px-6 py-2 flex items-center justify-between gap-4 text-[10px] font-mono uppercase tracking-[0.22em] text-fg-muted">
-          <span>VOL. I · NO. {CASE_NUMBER}</span>
-          <span className="hidden sm:inline">SELF-HOSTED · AI-SAFE BY DESIGN</span>
-          <span>{FILED}</span>
-        </div>
-      </div>
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-6 flex items-end justify-between gap-6 flex-wrap">
-        <Link href={{ pathname: '/' }} className="flex items-baseline gap-3">
-          <Logomark />
-          <span className="font-display text-5xl md:text-6xl leading-none tracking-tight font-medium">
-            keynv
+    <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
+      <div className="mx-auto max-w-6xl px-4 md:px-6 h-14 flex items-center gap-4">
+        <Link
+          href={{ pathname: '/' }}
+          className="flex items-center gap-2 font-semibold tracking-tight text-fg"
+        >
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[11px] font-bold">
+            k
           </span>
+          <span>keynv</span>
         </Link>
-        <nav className="flex items-baseline gap-5 text-[13px] text-fg-muted font-sans">
+
+        <nav className="hidden md:flex items-center gap-5 text-sm text-fg-muted ml-4">
           <a
             href="#how-it-works"
             className="hover:text-fg transition-colors duration-fast ease-snap"
@@ -119,303 +117,255 @@ function Masthead({ ctx }: { ctx: CtaContext }) {
             Changelog
           </Link>
           <GithubStars />
-          <CtaCluster ctx={ctx} compact />
         </nav>
+
+        <div className="ml-auto flex items-center gap-2">
+          {ctx.isAuthed ? (
+            <Link href={{ pathname: '/projects' }}>
+              <Button className="gap-1.5">
+                Open dashboard
+                <ArrowRight size={13} strokeWidth={2.25} />
+              </Button>
+            </Link>
+          ) : ctx.publicSignup ? (
+            <>
+              <Link
+                href={{ pathname: '/login' }}
+                className="text-sm text-fg-muted hover:text-fg transition-colors duration-fast ease-snap px-2"
+              >
+                Sign in
+              </Link>
+              <Link href={{ pathname: '/register' }}>
+                <Button className="gap-1.5">
+                  Get started
+                  <ArrowRight size={13} strokeWidth={2.25} />
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Link href={{ pathname: '/login' }}>
+              <Button>Sign in</Button>
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );
 }
 
-function Logomark() {
-  return (
-    <span
-      aria-hidden
-      className="inline-flex h-12 w-12 items-center justify-center bg-fg text-bg font-display font-semibold text-3xl leading-none -tracking-wide relative shrink-0"
-      style={{
-        boxShadow: '4px 4px 0 0 var(--color-highlight)',
-      }}
-    >
-      k
-    </span>
-  );
-}
-
-function CtaCluster({ ctx, compact = false }: { ctx: CtaContext; compact?: boolean }) {
-  if (ctx.isAuthed) {
-    return (
-      <Link href={{ pathname: '/projects' }}>
-        <Button className="gap-1.5 bg-fg text-bg hover:opacity-80 rounded-none border border-fg">
-          Open dashboard
-          <ArrowRight size={13} strokeWidth={2.25} />
-        </Button>
-      </Link>
-    );
-  }
-  if (ctx.publicSignup) {
-    return (
-      <span className="flex items-center gap-3">
-        {!compact && (
-          <Link href={{ pathname: '/login' }} className="text-sm hover:underline">
-            Sign in
-          </Link>
-        )}
-        <Link href={{ pathname: '/register' }}>
-          <Button
-            className="gap-1.5 rounded-none border border-fg bg-fg text-bg hover:bg-fg hover:opacity-85"
-            style={{
-              boxShadow: '3px 3px 0 0 var(--color-highlight)',
-            }}
-          >
-            Get started
-            <ArrowRight size={13} strokeWidth={2.25} />
-          </Button>
-        </Link>
-      </span>
-    );
-  }
-  return (
-    <Link href={{ pathname: '/login' }}>
-      <Button className="gap-1.5 rounded-none border border-fg bg-fg text-bg">
-        Sign in
-        <ArrowRight size={13} strokeWidth={2.25} />
-      </Button>
-    </Link>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────────── */
-/* HERO                                                                   */
-/* ────────────────────────────────────────────────────────────────────── */
+// ─── HERO ────────────────────────────────────────────────────────────────────
 
 function Hero({ ctx }: { ctx: CtaContext }) {
   return (
-    <section className="relative">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 pt-16 md:pt-24 pb-20 md:pb-28 grid gap-10 md:grid-cols-12 items-start">
-        <div className="md:col-span-8 relative">
-          <div className="animate-stamp">
-            <Stamp
-              parts={['FILED', FILED, `CASE ${CASE_NUMBER}`, 'INSTANCE — keynv.dev']}
-              variant="rotate"
-            />
-          </div>
+    <section className="relative overflow-hidden border-b border-border">
+      <GridBackdrop />
+      <div className="relative mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-28 text-center">
+        <Badge tone="neutral" className="mx-auto">
+          Phases 1–3 shipping · Phase 4 in progress
+        </Badge>
 
-          <h1 className="font-display font-medium tracking-[-0.02em] leading-[0.95] text-[clamp(3.5rem,9vw,7.5rem)] mt-8">
-            Secrets your AI
-            <br />
-            agent <RedactedText mode="hover">can&rsquo;t</RedactedText> see.
-          </h1>
+        <h1 className="mt-5 text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto">
+          Secrets your AI agent <span className="text-fg-muted">can&rsquo;t leak.</span>
+        </h1>
 
-          <p className="font-sans text-[19px] md:text-[20px] leading-[1.55] text-fg-muted mt-7 max-w-[44ch]">
-            A self-hosted vault for your team&rsquo;s API keys, database passwords, and SSH
-            credentials. Reference everything by <span className="highlight">alias</span> — the only
-            string an AI agent ever observes.
-          </p>
+        <p className="mt-5 text-base md:text-lg text-fg-muted max-w-2xl mx-auto leading-relaxed">
+          Self-hosted vault for your team&rsquo;s API keys, database passwords, and SSH credentials.
+          Reference them everywhere by alias — your AI coding agent sees the alias literal, never
+          the value.
+        </p>
 
-          <div className="mt-9 flex items-center gap-4 flex-wrap">
-            <CtaCluster ctx={ctx} />
-            <a
-              href="https://github.com/keynv-labs/keynv"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 text-sm hover:underline"
-            >
-              <Github size={14} strokeWidth={2} />
-              View source on GitHub
-            </a>
-          </div>
-
-          {!ctx.isAuthed && ctx.publicSignup ? (
-            <p className="mt-5 text-[12px] text-fg-subtle font-mono uppercase tracking-[0.18em]">
-              Free during public beta · No credit card · Self-host the same binary anytime
-            </p>
-          ) : null}
+        <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
+          {ctx.isAuthed ? (
+            <Link href={{ pathname: '/projects' }}>
+              <Button className="gap-1.5">
+                Open dashboard
+                <ArrowRight size={13} strokeWidth={2.25} />
+              </Button>
+            </Link>
+          ) : ctx.publicSignup ? (
+            <>
+              <Link href={{ pathname: '/register' }}>
+                <Button className="gap-1.5">
+                  Get started — it&rsquo;s free
+                  <ArrowRight size={13} strokeWidth={2.25} />
+                </Button>
+              </Link>
+              <Link href={{ pathname: '/login' }}>
+                <Button variant="secondary">Sign in</Button>
+              </Link>
+            </>
+          ) : (
+            <Link href={{ pathname: '/login' }}>
+              <Button className="gap-1.5">
+                Sign in
+                <ArrowRight size={13} strokeWidth={2.25} />
+              </Button>
+            </Link>
+          )}
+          <a href="https://github.com/keynv-labs/keynv" target="_blank" rel="noreferrer">
+            <Button variant="secondary" className="gap-1.5">
+              <Github size={13} strokeWidth={2} />
+              View on GitHub
+            </Button>
+          </a>
         </div>
 
-        <aside className="md:col-span-4 md:pt-32 hidden md:block">
-          <Stamp parts={['ABSTRACT']} variant="inline" />
-          <p className="mt-3 font-sans italic text-[16px] leading-[1.55] text-fg-muted">
-            Existing vaults — HashiCorp, Doppler, 1Password — were built for an era when{' '}
-            <RedactedText mode="hover">developers</RedactedText> typed the commands.
+        {!ctx.isAuthed && ctx.publicSignup ? (
+          <p className="mt-4 text-xs text-fg-subtle">
+            No credit card required. Self-host with the same binary anytime.
           </p>
-          <p className="mt-3 font-sans italic text-[16px] leading-[1.55] text-fg-muted">
-            keynv assumes the agent is already in the room.
-          </p>
-          <hr className="mt-6 border-t border-fg/30 w-12" />
-          <div className="mt-4">
-            <Transcript />
-          </div>
-        </aside>
+        ) : null}
+
+        <CodeFrame />
       </div>
     </section>
   );
 }
 
-function Transcript() {
-  const lines = [
-    { no: '01', kind: 'cmd', body: '$ keynv exec -- mysql -p @billing.prod.db_password' },
-    { no: '02', kind: 'comment', body: '   resolved in subprocess; agent sees only the alias' },
-    { no: '03', kind: 'blank', body: '' },
-    { no: '04', kind: 'cmd', body: '$ ps aux | grep mysql' },
-    { no: '05', kind: 'output', body: '   mysql -p ████████ -h ████████' },
-  ];
+function GridBackdrop() {
   return (
-    <figure className="border border-fg/80 bg-bg-overlay p-0 shadow-[6px_6px_0_0_var(--color-redact)]">
-      <figcaption className="px-3 py-2 border-b border-fg/30 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em]">
-        <span>TRANSCRIPT — ~/billing-app</span>
-        <HashChip hash="a3f5912cb74e0d61" length={6} />
-      </figcaption>
-      <pre className="font-mono text-[12.5px] leading-[1.7] p-3 overflow-x-auto whitespace-pre">
-        {lines.map((l) => (
-          <span key={l.no} className="block">
-            <span className="text-fg-subtle inline-block w-7 select-none">{l.no}</span>
-            {l.kind === 'cmd' ? (
-              <span className="text-fg">{l.body}</span>
-            ) : l.kind === 'comment' ? (
-              <span className="text-fg-subtle">{l.body}</span>
-            ) : l.kind === 'output' ? (
-              <span className="text-fg-muted">{l.body}</span>
-            ) : (
-              <span> </span>
-            )}
-          </span>
-        ))}
+    <div
+      aria-hidden
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        backgroundImage:
+          'linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)',
+        backgroundSize: '32px 32px',
+        maskImage: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,0,0,0.6), transparent 70%)',
+        WebkitMaskImage:
+          'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,0,0,0.6), transparent 70%)',
+        opacity: 0.5,
+      }}
+    />
+  );
+}
+
+function CodeFrame() {
+  return (
+    <div className="mt-12 mx-auto max-w-2xl rounded-xl border border-border bg-bg-elevated text-left shadow-2xl overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <span className="h-2.5 w-2.5 rounded-full bg-bg-elevated-hover" />
+        <span className="h-2.5 w-2.5 rounded-full bg-bg-elevated-hover" />
+        <span className="h-2.5 w-2.5 rounded-full bg-bg-elevated-hover" />
+        <span className="ml-2 text-[11px] font-mono text-fg-subtle">~/billing-app</span>
+      </div>
+      <pre className="px-4 py-4 font-mono text-[12px] sm:text-[13px] leading-relaxed overflow-x-auto whitespace-pre">
+        <span className="text-fg-subtle">$</span> <span className="text-fg">keynv</span> exec --
+        {'\n'}
+        <span className="text-fg-subtle"> </span>
+        <span className="text-fg">mysql</span> -p
+        <span className="text-accent">@billing.prod.db_password</span>
+        {'\n'}
+        <span className="text-fg-subtle"> \\</span>{' '}
+        <span className="text-fg-muted">
+          comment: what your AI agent sees in tool input + output
+        </span>
+        {'\n\n'}
+        <span className="text-fg-subtle">$</span> ps aux | grep mysql{'\n'}
+        <span className="text-fg-muted"> mysql -p</span>
+        <span className="text-success">******</span>
+        <span className="text-fg-muted"> -h</span>
+        <span className="text-success">******</span>
+        {'\n'}
+        <span className="text-fg-subtle"> \\</span>{' '}
+        <span className="text-fg-muted">
+          comment: argv redacted; subprocess holds the real values
+        </span>
       </pre>
-    </figure>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────────── */
-/* PROBLEM — inverted spread                                              */
-/* ────────────────────────────────────────────────────────────────────── */
-
-function Problem() {
-  return (
-    <section className="newsprint-inverted border-y-2 border-fg">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-28 grid gap-10 md:grid-cols-12 items-start">
-        <header className="md:col-span-5">
-          <Stamp parts={['§ I · DIAGNOSIS', 'OPENED 2024']} />
-          <h2 className="font-display tracking-[-0.015em] text-[clamp(2.25rem,5vw,3.75rem)] leading-[0.98] mt-6 font-medium">
-            AI coding agents made the secret-leak problem an{' '}
-            <em className="font-display italic">order of magnitude</em> worse.
-          </h2>
-        </header>
-
-        <div className="md:col-span-6 md:col-start-7 relative">
-          <p className="font-sans text-[18px] leading-[1.65] text-fg-muted">
-            Developers leak credentials constantly —{' '}
-            <code className="font-mono text-fg bg-bg-elevated border border-border px-1 py-0.5 rounded-sm text-[0.92em]">
-              .env
-            </code>{' '}
-            files committed to repos, keys left in shell history, tokens in tool outputs.
-          </p>
-          <p className="font-sans text-[18px] leading-[1.65] text-fg-muted mt-4">
-            AI agents permanently residing in your terminal made it worse: every command, every
-            file, every diff is shipped to a vendor&rsquo;s logs. Existing vaults are mature — and
-            none were designed around an agent being there.
-          </p>
-          <MarginNote label="CF.">
-            See <span className="underline">/docs/threat-model</span> for the full adversary model.
-          </MarginNote>
-        </div>
-
-        <div className="md:col-span-12 grid gap-px bg-fg/30 sm:grid-cols-3 mt-6 border border-fg/30">
-          <Statistic
-            value="23.7M"
-            label="hardcoded secrets pushed to GitHub in 2024"
-            cite="GitGuardian · State of Secrets Sprawl 2024"
-          />
-          <Statistic
-            value="every diff"
-            label="visible to your AI agent’s vendor and their logs"
-            cite="observed behaviour · Claude Code, Cursor, Copilot"
-          />
-          <Statistic
-            value="alias only"
-            label="resolution happens in a process the agent cannot read"
-            cite="keynv — keynv exec(8)"
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Statistic({ value, label, cite }: { value: string; label: string; cite: string }) {
-  return (
-    <div className="bg-bg p-6">
-      <div className="font-display text-[56px] leading-[0.95] font-medium tracking-[-0.02em] text-fg">
-        {value}
-      </div>
-      <div className="font-sans text-[15px] leading-[1.5] text-fg-muted mt-3 max-w-[28ch]">
-        {label}
-      </div>
-      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle mt-5">
-        {cite}
-      </div>
     </div>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────── */
-/* EXHIBITS                                                               */
-/* ────────────────────────────────────────────────────────────────────── */
+// ─── PROBLEM ─────────────────────────────────────────────────────────────────
 
-function Exhibits() {
+function Problem() {
+  return (
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-4xl px-4 md:px-6 py-16 md:py-20">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          Why it exists
+        </div>
+        <h2 className="mt-3 text-2xl md:text-3xl font-semibold tracking-tight leading-tight">
+          AI coding agents made the secret-leak problem{' '}
+          <span className="text-fg-muted">an order of magnitude worse.</span>
+        </h2>
+        <p className="mt-5 text-base text-fg-muted leading-relaxed">
+          Developers leak credentials constantly — <code className="font-mono text-fg">.env</code>{' '}
+          files committed to repos, keys left in shell history, tokens in tool outputs. AI agents
+          permanently residing in your terminal made it worse: every command, every file, every diff
+          is shipped to a vendor&rsquo;s logs. Existing vaults (HashiCorp, Doppler, 1Password) are
+          mature but none were designed around AI agents being there.
+        </p>
+
+        <ul className="mt-8 grid gap-3 sm:grid-cols-3 text-sm">
+          <Stat value="23.7M" label="hardcoded secrets pushed to GitHub in 2024 (+25% YoY)" />
+          <Stat value="every diff" label="visible to your AI agent's vendor — and their logs" />
+          <Stat value="alias-only" label="resolution happens in a process the agent cannot read" />
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <li className="rounded-lg border border-border bg-bg-elevated p-4">
+      <div className="text-fg font-semibold tracking-tight">{value}</div>
+      <div className="text-xs text-fg-muted mt-1 leading-relaxed">{label}</div>
+    </li>
+  );
+}
+
+// ─── PILLARS ─────────────────────────────────────────────────────────────────
+
+function Pillars() {
   return (
     <section id="pillars" className="border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-28">
-        <div className="text-center max-w-3xl mx-auto">
-          <Stamp parts={['§ II · FILES', 'EXHIBITS A–C']} className="justify-center" />
-          <h2 className="font-display tracking-[-0.015em] text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.0] mt-5 font-medium">
-            Three products. One file cabinet.
-          </h2>
+      <div className="mx-auto max-w-6xl px-4 md:px-6 py-16 md:py-20">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle text-center">
+          What it does
         </div>
+        <h2 className="mt-3 text-2xl md:text-3xl font-semibold tracking-tight leading-tight text-center max-w-2xl mx-auto">
+          Two products in one — a team vault and an AI-safety layer.
+        </h2>
 
-        <div className="mt-14 grid gap-px bg-fg/30 sm:grid-cols-3 border border-fg/30">
-          <Exhibit
-            tag="EXHIBIT A"
-            title="A self-hosted vault"
-            body="SQLite + Litestream, one file with real-time S3 backup. Envelope encryption via libsodium: KEK in OS keychain, a per-project DEK on top. RBAC across owner / admin / developer / reader, with project-scoped overrides."
-            footnotes={[
-              'XSalsa20-Poly1305 via libsodium',
-              'Postgres adapter is Phase 6',
-              'No phone-home, no telemetry',
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <Pillar
+            icon={<KeyRound size={16} strokeWidth={2} />}
+            title="Self-hosted vault"
+            tone="success"
+            bullets={[
+              'SQLite + Litestream — single file, real-time S3 backup',
+              'Envelope encryption (libsodium): KEK in OS keychain, per-project DEK',
+              'RBAC: Owner / Admin / Developer / Reader',
+              'Append-only hash-chained audit log',
             ]}
           />
-          <Exhibit
-            tag="EXHIBIT B"
-            title="The AI-safety layer"
-            body={
-              <>
-                Aliases like <code className="font-mono text-fg">@project.env.key</code> are the
-                only strings an agent sees. <code className="font-mono text-fg">keynv exec</code>{' '}
-                spawns a subprocess your agent can&rsquo;t read; the MCP server returns single-use
-                refs, never values; tool outputs are passed through the redactor.
-              </>
-            }
-            footnotes={[
-              'Regex + entropy scanner',
-              'Per-agent installers',
-              'Subprocess argv is masked',
-            ]}
-          />
-          <Exhibit
-            tag="EXHIBIT C"
-            title="A tamper-evident ledger"
-            body={
-              <>
-                Every read, write, rotation, role change is appended to a hash-chained audit log.
-                SHA-256 prev-hash links each row to the one before it; the chain can be walked
-                end-to-end any time.
-              </>
-            }
-            footnotes={[
-              <span key="tail" className="inline-flex items-center gap-2">
-                tail
-                <HashChip hash="a3f5912cb74e0d61" length={6} />
+          <Pillar
+            icon={<ShieldCheck size={16} strokeWidth={2} />}
+            title="AI-safety layer"
+            tone="warn"
+            bullets={[
+              <span key="alias">
+                <code className="font-mono text-fg">@project.env.key</code> aliases everywhere
               </span>,
-              'Verifiable any time',
-              'Filter by actor, alias, range',
+              <span key="exec">
+                <code className="font-mono text-fg">keynv exec</code> spawns a privileged subprocess
+                your agent can&rsquo;t see
+              </span>,
+              'MCP server returns single-use refs, never values',
+              'Output redactor (regex + entropy) on every tool result',
+            ]}
+          />
+          <Pillar
+            icon={<ScrollText size={16} strokeWidth={2} />}
+            title="Tamper-evident audit"
+            tone="neutral"
+            bullets={[
+              'Every read, write, rotation, role change appended to the chain',
+              'SHA-256 prev-hash links every entry to the previous one',
+              'Re-verify integrity any time — green or "broken at id X"',
+              'Filter by actor, event type, alias, time range',
             ]}
           />
         </div>
@@ -424,32 +374,41 @@ function Exhibits() {
   );
 }
 
-function Exhibit({
-  tag,
+function Pillar({
+  icon,
   title,
-  body,
-  footnotes,
+  tone,
+  bullets,
 }: {
-  tag: string;
+  icon: React.ReactNode;
   title: string;
-  body: React.ReactNode;
-  footnotes: React.ReactNode[];
+  tone: 'success' | 'warn' | 'neutral';
+  bullets: React.ReactNode[];
 }) {
+  const ringClass =
+    tone === 'success' ? 'text-success' : tone === 'warn' ? 'text-warn' : 'text-fg-muted';
   return (
-    <article className="bg-bg p-7 flex flex-col">
-      <Stamp parts={[tag]} />
-      <h3 className="font-display text-[28px] leading-[1.05] tracking-[-0.01em] mt-3 font-medium text-fg">
-        {title}
-      </h3>
-      <p className="font-sans text-[15.5px] leading-[1.6] text-fg-muted mt-3">{body}</p>
-      <ul className="mt-6 pt-4 border-t border-fg/15 space-y-1.5 font-mono text-[11px] text-fg-subtle uppercase tracking-[0.18em]">
-        {footnotes.map((fn, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: static layout
-          <li key={i} className="flex items-baseline gap-2">
-            <span aria-hidden className="text-fg-subtle">
-              ¹
-            </span>
-            <span>{fn}</span>
+    <article className="rounded-lg border border-border bg-bg-elevated p-5">
+      <div
+        className={`inline-flex h-9 w-9 items-center justify-center rounded-md bg-bg ${ringClass}`}
+      >
+        {icon}
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-fg">{title}</h3>
+      <ul className="mt-3 space-y-2 text-sm text-fg-muted">
+        {bullets.map((b, i) => (
+          <li
+            // biome-ignore lint/suspicious/noArrayIndexKey: static layout, order never changes
+            key={i}
+            className="flex items-start gap-2"
+          >
+            <CheckCircle2
+              size={13}
+              strokeWidth={2}
+              className={`shrink-0 mt-0.5 ${ringClass}`}
+              aria-hidden
+            />
+            <span>{b}</span>
           </li>
         ))}
       </ul>
@@ -457,60 +416,55 @@ function Exhibit({
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────── */
-/* PROCEDURE — How it works                                               */
-/* ────────────────────────────────────────────────────────────────────── */
+// ─── HOW IT WORKS ────────────────────────────────────────────────────────────
 
-function Procedure() {
+function HowItWorks() {
   return (
     <section id="how-it-works" className="border-b border-border">
-      <div className="mx-auto max-w-5xl px-4 md:px-6 py-20 md:py-28">
-        <div className="max-w-3xl">
-          <Stamp parts={['§ III · PROCEDURE']} />
-          <h2 className="font-display tracking-[-0.015em] text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.0] mt-5 font-medium">
-            Aliases in code. Resolution in a process the agent can&rsquo;t see.
-          </h2>
+      <div className="mx-auto max-w-5xl px-4 md:px-6 py-16 md:py-20">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle text-center">
+          How it works
         </div>
+        <h2 className="mt-3 text-2xl md:text-3xl font-semibold tracking-tight leading-tight text-center max-w-2xl mx-auto">
+          Aliases in code. Resolution in a process the agent can&rsquo;t see.
+        </h2>
 
-        <ol className="mt-14 space-y-px bg-fg/30 border border-fg/30">
+        <ol className="mt-10 grid gap-4 md:grid-cols-3">
           <Step
-            no="01"
+            number="1"
+            icon={<FileLock size={14} strokeWidth={2} />}
             title="Store"
             body={
               <>
-                Add secrets through the CLI or the web dashboard. Values are encrypted with a
-                per-project DEK; the master KEK lives in the OS keychain or your HSM.
+                Your team adds secrets to the keynv server with the CLI or web UI. Values are
+                encrypted at rest with a per-project DEK; the master KEK lives in the OS keychain or
+                HSM.
               </>
             }
-            cmd="keynv secret set @billing.prod.db_password"
           />
           <Step
-            no="02"
+            number="2"
+            icon={<Terminal size={14} strokeWidth={2} />}
             title="Reference"
             body={
               <>
-                In code, configs, and shell commands you type{' '}
-                <code className="font-mono text-fg bg-bg-elevated border border-border px-1 py-0.5 rounded-sm text-[0.9em]">
-                  @billing.prod.db_password
-                </code>
-                . That alias is the only string the AI agent ever sees.
+                In code, configs, and bash commands you type{' '}
+                <code className="font-mono text-fg">@billing.prod.db_password</code>. That&rsquo;s
+                the only string the AI agent ever sees.
               </>
             }
-            cmd='echo "DB=@billing.prod.db_password" >> .envrc'
           />
           <Step
-            no="03"
+            number="3"
+            icon={<ShieldCheck size={14} strokeWidth={2} />}
             title="Resolve safely"
             body={
               <>
-                <code className="font-mono text-fg bg-bg-elevated border border-border px-1 py-0.5 rounded-sm text-[0.9em]">
-                  keynv exec
-                </code>{' '}
-                spawns a subprocess with the real value injected via stdin or a temp file. The
-                agent&rsquo;s process tree, env, and tool output are scrubbed.
+                <code className="font-mono text-fg">keynv exec</code> spawns a subprocess with the
+                real value injected via stdin or a temp file. The agent&rsquo;s process tree, env
+                vars, and tool output are scrubbed.
               </>
             }
-            cmd="keynv exec -- pnpm dev"
           />
         </ol>
       </div>
@@ -519,119 +473,107 @@ function Procedure() {
 }
 
 function Step({
-  no,
+  number,
+  icon,
   title,
   body,
-  cmd,
 }: {
-  no: string;
+  number: string;
+  icon: React.ReactNode;
   title: string;
   body: React.ReactNode;
-  cmd: string;
 }) {
   return (
-    <li className="bg-bg p-7 grid gap-6 md:grid-cols-12 items-start">
-      <div className="md:col-span-1">
-        <span className="font-display text-[44px] leading-[0.9] font-medium tracking-[-0.02em] text-fg">
-          {no}
+    <li className="rounded-lg border border-border bg-bg-elevated p-5">
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-strong bg-bg text-fg-muted"
+        >
+          {icon}
         </span>
+        <span className="font-mono text-[11px] text-fg-subtle">step {number}</span>
       </div>
-      <div className="md:col-span-6">
-        <h3 className="font-display text-[26px] leading-[1.1] tracking-[-0.01em] font-medium">
-          {title}
-        </h3>
-        <p className="font-sans text-[16px] leading-[1.6] text-fg-muted mt-2">{body}</p>
-      </div>
-      <div className="md:col-span-5">
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle mb-2">
-          Sample
-        </div>
-        <code className="block font-mono text-[12.5px] leading-[1.5] bg-bg-overlay border border-border-strong px-3 py-3 text-fg overflow-x-auto whitespace-pre">
-          <span className="text-fg-subtle">$ </span>
-          {cmd}
-        </code>
-      </div>
+      <h3 className="mt-3 text-base font-semibold text-fg">{title}</h3>
+      <p className="mt-2 text-sm text-fg-muted leading-relaxed">{body}</p>
     </li>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────── */
-/* INSTALL                                                                */
-/* ────────────────────────────────────────────────────────────────────── */
+// ─── BOTTOM CTA ──────────────────────────────────────────────────────────────
 
-function Install() {
+function BottomCta({ ctx }: { ctx: CtaContext }) {
   return (
     <section className="border-b border-border">
-      <div className="mx-auto max-w-4xl px-4 md:px-6 py-16 md:py-20">
-        <div className="max-w-3xl">
-          <Stamp parts={['§ IV · INSTALLATION']} />
-        </div>
-        <InstallTabs />
-      </div>
-    </section>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────────── */
-/* CLOSING CTA — inverted                                                  */
-/* ────────────────────────────────────────────────────────────────────── */
-
-function ClosingCta({ ctx }: { ctx: CtaContext }) {
-  return (
-    <section className="newsprint-inverted border-y-2 border-fg">
-      <div className="mx-auto max-w-4xl px-4 md:px-6 py-20 md:py-28 text-center">
-        <Stamp parts={['§ V · CLOSING']} className="justify-center" />
-        <h2 className="font-display tracking-[-0.015em] text-[clamp(2.5rem,6vw,5rem)] leading-[0.98] mt-5 font-medium">
-          Ready to stop <RedactedText mode="hover">leaking</RedactedText>?
+      <div className="mx-auto max-w-3xl px-4 md:px-6 py-16 md:py-20 text-center">
+        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight leading-tight">
+          Ready to stop leaking?
         </h2>
-        <p className="font-sans text-[18px] leading-[1.55] text-fg-muted mt-5 max-w-2xl mx-auto">
-          Fifteen-minute self-host on Coolify. Single binary CLI. Source-available now, MIT when
-          Phase 5 ships.
+        <p className="mt-3 text-base text-fg-muted">
+          15-minute self-host on Coolify. Single binary CLI. Source-available, MIT-when-Phase-5
+          ships.
         </p>
-        <div className="mt-9 flex items-center justify-center gap-4 flex-wrap">
-          <CtaCluster ctx={ctx} />
-          <Link href={{ pathname: '/docs/quickstart' }}>
-            <Button
-              variant="secondary"
-              className="rounded-none border border-fg bg-transparent text-fg hover:bg-fg/10"
-            >
-              Quickstart guide
-            </Button>
-          </Link>
+        <div className="mt-7 flex items-center justify-center gap-3 flex-wrap">
+          {ctx.isAuthed ? (
+            <Link href={{ pathname: '/projects' }}>
+              <Button className="gap-1.5">
+                Open dashboard
+                <ArrowRight size={13} strokeWidth={2.25} />
+              </Button>
+            </Link>
+          ) : ctx.publicSignup ? (
+            <Link href={{ pathname: '/register' }}>
+              <Button className="gap-1.5">
+                Create your account
+                <ArrowRight size={13} strokeWidth={2.25} />
+              </Button>
+            </Link>
+          ) : (
+            <Link href={{ pathname: '/login' }}>
+              <Button className="gap-1.5">
+                Sign in
+                <ArrowRight size={13} strokeWidth={2.25} />
+              </Button>
+            </Link>
+          )}
+          <a
+            href="https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Button variant="secondary">Deploy guide</Button>
+          </a>
         </div>
-        <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle">
-          FILED {FILED} · CASE {CASE_NUMBER} · keynv.dev
-        </p>
       </div>
     </section>
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────── */
-/* COLOPHON / FOOTER                                                       */
-/* ────────────────────────────────────────────────────────────────────── */
+// ─── FOOTER ──────────────────────────────────────────────────────────────────
 
-function Colophon() {
+function Footer() {
   return (
-    <footer className="border-t border-fg/40">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-12">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className="border-t border-border">
+      <div className="mx-auto max-w-6xl px-4 md:px-6 py-10">
+        <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr] text-xs text-fg-muted">
           <div>
-            <div className="flex items-baseline gap-3">
-              <Logomark />
-              <span className="font-display text-2xl font-medium tracking-tight">keynv</span>
+            <div className="flex items-center gap-2 text-fg">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-accent text-fg-on-accent text-[10px] font-bold">
+                k
+              </span>
+              <span className="font-semibold tracking-tight">keynv</span>
             </div>
-            <p className="mt-5 font-sans text-[14px] leading-[1.6] text-fg-muted max-w-sm">
+            <p className="mt-3 leading-relaxed max-w-sm">
               Self-hosted, source-available secrets manager built for the AI-coding era. Phase 4 in
               progress; treat as not-yet-OSI-licensed until Phase 5 ships.
             </p>
-            <div className="mt-5">
+            <div className="mt-4">
               <StatusPill />
             </div>
           </div>
 
           <FooterColumn title="Product">
-            <FooterLink href="/docs">Documentation</FooterLink>
+            <FooterLink href="/docs">Docs</FooterLink>
             <FooterLink href="/changelog">Changelog</FooterLink>
             <FooterLink href="/docs/quickstart">Quickstart</FooterLink>
             <FooterLink href="/docs/roadmap">Roadmap</FooterLink>
@@ -660,12 +602,13 @@ function Colophon() {
           </FooterColumn>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-fg/25 flex flex-col md:flex-row md:items-center md:justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle">
+        <div className="mt-10 pt-6 border-t border-border flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-[11px] text-fg-subtle">
           <span>
-            PUBLIC BETA · SOC2 READINESS H2 2026 ·{' '}
+            Public beta · SOC2 readiness on the roadmap for H2 2026 — see{' '}
             <Link href={{ pathname: '/docs/threat-model' }} className="text-fg-muted hover:text-fg">
-              today’s defence
+              what we defend against today
             </Link>
+            .
           </span>
           <span>© {new Date().getFullYear()} keynv labs</span>
         </div>
@@ -677,10 +620,10 @@ function Colophon() {
 function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
         {title}
       </div>
-      <ul className="mt-4 space-y-2.5 font-sans text-[14px]">{children}</ul>
+      <ul className="mt-3 space-y-2">{children}</ul>
     </div>
   );
 }
@@ -701,7 +644,7 @@ function FooterLink({
           href={href}
           target="_blank"
           rel="noreferrer"
-          className="hover:underline transition-colors duration-fast ease-snap"
+          className="hover:text-fg transition-colors duration-fast ease-snap"
         >
           {children}
         </a>
@@ -712,7 +655,7 @@ function FooterLink({
     <li>
       <Link
         href={{ pathname: href } as never}
-        className="hover:underline transition-colors duration-fast ease-snap"
+        className="hover:text-fg transition-colors duration-fast ease-snap"
       >
         {children}
       </Link>

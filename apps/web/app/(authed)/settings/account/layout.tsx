@@ -13,9 +13,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
       <div>
         <Breadcrumb segments={[{ label: 'Settings' }, { label: 'Account' }]} />
         <header className="mt-3">
-          <h1 className="font-display text-[32px] font-medium tracking-[-0.01em] leading-tight">
-            Account
-          </h1>
+          <h1 className="text-[22px] font-semibold tracking-tight">Account</h1>
         </header>
       </div>
 
