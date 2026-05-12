@@ -63,6 +63,32 @@ pnpm test
 
 If you find a vulnerability, see [`SECURITY.md`](./SECURITY.md). Do not file a public issue.
 
+## Adding a new public route in apps/web
+
+Public routes (anything visitors should reach without a session) need
+to be declared in five places. Missing one is a silent bug: the route
+will build green locally but visitors will hit a `/login?next=…`
+redirect, a 404, or a broken deploy. Run through this list every
+time you add a top-level route under `apps/web/app/`:
+
+1. **Middleware** — add the path to `apps/web/middleware.ts`
+   `PUBLIC_PATHS` (exact) or `PUBLIC_PREFIXES` (any sub-route).
+   Without this the dashboard auth-guard sends visitors to /login.
+2. **Robots** — add to `apps/web/app/robots.ts` `allow` list so
+   search engines can crawl it.
+3. **Sitemap** — add to `apps/web/app/sitemap.ts` so the page is
+   discoverable + prioritised correctly.
+4. **Metadata** — set page-level `openGraph` / `twitter` / canonical
+   in the route's `metadata` export.
+5. **Dockerfile (if it reads files at build time)** — if the route
+   is `force-static` and calls `readFile` / `readRepoFile` on source
+   files outside `apps/web/`, add a `COPY` line for those files in
+   `apps/web/Dockerfile` stage 2 (builder). The local build will
+   succeed without it; the Coolify build will fail.
+
+This list is here because we forgot one step three times in three
+sprints. Sorry to future you.
+
 ## Tests
 
 - Unit tests live next to the code (`src/foo.ts` + `src/foo.test.ts`).
