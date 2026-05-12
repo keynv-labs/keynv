@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { SkipLink } from '@/components/ui/skip-link';
 import { type ChangelogSection, parseChangelog, readRepoFile } from '@/lib/markdown';
 import { ArrowRight, Github, Rss } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -32,6 +33,7 @@ export default async function ChangelogPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SkipLink />
       <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
         <div className="mx-auto max-w-3xl px-4 md:px-6 h-14 flex items-center gap-4">
           <Link
@@ -65,7 +67,7 @@ export default async function ChangelogPage() {
         </div>
       </header>
 
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         <div className="mx-auto max-w-3xl px-4 md:px-6 py-12 md:py-16">
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight">
             {TITLE}

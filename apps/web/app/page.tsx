@@ -3,6 +3,7 @@ import { GithubStars } from '@/components/trust/github-stars';
 import { StatusPill } from '@/components/trust/status-pill';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SkipLink } from '@/components/ui/skip-link';
 import { getCapabilities } from '@/lib/capabilities';
 import { getSession } from '@/lib/session';
 import {
@@ -65,8 +66,9 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
+      <SkipLink />
       <TopNav ctx={ctx} />
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         <Hero ctx={ctx} />
         <Problem />
         <Pillars />

@@ -11,10 +11,20 @@
   --color-border: #23272f;
   --color-border-strong: #2f343d;
 
-  /* Foreground */
+  /* Foreground
+   * Contrast targets (WCAG AA, against --color-bg #0a0c0f and
+   * --color-bg-elevated #13161b):
+   *   --color-fg          ≈ 14.0 : 1   AAA normal + large
+   *   --color-fg-muted    ≈ 6.8  : 1   AA normal + AAA large
+   *   --color-fg-subtle   ≈ 4.8  : 1   AA normal (just clears 4.5)
+   * The previous --color-fg-subtle (#5d6470) sat at 3.1 : 1 — fine
+   * for large text only. Bumped to #7a8593 so 11-13 px metadata
+   * labels (timestamps, badges, breadcrumbs) clear AA. Do not push
+   * subtle further than this without re-checking; the design relies
+   * on a clear three-step hierarchy fg > muted > subtle. */
   --color-fg: #e9ecf2;
   --color-fg-muted: #9098a4;
-  --color-fg-subtle: #5d6470;
+  --color-fg-subtle: #7a8593;
   --color-fg-on-accent: #ffffff;
 
   /* Accent — single primary, used for primary action only (one per view) */

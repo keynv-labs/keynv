@@ -123,6 +123,7 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
                     <Link
                       href={{ pathname: item.href }}
                       onClick={handleNavigate}
+                      aria-current={active ? 'page' : undefined}
                       className={cn(
                         'group flex items-center gap-2.5 rounded-md px-2 py-1.5',
                         'text-sm transition-colors duration-fast ease-snap',

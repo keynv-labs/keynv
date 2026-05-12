@@ -1,4 +1,5 @@
 import { DocsSidebar } from '@/components/docs/sidebar';
+import { SkipLink } from '@/components/ui/skip-link';
 import { Github } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -6,6 +7,7 @@ import type { ReactNode } from 'react';
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
+      <SkipLink />
       <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-4 md:px-6 h-14 flex items-center gap-4">
           <Link
