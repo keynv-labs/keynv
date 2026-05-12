@@ -37,7 +37,7 @@ export async function addMemberAction(
   } catch (err) {
     return { error: (err as ApiError).message };
   }
-  revalidatePath(`/projects/${parsed.data.project_id}/members`);
+  revalidatePath(`/projects/${parsed.data.project_id}/settings`);
   return { ok: `added ${parsed.data.email}` };
 }
 
@@ -50,5 +50,5 @@ export async function removeMemberAction(formData: FormData): Promise<void> {
   } catch {
     /* ignore — refresh will surface */
   }
-  revalidatePath(`/projects/${project_id}/members`);
+  revalidatePath(`/projects/${project_id}/settings`);
 }

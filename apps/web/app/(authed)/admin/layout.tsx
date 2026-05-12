@@ -8,7 +8,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   // gate by role. Owner and admin can see the admin surface.
   if (!session) redirect('/login');
   if (session.org_role !== 'owner' && session.org_role !== 'admin') {
-    redirect('/projects');
+    redirect('/dashboard');
   }
   return <>{children}</>;
 }

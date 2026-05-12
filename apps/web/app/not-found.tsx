@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default async function NotFound() {
   const session = await getSession();
-  const homeHref = session ? '/projects' : '/';
+  const homeHref = session ? '/dashboard' : '/';
   const homeLabel = session ? 'Open dashboard' : 'Back home';
 
   return (

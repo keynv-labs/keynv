@@ -55,6 +55,6 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     access_expires_at: new Date(Date.now() + response.expires_in * 1000).toISOString(),
   });
 
-  const next = parsed.data.next?.startsWith('/') ? parsed.data.next : '/projects';
+  const next = parsed.data.next?.startsWith('/') ? parsed.data.next : '/dashboard';
   redirect(next);
 }

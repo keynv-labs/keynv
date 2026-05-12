@@ -116,7 +116,7 @@ function TopNav({ ctx }: { ctx: CtaContext }) {
 
         <div className="ml-auto flex items-center gap-2">
           {ctx.isAuthed ? (
-            <Link href={{ pathname: '/projects' }}>
+            <Link href={{ pathname: '/dashboard' }}>
               <Button size="sm" className="gap-1.5">
                 Open dashboard
                 <ArrowRight size={13} strokeWidth={2.25} />
@@ -195,7 +195,7 @@ function Hero({ ctx }: { ctx: CtaContext }) {
           style={{ animationDelay: '180ms' }}
         >
           {ctx.isAuthed ? (
-            <Link href={{ pathname: '/projects' }}>
+            <Link href={{ pathname: '/dashboard' }}>
               <Button size="lg" className="gap-2">
                 Open dashboard
                 <ArrowRight size={14} strokeWidth={2.25} />
@@ -543,7 +543,7 @@ function BottomCta({ ctx }: { ctx: CtaContext }) {
         </p>
         <div className="mt-9 flex items-center justify-center gap-3 flex-wrap">
           {ctx.isAuthed ? (
-            <Link href={{ pathname: '/projects' }}>
+            <Link href={{ pathname: '/dashboard' }}>
               <Button size="lg" className="gap-2">
                 Open dashboard
                 <ArrowRight size={14} strokeWidth={2.25} />

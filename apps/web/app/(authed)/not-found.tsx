@@ -15,9 +15,9 @@ export default function AuthedNotFound() {
         </>
       }
       actions={
-        <Link href={{ pathname: '/projects' }}>
+        <Link href={{ pathname: '/dashboard' }}>
           <Button className="gap-1.5">
-            Back to projects
+            Back to dashboard
             <ArrowRight size={13} strokeWidth={2.25} />
           </Button>
         </Link>

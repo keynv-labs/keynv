@@ -10,7 +10,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; reason?: string }>;
 }) {
   const params = await searchParams;
-  const nextParam = params.next ?? '/projects';
+  const nextParam = params.next ?? '/dashboard';
   const { publicSignup } = await getCapabilities();
 
   return (

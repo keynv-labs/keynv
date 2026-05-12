@@ -7,14 +7,13 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useActionState } from 'react';
-import { type TestActionState, runTestAction } from './actions';
+import { type TestActionState, runTestAction } from './test-actions';
 
 type TesterType = 'postgres' | 'mysql' | 'redis' | 'ssh' | 'http';
 
@@ -31,11 +30,11 @@ interface Props {
   env: string;
   keyName: string;
   alias: string;
-  trigger: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function TestSecretDialog({ projectId, env, keyName, alias, trigger }: Props) {
-  const [open, setOpen] = useState(false);
+export function TestSecretDialog({ projectId, env, keyName, alias, open, onOpenChange }: Props) {
   const [tester, setTester] = useState<TesterType>('postgres');
   const [state, action, pending] = useActionState<TestActionState, FormData>(runTestAction, {});
   const result = state.result;
@@ -47,18 +46,21 @@ export function TestSecretDialog({ projectId, env, keyName, alias, trigger }: Pr
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>
-          Test <span className="font-mono text-fg">{alias}</span>
+          Test{' '}
+          <span className="font-mono text-fg tabular">
+            <span className="text-accent">@</span>
+            {alias.replace(/^@/, '')}
+          </span>
         </DialogTitle>
         <DialogDescription>
           Pick a tester type and target. The secret value is decrypted server-side only for the
           duration of this call. Result is sanitised before it returns — no value will appear here.
         </DialogDescription>
 
-        <form action={action} className="mt-4 space-y-3">
+        <form action={action} className="mt-4 space-y-4">
           <input type="hidden" name="project_id" value={projectId} />
           <input type="hidden" name="env" value={env} />
           <input type="hidden" name="key" value={keyName} />
@@ -68,7 +70,7 @@ export function TestSecretDialog({ projectId, env, keyName, alias, trigger }: Pr
               name="tester"
               value={tester}
               onChange={(e) => setTester(e.target.value as TesterType)}
-              className="block h-8 w-full rounded-md border border-border bg-bg px-2.5 text-sm text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+              className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
             >
               {(['postgres', 'mysql', 'redis', 'ssh', 'http'] as const).map((t) => (
                 <option key={t} value={t}>
@@ -80,15 +82,19 @@ export function TestSecretDialog({ projectId, env, keyName, alias, trigger }: Pr
 
           <TargetForm tester={tester} />
 
-          {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+          {state.error ? (
+            <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
+              {state.error}
+            </p>
+          ) : null}
 
           {result ? <ResultBlock result={result} /> : null}
 
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending} className="gap-1.5">
               {pending ? (
                 <>
                   <Loader2 size={13} className="animate-spin" />
@@ -106,10 +112,6 @@ export function TestSecretDialog({ projectId, env, keyName, alias, trigger }: Pr
 }
 
 function TargetForm({ tester }: { tester: TesterType }) {
-  // Each tester needs slightly different fields. We render visible
-  // <Input>s, then mirror them into a hidden 'target_json' field via
-  // form data on submit. The server's zod schema does the real
-  // validation; this is just a thin shaping layer for UX.
   switch (tester) {
     case 'postgres':
     case 'mysql':
@@ -220,11 +222,6 @@ interface FieldDef {
   options?: string[];
 }
 
-/**
- * Renders the visible inputs and ALSO emits the same data as a single
- * hidden `target_json` form field so the server action gets a stable
- * shape regardless of which tester is selected.
- */
 function BuildJson({ fields }: { fields: FieldDef[] }) {
   const [values, setValues] = useState<Record<string, string | boolean>>(() => {
     const init: Record<string, string | boolean> = {};
@@ -255,12 +252,12 @@ function BuildJson({ fields }: { fields: FieldDef[] }) {
         {fields.map((f) => (
           <Field key={f.name} label={f.label}>
             {f.type === 'checkbox' ? (
-              <label className="inline-flex items-center gap-2 text-sm text-fg">
+              <label className="inline-flex items-center gap-2 text-sm text-fg h-9">
                 <input
                   type="checkbox"
                   checked={Boolean(values[f.name])}
                   onChange={(e) => setField(f.name, e.target.checked)}
-                  className="h-4 w-4 rounded border-border bg-bg accent-accent"
+                  className="h-4 w-4 rounded border-border bg-bg-inset accent-accent"
                 />
                 <span className="text-fg-muted text-xs">enable</span>
               </label>
@@ -268,7 +265,7 @@ function BuildJson({ fields }: { fields: FieldDef[] }) {
               <select
                 value={String(values[f.name] ?? '')}
                 onChange={(e) => setField(f.name, e.target.value)}
-                className="block h-8 w-full rounded-md border border-border bg-bg px-2.5 text-sm text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+                className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
               >
                 <option value="">—</option>
                 {f.options?.map((opt) => (
@@ -304,8 +301,8 @@ function ResultBlock({
       className={cn(
         'rounded-md border p-3 text-sm',
         result.ok
-          ? 'border-[color-mix(in_oklab,var(--color-success)_30%,var(--color-border))] bg-[color-mix(in_oklab,var(--color-success)_8%,transparent)]'
-          : 'border-[color-mix(in_oklab,var(--color-danger)_30%,var(--color-border))] bg-[color-mix(in_oklab,var(--color-danger)_8%,transparent)]',
+          ? 'border-success-soft-border bg-success-soft'
+          : 'border-danger-soft-border bg-danger-soft',
       )}
     >
       <div className="flex items-center gap-2">
@@ -315,7 +312,9 @@ function ResultBlock({
           <XCircle size={14} className="text-danger shrink-0" strokeWidth={2.25} />
         )}
         <span className="font-medium">{result.ok ? 'Connected' : 'Failed'}</span>
-        <span className="ml-auto text-xs text-fg-muted tabular-nums">{result.latency_ms}ms</span>
+        <span className="ml-auto font-mono text-xs text-fg-muted tabular">
+          {result.latency_ms}ms
+        </span>
       </div>
       {result.error ? (
         <div className="mt-2 font-mono text-[12px] text-danger break-all">{result.error}</div>
@@ -332,7 +331,7 @@ function ResultBlock({
 function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

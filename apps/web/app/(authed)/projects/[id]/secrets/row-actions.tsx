@@ -7,10 +7,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileText, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import { Activity, FileText, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { DeleteSecretDialog, RotateSecretDialog } from './secret-dialogs';
+import { TestSecretDialog } from './test-dialog';
 
 interface Props {
   projectId: string;
@@ -22,6 +23,7 @@ interface Props {
 export function RowActions({ projectId, env, keyName, alias }: Props) {
   const [rotateOpen, setRotateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
 
   return (
     <>
@@ -36,6 +38,10 @@ export function RowActions({ projectId, env, keyName, alias }: Props) {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          <DropdownMenuItem onSelect={() => setTestOpen(true)}>
+            <Activity size={13} className="text-accent" />
+            Test connection
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setRotateOpen(true)}>
             <RotateCcw size={13} className="text-fg-muted" />
             Rotate value
@@ -62,6 +68,14 @@ export function RowActions({ projectId, env, keyName, alias }: Props) {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <TestSecretDialog
+        projectId={projectId}
+        env={env}
+        keyName={keyName}
+        alias={alias}
+        open={testOpen}
+        onOpenChange={setTestOpen}
+      />
       <RotateSecretDialog
         open={rotateOpen}
         onOpenChange={setRotateOpen}

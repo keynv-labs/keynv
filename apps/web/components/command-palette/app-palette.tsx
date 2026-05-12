@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Command } from 'cmdk';
 import {
+  Activity,
   FolderKanban,
   LogOut,
   Plus,
@@ -75,7 +76,10 @@ export function AppPalette() {
 
       // g-prefix: 2-key navigation sequence.
       if (pendingPrefix === 'g') {
-        if (e.key === 'p') {
+        if (e.key === 'h') {
+          e.preventDefault();
+          router.push('/dashboard');
+        } else if (e.key === 'p') {
           e.preventDefault();
           router.push('/projects');
         } else if (e.key === 'a') {
@@ -152,9 +156,16 @@ export function AppPalette() {
 
                 <Command.Group heading="Go to">
                   <PaletteItem
+                    icon={<Activity size={14} strokeWidth={2} />}
+                    label="Activity"
+                    keywords={['activity', 'home', 'dashboard', 'feed']}
+                    hint="g h"
+                    onSelect={() => closeAndGo('/dashboard')}
+                  />
+                  <PaletteItem
                     icon={<FolderKanban size={14} strokeWidth={2} />}
                     label="Projects"
-                    keywords={['projects', 'home', 'dashboard']}
+                    keywords={['projects', 'list', 'all']}
                     hint="g p"
                     onSelect={() => closeAndGo('/projects')}
                   />
@@ -281,6 +292,9 @@ function GPrefixHint() {
     >
       <span className="font-mono text-fg-muted">g</span>
       <span className="mx-1.5 text-fg-subtle">→</span>
+      <span className="font-mono text-fg">h</span>
+      <span className="text-fg-muted"> home</span>
+      <span className="mx-2 text-fg-subtle">·</span>
       <span className="font-mono text-fg">p</span>
       <span className="text-fg-muted"> projects</span>
       <span className="mx-2 text-fg-subtle">·</span>

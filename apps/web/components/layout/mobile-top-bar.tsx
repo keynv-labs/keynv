@@ -33,7 +33,7 @@ export function MobileTopBar({ email, role }: Props) {
         >
           <Menu size={18} strokeWidth={2} />
         </button>
-        <Link href={{ pathname: '/projects' }} className="flex items-center">
+        <Link href={{ pathname: '/dashboard' }} className="flex items-center">
           <Logomark size={22} />
         </Link>
       </header>

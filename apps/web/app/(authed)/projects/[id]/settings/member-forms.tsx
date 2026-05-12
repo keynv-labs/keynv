@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
-import { type MemberActionState, addMemberAction, removeMemberAction } from './actions';
+import { type MemberActionState, addMemberAction, removeMemberAction } from './member-actions';
 
 export function AddMemberDialog({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
@@ -67,7 +67,7 @@ export function AddMemberDialog({ projectId }: { projectId: string }) {
             <select
               name="role"
               defaultValue="developer"
-              className="block h-8 w-full rounded-md border border-border bg-bg px-2.5 text-sm text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+              className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
             >
               <option value="lead">Lead</option>
               <option value="developer">Developer</option>
@@ -75,7 +75,11 @@ export function AddMemberDialog({ projectId }: { projectId: string }) {
             </select>
           </Field>
 
-          {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+          {state.error ? (
+            <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
+              {state.error}
+            </p>
+          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
@@ -118,7 +122,7 @@ export function RemoveMemberAction({
           <div className="flex items-start gap-3">
             <span
               aria-hidden
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--color-danger)_14%,transparent)]"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-danger-soft-border bg-danger-soft"
             >
               <Trash2 size={16} className="text-danger" strokeWidth={2} />
             </span>
@@ -169,7 +173,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

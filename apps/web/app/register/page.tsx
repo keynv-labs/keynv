@@ -11,7 +11,7 @@ export default async function RegisterPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const params = await searchParams;
-  const nextParam = params.next ?? '/projects';
+  const nextParam = params.next ?? '/dashboard';
 
   const { publicSignup } = await getCapabilities({ fallback: { publicSignup: true } });
   if (!publicSignup) {

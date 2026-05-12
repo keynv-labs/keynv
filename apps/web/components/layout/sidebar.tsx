@@ -3,7 +3,15 @@
 import { logoutAction } from '@/app/(authed)/actions';
 import { Logomark } from '@/components/brand/logomark';
 import { cn } from '@/lib/cn';
-import { FolderKanban, LogOut, ScrollText, Settings, ShieldCheck, Users } from 'lucide-react';
+import {
+  Activity,
+  FolderKanban,
+  LogOut,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
@@ -24,8 +32,15 @@ interface NavGroup {
 function buildGroups(role: string): NavGroup[] {
   const groups: NavGroup[] = [
     {
-      title: 'Vault',
+      title: 'Workspace',
       items: [
+        {
+          href: '/dashboard',
+          label: 'Activity',
+          icon: Activity,
+          shortcut: 'g h',
+          match: (p) => p === '/dashboard',
+        },
         {
           href: '/projects',
           label: 'Projects',
@@ -43,11 +58,11 @@ function buildGroups(role: string): NavGroup[] {
       ],
     },
     {
-      title: 'Workspace',
+      title: 'Account',
       items: [
         {
           href: '/settings/account',
-          label: 'Account',
+          label: 'Settings',
           icon: Settings,
           shortcut: 'g s',
           match: (p) => p.startsWith('/settings'),
@@ -93,7 +108,7 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
     <div className="flex h-full flex-col">
       <div className="h-14 px-4 flex items-center border-b border-border shrink-0">
         <Link
-          href={{ pathname: '/projects' }}
+          href={{ pathname: '/dashboard' }}
           onClick={handleNavigate}
           className="flex items-center"
         >
@@ -154,12 +169,11 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
       >
         <span className="relative inline-flex shrink-0">
           <ShieldCheck size={14} className="text-success" />
-          <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-success animate-amber-pulse [animation-name:amber-pulse]" />
         </span>
         <div className="flex-1 min-w-0">
-          <div className="text-fg leading-tight">Audit chain</div>
+          <div className="text-fg leading-tight">Chain healthy</div>
           <div className="text-fg-subtle leading-tight mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em]">
-            tamper-evident
+            tamper-evident · verify
           </div>
         </div>
       </Link>
