@@ -15,10 +15,40 @@ import {
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+const TITLE = 'keynv — secrets your AI agent can’t leak';
+const DESCRIPTION =
+  'Self-hosted vault for your team’s API keys, DB passwords, and SSH credentials. Reference them by alias — your AI coding agent sees the alias literal, never the value.';
+
 export const metadata: Metadata = {
-  title: 'keynv — secrets your AI agent can’t leak',
-  description:
-    'Self-hosted vault for your team’s API keys, DB passwords, and SSH credentials. Reference them by alias — your AI coding agent sees the alias literal, never the value.',
+  metadataBase: new URL('https://keynv.dev'),
+  title: TITLE,
+  description: DESCRIPTION,
+  applicationName: 'keynv',
+  keywords: [
+    'secrets management',
+    'AI agent security',
+    'AI coding agents',
+    'Claude Code',
+    'Cursor',
+    'self-hosted vault',
+    'AI-safe secrets',
+    'environment variables',
+    'API key vault',
+  ],
+  openGraph: {
+    type: 'website',
+    url: 'https://keynv.dev',
+    siteName: 'keynv',
+    title: TITLE,
+    description: DESCRIPTION,
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  alternates: { canonical: 'https://keynv.dev' },
 };
 
 interface CtaContext {

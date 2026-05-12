@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 /**
- * Auth middleware. Public paths: '/', '/login', '/register', '/_next/*',
- * static assets, '/api/health'. Everything else requires the session
- * cookie.
+ * Auth middleware. Public paths: the landing pages, '/_next/*', the
+ * '/api/health' probe, and any path with a file extension (favicons,
+ * icons, robots.txt, sitemap.xml, llms.txt, opengraph-image.png, …).
+ * Everything else requires the session cookie.
  *
  * The cookie's actual validity (signature, expiry) is checked by the
  * keynv-server on every API call; the middleware only gates whether
@@ -14,6 +15,7 @@ import { type NextRequest, NextResponse } from 'next/server';
  * flag — middleware just lets the request through.
  */
 const PUBLIC_PATHS = new Set(['/login', '/register', '/']);
+const STATIC_OR_DISCOVERY = /\.[a-zA-Z0-9]+$/;
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -21,7 +23,7 @@ export function middleware(req: NextRequest) {
     PUBLIC_PATHS.has(pathname) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/health') ||
-    pathname.startsWith('/favicon')
+    STATIC_OR_DISCOVERY.test(pathname)
   ) {
     return NextResponse.next();
   }
