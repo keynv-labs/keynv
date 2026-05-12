@@ -150,6 +150,7 @@ jobs:
           set -euo pipefail
           if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then
             npm publish --access public --tag next --provenance
+            npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
           else
             npm publish --access public --provenance
           fi
