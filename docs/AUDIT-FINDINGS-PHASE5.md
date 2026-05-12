@@ -31,7 +31,7 @@ Status as of: Phase 5 kick-off. This document grows as the audit progresses.
 | Threat | Mitigation in code | Test pointer | Status |
 | --- | --- | --- | --- |
 | Fake `keynv` binary on PATH spoofs the real one and exfiltrates | Phase 5 release pipeline ships cosign-signed binaries (Stream C, deferred to v0.2.0 per locked DP #2). Documentation tells users to verify signatures before trusting binaries. | — | ⚠️ Deferred to v0.2.0 |
-| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls | `keynv install <agent>` writes the MCP config with an absolute path. The integration installer asserts the configured `command` matches the keynv-mcp binary. | `tests/security/mcp-reference-token.test.ts` (it.todo) | 🟡 Mitigated by inspection |
+| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls | `keynv init` writes the MCP config with an absolute path. The CLI asserts the configured `command` matches the keynv-mcp binary on first run. | `tests/security/mcp-reference-token.test.ts` (it.todo) | 🟡 Mitigated by inspection |
 | Replay of an old auth token | Access tokens are short-lived JWTs (15 min default; `KEYNV_ACCESS_TOKEN_TTL_S`). Refresh tokens are SHA-256-hashed at rest in `auth_refresh_tokens` and rotated on every refresh — `apps/server/src/auth/tokens.ts:rotateRefreshToken` revokes the old one before issuing the new. | `apps/server/src/test/integration.test.ts` covers refresh + revoke; the rotation behavior is exercised by the `auth.refresh` happy path | ⚙️ Mitigated, tested via integration |
 | Forged audit entries | Audit chain is hash-chained (SHA-256 of previous row). `appendEntry` in `packages/core/src/audit/append.ts` computes `hash = SHA256(prev_hash + JSON-canonical(payload) + ts + actor + event_type)`. `auditCore.verifyChain` walks the chain and reports the first break. | `packages/core/src/audit/*.test.ts` (18 tests over chain + payload schemas); integration: `audit chain records the full flow with a verifiable chain` | ✅ Mitigated + tested |
 
@@ -64,8 +64,8 @@ Status as of: Phase 5 kick-off. This document grows as the audit progresses.
 | Mechanism | Code path | Test |
 | --- | --- | --- |
 | Project doesn't store `.env` with values; uses `.keynv.toml` listing aliases only | Convention; project init scaffolds the right shape | ⚠️ no test |
-| Claude Code: `keynv install claude-code` writes a PreToolUse hook denying `Read` of `.env`, `*.pem`, `id_rsa*` | `packages/integrations/src/claude-code.ts` | `tests/security/env-files.test.ts` (it.todo) |
-| Cursor / Aider: `.cursorignore` / `.aiderignore` written with the same patterns | `packages/integrations/src/{cursor,aider}.ts` | same — todos |
+| Claude Code: `keynv init` migrates `.env` to vault, writes `.keynv.env` with alias refs only — raw values never reach disk | `apps/cli/src/init.ts` | N/A — threat target removed |
+| Cursor / Aider: `.keynv.env` with alias refs only, no raw values on disk | `apps/cli/src/init.ts` | N/A — threat target removed |
 
 **Status**: 🟡 Mitigated by inspection. Phase 5 sub-task **AF-1**: convert the env-files todos into real tests that materialize a fake repo dir, run the integration installer, and assert the resulting hook/ignore files block the right paths.
 

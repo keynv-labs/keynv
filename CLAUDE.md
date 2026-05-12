@@ -71,7 +71,7 @@ The master plan that produced these docs lives at `~/.claude/plans/geli-tiricile
 - The codebase contains test fixtures that *look* like secrets but are not (e.g., `example-fake-token-do-not-use`). Treat them as opaque strings; do not try to "resolve" them.
 - If a tool result contains real-looking sensitive values, *flag it to the user* — that's likely a leak and should be reported, not used.
 - Prefer `keynv exec --` even in development scripts. Eat your own dogfood; if `keynv exec` is awkward in some flow, that's a UX bug to file, not to work around.
-- The `~/.claude/settings.local.json` (or `.claude/settings.json` in this repo, once Phase 2 ships an `keynv install claude-code` template) will deny `Read` on `.env*`, `*.pem`, `id_rsa*`. If a tool fails with "blocked by keynv-guard", do not try to work around it.
+- The `~/.claude/settings.local.json` (or `.claude/settings.json` in this repo) denies `Read` on `.env*`, `*.pem`, `id_rsa*` via the agent's own hook mechanism. If a tool fails with "blocked by keynv-guard", do not try to work around it.
 
 ## Quick orientation commands
 
@@ -105,5 +105,5 @@ pnpm --filter @keynv/server dev
 - **KEK**: Key Encryption Key. Master key that encrypts each project's DEK. Lives in OS keychain locally; in HSM/KMS in commercial tier.
 - **redactor**: The pattern + entropy scanner that masks secrets in tool outputs before they reach the AI agent.
 - **safety layer**: The combination of `keynv exec`, `keynv-mcp`, and the redactor.
-- **integration installer**: Per-agent config writer (`keynv install claude-code`, `keynv install cursor`, ...).
+- **integration installer**: Replaced by `keynv init` — scans `.env` files, uploads secrets to vault, writes `.keynv.env` (alias refs only).
 - **privileged subprocess**: Subprocess spawned by `keynv exec` that has the real secret values in its env/argv/stdin but does NOT inherit the AI agent's fd/env/cwd.

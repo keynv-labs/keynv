@@ -66,7 +66,9 @@ export async function runBrowserAuth(serverUrl: string): Promise<Credentials> {
   if (!opened) {
     throw new BrowserAuthError(`Open this URL in your browser: ${start.verification_uri_complete}`);
   }
-  process.stderr.write(`\n  Your code: ${start.user_code}\n  Complete auth in your browser, then return here.\n\n`);
+  process.stderr.write(
+    `\n  Your code: ${start.user_code}\n  Complete auth in your browser, then return here.\n\n`,
+  );
 
   const deadline = Date.now() + start.expires_in * 1000;
   const intervalMs = Math.max(1, start.interval) * 1000;

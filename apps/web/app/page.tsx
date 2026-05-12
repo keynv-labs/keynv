@@ -494,15 +494,18 @@ function Integrations() {
           <span className="text-fg-muted">No prompt-engineering required.</span>
         </h2>
         <p className="mt-6 text-base text-fg-muted text-center max-w-2xl mx-auto leading-relaxed">
-          The CLI ships installers for popular AI coding agents — they configure the MCP server,
-          register the safety hooks, and rewrite your shell so secrets are resolved out-of-band.
+          Run <code className="text-accent">keynv init</code> in your project root — it scans
+          existing
+          <code className="text-accent">.env</code> files, uploads detected secrets to the vault,
+          and writes a project-local <code className="text-accent">.keynv.env</code> that maps alias
+          names to vault references. Safe to commit — alias literals only, never raw values.
         </p>
 
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           <IntegrationCard
             name="Claude Code"
-            command="keynv install claude-code"
-            file="~/.claude/settings.local.json"
+            command="keynv init"
+            file="your-project/.keynv.env"
             snippet={
               <>
                 <Line>
@@ -538,14 +541,14 @@ function Integrations() {
             }
             features={[
               'MCP server with use_secret refs',
-              'Read denylist on .env / *.pem',
               'Output redactor on every tool result',
+              'Shell wrapper: keynv exec --',
             ]}
           />
           <IntegrationCard
-            name="Cursor"
-            command="keynv install cursor"
-            file="~/.cursor/mcp.json"
+            name="MCP-powered agents"
+            command="keynv-mcp"
+            file="any MCP-compatible agent"
             snippet={
               <>
                 <Line>
@@ -564,14 +567,7 @@ function Integrations() {
                 <Line>
                   {'      '}
                   <span className="text-fg-muted">"command"</span>:{' '}
-                  <span className="text-success">"keynv-mcp"</span>,
-                </Line>
-                <Line>
-                  {'      '}
-                  <span className="text-fg-muted">"args"</span>:{' '}
-                  <span className="text-fg-subtle">[</span>
-                  <span className="text-success">"--mode=cursor"</span>
-                  <span className="text-fg-subtle">{']'}</span>
+                  <span className="text-success">"keynv-mcp"</span>
                 </Line>
                 <Line>
                   {'    '}
@@ -587,9 +583,9 @@ function Integrations() {
               </>
             }
             features={[
-              'Same MCP server as Claude Code',
-              'Composer auto-resolves @aliases',
-              'Per-rule access scoping',
+              'Works with any MCP client',
+              'use_secret returns single-use refs',
+              'Resolution inside privileged subprocess',
             ]}
           />
           <IntegrationCard

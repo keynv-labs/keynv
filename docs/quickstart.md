@@ -104,20 +104,14 @@ shell history). Run `keynv secret list @billing.dev` to verify.
 
 ## 6 · Wire your AI coding agent
 
+Run `keynv init` in your project root. It scans existing `.env` files,
+uploads detected secrets to the vault, and writes a project-local
+`.keynv.env` that maps alias names to vault references. The file is safe
+to commit — it contains only alias literals, never raw values.
+
 ```bash
-keynv install claude-code
-# or: keynv install cursor
+keynv init
 ```
-
-This writes a hardened `~/.claude/settings.local.json` (or equivalent)
-that:
-
-- Adds `keynv-mcp` as an MCP server so the agent can ask for secret
-  references by alias.
-- Denies `Read` on `.env*`, `*.pem`, `id_rsa*` so the agent can't
-  bypass keynv by reading raw files.
-- Wraps shell commands with `keynv exec --` so resolved values never
-  touch the agent's process tree.
 
 Restart your agent.
 

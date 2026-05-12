@@ -49,7 +49,7 @@ The product itself exists because existing vaults (HashiCorp, Doppler, 1Password
 
 - CLI: \`@keynv/cli\` on npm (Node 20+, also distributed as a single-file Bun build)
 - MCP server: \`keynv-mcp\` for AI agents that speak Model Context Protocol
-- Per-agent installers: \`keynv install claude-code\`, \`keynv install cursor\` (writes a hardened settings template)
+- Per-agent setup: run keynv init in your project to migrate .env files and write a .keynv.env (alias references only, safe to commit)
 
 ## Project status
 

@@ -19,10 +19,9 @@ interface OnboardingDeps {
  * the caller's own user (cli tokens) so a teammate's progress doesn't
  * silently mark steps complete for someone else who hasn't done them.
  *
- * `integration_installed` is unimplemented — there's no audit event
- * type yet for `keynv install <agent>`. Always returns false until
- * that event ships. The web client treats false as "not yet" and
- * surfaces the install CTA accordingly.
+ * `integration_installed` is no longer tracked — `keynv init` replaces the
+ * per-agent installers. The web client skips the install CTA when
+ * `.keynv.env` exists in the project root.
  *
  * Dismissal state is NOT tracked here — kept in browser localStorage
  * for the v1 (per-device, lightweight). Move to a `users.

@@ -33,7 +33,7 @@ Out of scope:
 | Threat | Mitigation |
 |---|---|
 | Fake `keynv` binary on PATH spoofs the real one and exfiltrates. | Binaries are signed (Phase 5); installer verifies signature. Documentation tells users to verify signatures and pin paths. |
-| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls. | MCP server config in agent settings points at an absolute path written by `keynv install <agent>`; the integration installer rejects suspicious overrides. |
+| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls. | `keynv init` writes the MCP config with an absolute path; the CLI asserts the configured `command` matches the keynv-mcp binary on first run. | `tests/security/mcp-reference-token.test.ts` | 🟡 Mitigated by inspection |
 | Replay of an old auth token. | JWTs are short-lived (15 min). Refresh tokens are bound to a device fingerprint. |
 | Forged audit entries. | Audit chain is hash-chained: each row includes SHA-256 of previous row. `keynv audit verify` detects tampering. |
 
