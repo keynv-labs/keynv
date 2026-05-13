@@ -2,15 +2,15 @@ import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { PageHeader, SectionHeader, StatCard } from '@/components/layout/page-header';
 import { OnboardingChecklist } from '@/components/onboarding/checklist';
 import { Badge, envTone } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { type OnboardingStatus, isOnboardingComplete } from '@/lib/onboarding';
 import { fetchOnboardingStatus } from '@/lib/onboarding-server';
 import { getSession } from '@/lib/session';
-import { ArrowUpRight, Plus, Terminal } from 'lucide-react';
+import { ArrowUpRight, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { NewProjectButton } from './new-project-button';
 
 interface ProjectListItem {
   id: string;
@@ -78,16 +78,7 @@ export default async function ProjectsPage() {
         eyebrow="vault · all projects"
         title="Projects"
         description="Operational state across your organization."
-        actions={
-          canCreate ? (
-            <Link href={{ pathname: '/projects/new' }}>
-              <Button className="gap-1.5">
-                <Plus size={14} strokeWidth={2.25} />
-                New project
-              </Button>
-            </Link>
-          ) : null
-        }
+        actions={canCreate ? <NewProjectButton /> : null}
       />
 
       <Suspense fallback={<ProjectsSkeleton />}>
@@ -242,12 +233,7 @@ function EmptyState({ canCreate }: { canCreate: boolean }) {
 
         {canCreate ? (
           <div className="mt-7">
-            <Link href={{ pathname: '/projects/new' }}>
-              <Button className="gap-1.5">
-                <Plus size={14} strokeWidth={2.25} />
-                Create first project
-              </Button>
-            </Link>
+            <NewProjectButton label="Create first project" />
             <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
               or run <code className="text-accent normal-case">keynv project init</code> from the
               CLI

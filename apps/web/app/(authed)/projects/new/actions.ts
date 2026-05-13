@@ -1,7 +1,6 @@
 'use server';
 
 import { type ApiError, api } from '@/lib/api';
-import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 const Env = z.object({
@@ -21,6 +20,7 @@ const Body = z.object({
 
 export interface CreateProjectState {
   error?: string;
+  projectId?: string;
 }
 
 export async function createProjectAction(
@@ -58,5 +58,5 @@ export async function createProjectAction(
     const e = err as ApiError;
     return { error: e.message };
   }
-  redirect(`/projects/${project.id}`);
+  return { projectId: project.id };
 }
