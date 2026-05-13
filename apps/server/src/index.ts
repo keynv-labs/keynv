@@ -5,7 +5,7 @@ import { openDb } from './db/index.js';
 import { loadOrCreateKek } from './kek/load.js';
 import { loadEnv } from './lib/env.js';
 
-export const VERSION = '0.0.0-phase1';
+export const VERSION = '0.1.0-rc.11';
 
 async function main(): Promise<void> {
   const env = loadEnv();
