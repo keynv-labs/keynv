@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectItem } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { cn } from '@/lib/cn';
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -82,11 +84,7 @@ export function TestSecretDialog({ projectId, env, keyName, alias, open, onOpenC
 
           <TargetForm tester={tester} />
 
-          {state.error ? (
-            <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
-              {state.error}
-            </p>
-          ) : null}
+          {state.error ? <ErrorBlock message={state.error} /> : null}
 
           {result ? <ResultBlock result={result} /> : null}
 
@@ -253,11 +251,9 @@ function BuildJson({ fields }: { fields: FieldDef[] }) {
           <Field key={f.name} label={f.label}>
             {f.type === 'checkbox' ? (
               <label className="inline-flex items-center gap-2 text-sm text-fg h-9">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={Boolean(values[f.name])}
-                  onChange={(e) => setField(f.name, e.target.checked)}
-                  className="h-4 w-4 rounded border-border bg-bg-inset accent-accent"
+                  onCheckedChange={(v) => setField(f.name, v === true)}
                 />
                 <span className="text-fg-muted text-xs">enable</span>
               </label>

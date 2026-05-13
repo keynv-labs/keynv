@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
 import { useActionState } from 'react';
 import { type CreateProjectState, createProjectAction } from './actions';
@@ -54,7 +55,7 @@ export function CreateProjectForm() {
         />
       </Field>
 
-      {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+      {state.error ? <ErrorBlock message={state.error} /> : null}
 
       <div className="flex items-center justify-end gap-2 pt-1">
         <Button type="submit" disabled={pending}>

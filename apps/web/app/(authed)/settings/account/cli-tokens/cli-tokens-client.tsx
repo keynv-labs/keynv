@@ -19,6 +19,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { ErrorBlock } from '@/components/ui/error-block';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/cn';
 import { Check, Copy, KeyRound, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -112,25 +119,27 @@ export function CliTokensClient({ tokens }: { tokens: CliTokenRow[] }) {
       )}
 
       {revoked.length > 0 ? (
-        <details className="group">
-          <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap select-none">
+        <Collapsible>
+          <CollapsibleTrigger className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap select-none data-[state=open]:text-accent">
             show revoked ({revoked.length})
-          </summary>
-          <ul className="mt-2 rounded-lg border border-border bg-bg-elevated/50 divide-y divide-border overflow-hidden opacity-70">
-            {revoked.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center gap-3 px-4 py-3 text-fg-muted line-through"
-              >
-                <KeyRound size={14} className="text-fg-subtle shrink-0" strokeWidth={2} />
-                <span className="flex-1 min-w-0 text-sm truncate">{t.name}</span>
-                <span className="text-[11px] text-fg-subtle no-underline">
-                  Revoked {formatRelative(t.revoked_at)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </details>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-fast">
+            <ul className="mt-2 rounded-lg border border-border bg-bg-elevated/50 divide-y divide-border overflow-hidden opacity-70">
+              {revoked.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center gap-3 px-4 py-3 text-fg-muted line-through"
+                >
+                  <KeyRound size={14} className="text-fg-subtle shrink-0" strokeWidth={2} />
+                  <span className="flex-1 min-w-0 text-sm truncate">{t.name}</span>
+                  <span className="text-[11px] text-fg-subtle no-underline">
+                    Revoked {formatRelative(t.revoked_at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
     </div>
   );
@@ -205,11 +214,7 @@ function CreateTokenDialog() {
                 />
               </label>
 
-              {state.error ? (
-                <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
-                  {state.error}
-                </p>
-              ) : null}
+              {state.error ? <ErrorBlock message={state.error} /> : null}
 
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
@@ -282,14 +287,16 @@ function RevokeAction({ id, name }: { id: string; name: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={`Revoke ${name}`}
-        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted hover:bg-bg-elevated-hover hover:text-danger transition-colors duration-fast ease-snap"
-      >
-        <Trash2 size={14} strokeWidth={2} />
-      </button>
+      <Tooltip content={`Revoke ${name}`} side="left">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`Revoke ${name}`}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted hover:bg-bg-elevated-hover hover:text-danger transition-colors duration-fast ease-snap"
+        >
+          <Trash2 size={14} strokeWidth={2} />
+        </button>
+      </Tooltip>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>

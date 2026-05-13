@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { useActionState } from 'react';
@@ -48,15 +49,7 @@ export function LoginForm({ next }: { next: string }) {
         />
       </Field>
 
-      {state.error ? (
-        <p
-          className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger"
-          role="alert"
-          aria-live="polite"
-        >
-          {state.error}
-        </p>
-      ) : null}
+      {state.error ? <ErrorBlock message={state.error} /> : null}
 
       <Button type="submit" size="lg" disabled={pending} className="w-full">
         {pending ? 'Signing in…' : 'Sign in'}

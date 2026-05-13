@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
@@ -92,7 +93,7 @@ export function CreateSecretDialog({
             />
           </Field>
 
-          {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+          {state.error ? <ErrorBlock message={state.error} /> : null}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
@@ -155,7 +156,7 @@ export function RotateSecretDialog({
             />
           </Field>
 
-          {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+          {state.error ? <ErrorBlock message={state.error} /> : null}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

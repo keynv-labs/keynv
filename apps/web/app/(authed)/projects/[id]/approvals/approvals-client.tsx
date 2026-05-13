@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
 import { Check, ShieldAlert, X } from 'lucide-react';
@@ -265,7 +266,7 @@ function GrantDialog({
               />
             </Field>
 
-            {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+            {state.error ? <ErrorBlock message={state.error} /> : null}
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
@@ -348,7 +349,7 @@ function DenyDialog({
               />
             </Field>
 
-            {state.error ? <p className="text-xs text-danger">{state.error}</p> : null}
+            {state.error ? <ErrorBlock message={state.error} /> : null}
 
             <AlertDialogFooter>
               <AlertDialogCancel asChild>

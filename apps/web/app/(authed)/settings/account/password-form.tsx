@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { ErrorBlock, SuccessBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
 import { useEffect, useRef } from 'react';
 import { useActionState } from 'react';
@@ -56,16 +57,8 @@ export function ChangePasswordForm() {
         />
       </Field>
 
-      {state.error ? (
-        <p className="rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
-          {state.error}
-        </p>
-      ) : null}
-      {state.ok ? (
-        <p className="rounded-md border border-success-soft-border bg-success-soft px-3 py-2 text-xs text-success">
-          {state.ok}
-        </p>
-      ) : null}
+      {state.error ? <ErrorBlock message={state.error} /> : null}
+      {state.ok ? <SuccessBlock message={state.ok} /> : null}
 
       <div className="flex items-center justify-end pt-1">
         <Button type="submit" disabled={pending}>

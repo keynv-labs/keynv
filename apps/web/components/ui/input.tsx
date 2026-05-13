@@ -9,7 +9,7 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
         'placeholder:text-fg-subtle',
         'transition-colors duration-fast ease-snap',
         'hover:border-border-strong',
-        'focus:border-border-bright focus:bg-bg',
+        'focus:border-border-bright focus:bg-bg focus:outline-none',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         className,
       )}

@@ -1,5 +1,6 @@
 import { Logomark } from '@/components/brand/logomark';
 import { Button } from '@/components/ui/button';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { SkipLink } from '@/components/ui/skip-link';
 import { getSession } from '@/lib/session';
 import Link from 'next/link';
@@ -59,9 +60,10 @@ export default async function CliAuthorizePage({
               </p>
 
               {params.error ? (
-                <p className="mt-5 rounded-md border border-danger-soft-border bg-danger-soft px-3 py-2 text-xs text-danger">
-                  The authorization code is invalid or expired. Run <code>keynv login</code> again.
-                </p>
+                <ErrorBlock
+                  message="The authorization code is invalid or expired. Run keynv login again."
+                  className="mt-5"
+                />
               ) : null}
 
               <form action={authorizeCliAction} className="mt-6 space-y-4">
