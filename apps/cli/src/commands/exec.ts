@@ -69,10 +69,11 @@ spelled \`--from\` to avoid the collision.)
     description: `Suppress the "loaded N vars from ${ENV_FILE_BASENAME}" status line.`,
   });
 
-  // Option.Proxy (not Rest) so that flags in the subprocess argv like
-  // `--port 3005` or `-v` are passed through as-is instead of being
-  // intercepted by clipanion's option parser.
-  rest = Option.Proxy();
+  // Option.Rest: keynv options (e.g. --no-env-file) are parsed before `--`.
+  // Everything after `--` is captured in rest verbatim, including subprocess
+  // flags like `--port 3005` and `-v`. Always use `--` to separate keynv
+  // options from the subprocess command.
+  rest = Option.Rest();
 
   async execute(): Promise<number> {
     if (!this.rest || this.rest.length === 0) {

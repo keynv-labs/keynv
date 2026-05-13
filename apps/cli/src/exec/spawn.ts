@@ -96,6 +96,7 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
   ]);
   let spawnCmd = opts.command;
   let spawnArgs = opts.args;
+  let windowsVerbatimArguments = false;
   if (process.platform === 'win32') {
     const comspec = env.COMSPEC ?? process.env.COMSPEC ?? 'cmd.exe';
     if (WIN_BUILTINS.has(opts.command.toLowerCase())) {
@@ -109,8 +110,16 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
       if (resolved !== null) {
         const ext = nodePath.extname(resolved).toLowerCase();
         if (ext === '.cmd' || ext === '.bat') {
+          // Build the cmd.exe command line manually to handle paths with spaces.
+          // Node.js's automatic quoting can corrupt the /s /c argument when the
+          // .cmd path contains spaces (e.g. C:\Users\John Doe\...\next.cmd).
+          // Pattern: wrap the ENTIRE inner command in outer quotes so /s strips
+          // exactly the outermost pair → "\"path with spaces\file.cmd\" args"
+          const q = (s: string) => (s.includes(' ') ? `"${s}"` : s);
+          const inner = [q(resolved), ...opts.args.map(q)].join(' ');
           spawnCmd = comspec;
-          spawnArgs = ['/d', '/s', '/c', resolved, ...opts.args];
+          spawnArgs = ['/d', '/s', '/c', `"${inner}"`];
+          windowsVerbatimArguments = true;
         } else {
           spawnCmd = resolved;
         }
@@ -122,6 +131,7 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
     env,
     stdio,
     detached: false,
+    windowsVerbatimArguments,
   });
 
   const literals = opts.resolved.map((r) => r.value).filter((v) => v.length > 0);

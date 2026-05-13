@@ -241,4 +241,34 @@ describe('spawnPrivileged — Windows .cmd resolution', () => {
       process.env.PATH = origPath;
     }
   });
+
+  it('resolves .cmd in a PATH directory whose name contains spaces (Windows)', async () => {
+    if (process.platform !== 'win32') return;
+
+    // Simulate node_modules/.bin living under a user directory with spaces,
+    // e.g. C:\Users\John Doe\project\node_modules\.bin\next.cmd
+    const { mkdtempSync: mdt, rmSync: rms } = await import('node:fs');
+    const spaceDir = mdt(join(tmpdir(), 'keynv space test-'));
+    try {
+      const cmdPath = join(spaceDir, 'spacetool.cmd');
+      writeFileSync(cmdPath, '@echo off\r\nif "%1"=="ok" (exit /b 0) else (exit /b 1)\r\n');
+
+      const origPath = process.env.PATH ?? '';
+      process.env.PATH = `${spaceDir}${delimiter}${origPath}`;
+      try {
+        const result = await spawnPrivileged({
+          command: 'spacetool',
+          args: ['ok'],
+          injectedEnv: {},
+          resolved: [],
+          noRedact: true,
+        });
+        expect(result.exitCode).toBe(0);
+      } finally {
+        process.env.PATH = origPath;
+      }
+    } finally {
+      rms(spaceDir, { recursive: true, force: true });
+    }
+  });
 });
