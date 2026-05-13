@@ -22,6 +22,11 @@ package.json scripts with \`keynv exec\`.
 Safe to re-run: existing .keynv.env entries are preserved; new
 entries are appended below a marker.
 
+--dry-run prints the secrets that would be uploaded and the alias
+mappings that would be written to .keynv.env, then exits without
+touching any files or making any network calls. Use it to preview
+what init will do before committing.
+
 Requires an interactive terminal (clack TUI). For scripted
 migration, use the lower-level \`keynv project\` and \`keynv secret\`
 commands directly.
@@ -35,7 +40,8 @@ commands directly.
   });
 
   dryRun = Option.Boolean('--dry-run', false, {
-    description: 'Show what would be done without writing files or uploading secrets.',
+    description:
+      'Scan .env files and print the secrets that would be uploaded and the alias mappings that would be written — no files written, no vault calls made.',
   });
   noScripts = Option.Boolean('--no-scripts', false, {
     description: 'Skip the package.json script-wrapping step.',

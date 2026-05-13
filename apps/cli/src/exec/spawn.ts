@@ -28,6 +28,18 @@ const ENV_ALLOWLIST: ReadonlyArray<string> = [
   'OLDPWD',
   'TMPDIR',
   'SSH_AUTH_SOCK',
+  // Windows-specific
+  'USERPROFILE',
+  'USERNAME',
+  'COMPUTERNAME',
+  'TEMP',
+  'TMP',
+  'SYSTEMROOT',
+  'SYSTEMDRIVE',
+  'WINDIR',
+  'COMSPEC',
+  'APPDATA',
+  'LOCALAPPDATA',
 ];
 
 export interface SpawnArgs {
@@ -72,10 +84,14 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
   // *our* stdout/stderr, so this is the right interception point.
   const stdio: StdioOptions = ['inherit', 'pipe', 'pipe'];
 
+  // On Windows, shell built-ins (echo, dir, type, etc.) are not executables
+  // and spawn fails with ENOENT unless shell:true is used. PowerShell also
+  // passes through cmd.exe so quoting semantics stay consistent.
   const child = spawn(opts.command, opts.args, {
     env,
     stdio,
     detached: false,
+    shell: process.platform === 'win32',
   });
 
   const literals = opts.resolved.map((r) => r.value).filter((v) => v.length > 0);

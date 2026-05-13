@@ -18,7 +18,9 @@ interface WhoamiResponse {
   id: string;
   email: string;
   org_id: string;
+  org_name: string;
   org_role: string;
+  memberships: Array<{ project_id: string; project_name: string; role: string }>;
 }
 
 export class LoginCommand extends Command {
@@ -208,22 +210,25 @@ export class WhoamiCommand extends Command {
       id: string;
       email: string;
       org_id: string;
+      org_name?: string;
       org_role: string;
-      memberships: Array<{ project_id: string; role: string }>;
+      memberships: Array<{ project_id: string; project_name?: string; role: string }>;
     }>('/v1/whoami');
     if (this.json) {
       this.context.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
       return 0;
     }
     this.context.stdout.write(`user:    ${data.email} (${data.id})\n`);
-    this.context.stdout.write(`org:     ${data.org_id}\n`);
+    const orgDisplay = data.org_name ? `${data.org_name} (${data.org_id})` : data.org_id;
+    this.context.stdout.write(`org:     ${orgDisplay}\n`);
     this.context.stdout.write(`role:    ${data.org_role}\n`);
     if (data.memberships.length === 0) {
       this.context.stdout.write('memberships: (none)\n');
     } else {
       this.context.stdout.write('memberships:\n');
       for (const m of data.memberships) {
-        this.context.stdout.write(`  ${m.project_id}: ${m.role}\n`);
+        const proj = m.project_name ? `${m.project_name} (${m.project_id})` : m.project_id;
+        this.context.stdout.write(`  ${proj}: ${m.role}\n`);
       }
     }
     return 0;

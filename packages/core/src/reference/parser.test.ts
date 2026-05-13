@@ -26,6 +26,21 @@ describe('parseAlias — happy paths', () => {
     });
   });
 
+  it('parses uppercase keys (standard .env convention)', () => {
+    expect(parseAlias('@billing.prod.DATABASE_URL')).toEqual({
+      literal: '@billing.prod.DATABASE_URL',
+      project: 'billing',
+      environment: 'prod',
+      key: 'DATABASE_URL',
+    });
+    expect(parseAlias('@auth-service.staging.API_KEY')).toMatchObject({
+      key: 'API_KEY',
+    });
+    expect(parseAlias('@billing.prod.Secret_Token_1')).toMatchObject({
+      key: 'Secret_Token_1',
+    });
+  });
+
   it('parses numeric components', () => {
     expect(parseAlias('@p1.pr-1234.k_42')).toMatchObject({
       project: 'p1',
@@ -56,7 +71,6 @@ describe('parseAlias — rejections', () => {
     ['empty key', '@billing.prod.'],
     ['uppercase project', '@Billing.prod.key'],
     ['uppercase env', '@billing.Prod.key'],
-    ['uppercase key', '@billing.prod.Key'],
     ['underscore in project (project allows kebab only)', '@bil_ling.prod.key'],
     ['leading dash in project', '@-billing.prod.key'],
     ['leading dash in env', '@billing.-prod.key'],
@@ -193,5 +207,12 @@ describe('buildAlias', () => {
     expect(buildAlias({ project: 'Billing', environment: 'prod', key: 'k' })).toBeNull();
     expect(buildAlias({ project: 'b', environment: '_p', key: 'k' })).toBeNull();
     expect(buildAlias({ project: 'b', environment: 'p', key: 'şifre' })).toBeNull();
+  });
+
+  it('accepts uppercase keys', () => {
+    expect(buildAlias({ project: 'billing', environment: 'prod', key: 'DATABASE_URL' })).toMatchObject({
+      key: 'DATABASE_URL',
+      literal: '@billing.prod.DATABASE_URL',
+    });
   });
 });

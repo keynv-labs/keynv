@@ -86,6 +86,23 @@ Response 200: same shape as `/login` (rotated refresh token).
 
 Invalidates the refresh token. Response 204.
 
+### Session lifecycle
+
+| Token type | Default TTL | Env var to override |
+|---|---|---|
+| Access token (JWT) | 15 minutes | `KEYNV_ACCESS_TOKEN_TTL_S` |
+| Refresh token | 7 days | `KEYNV_REFRESH_TOKEN_TTL_S` |
+| CLI token | No expiry (optional `expires_at` on creation) | — |
+| Browser auth flow | 10 minutes | — |
+
+**Access tokens** are short-lived JWTs. When an access token expires, the next API call returns HTTP 401 with code `auth.token_expired`.
+
+**The CLI refreshes automatically.** `ApiClient` catches the first 401, calls `POST /v1/auth/refresh` to get a new access token + refresh token, persists the new pair, and retries the original request. The rotation is transparent to the user unless the refresh token itself has also expired.
+
+**When the refresh token expires** the CLI receives 401 and the silent refresh returns null. The failed request surfaces as an error, and the user must run `keynv login` again to start a new session. Credentials stored on disk are NOT cleared automatically on expiry — `keynv logout` clears them explicitly, or they are overwritten on next login.
+
+**CLI tokens** (issued via Settings → CLI tokens) are long-lived Bearer tokens stored as a bcrypt-style hash in the database. They are **not** JWT access tokens and do not participate in the refresh flow. When a CLI token is revoked (via the web UI or `DELETE /v1/cli-tokens/:id`) or expires, subsequent requests return HTTP 401 with code `auth.invalid_credentials`. The user must issue a new token.
+
 ### Organizations & users
 
 #### `POST /v1/users/invite`  (Owner/Admin)

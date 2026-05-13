@@ -10,6 +10,9 @@ import { isInteractive } from '../ui/helpers/tty.js';
 import { promptHidden } from '../ui/input.js';
 import { resolveProjectId } from './project.js';
 
+const ALIAS_FORMAT_HINT =
+  'Format: @<project>.<env>.<KEY>  (project/env: lowercase kebab-case; key: letters, digits, _ or -)';
+
 function missingAlias(stderr: NodeJS.WritableStream): number {
   stderr.write('keynv: missing <alias> (TTY required for interactive prompt).\n');
   return 1;
@@ -65,7 +68,7 @@ export class SecretCreateCommand extends Command {
 
     const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'. Expected @project.env.key.\n`);
+      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
       return 1;
     }
 
@@ -115,7 +118,7 @@ export class SecretGetCommand extends Command {
 
     const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
+      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
       return 1;
     }
     const projectId = await resolveProjectId(client, parsed.project);
@@ -208,7 +211,7 @@ export class SecretRotateCommand extends Command {
 
     const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
+      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
       return 1;
     }
     let value: string;
@@ -256,7 +259,7 @@ export class SecretDeleteCommand extends Command {
 
     const parsed = parseAlias(alias);
     if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
+      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
       return 1;
     }
     const projectId = await resolveProjectId(client, parsed.project);

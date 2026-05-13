@@ -61,7 +61,8 @@ export async function saveCredentials(creds: Credentials): Promise<void> {
   cache = creds;
 }
 
-export function clearCredentials(): void {
-  clearCredentialsFile();
+export function clearCredentials(): boolean {
+  const ok = clearCredentialsFile();
   cache = null;
+  return ok;
 }

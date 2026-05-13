@@ -50,6 +50,14 @@ export interface EntropyOptions {
   minLength?: number;
   /** Minimum bits-per-character. Default 4.5. */
   minBitsPerChar?: number;
+  /**
+   * Token prefixes to exclude from entropy detection. Tokens whose
+   * lowercased value starts with any of these strings are never flagged.
+   * Default: common content-hash prefixes (sha1-, sha256:, sha384-,
+   * sha512-) which appear in package-lock.json integrity fields and
+   * Docker digests but are never actual secrets.
+   */
+  excludePrefixes?: ReadonlyArray<string>;
 }
 
 export interface RedactionSummary {

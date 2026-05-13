@@ -11,7 +11,7 @@ const envArb = fc
   .filter((s) => s.length >= 1 && s.length <= 24);
 
 const keyArb = fc
-  .stringMatching(/^[a-z0-9][a-z0-9_-]{0,63}$/)
+  .stringMatching(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/)
   .filter((s) => s.length >= 1 && s.length <= 64);
 
 const aliasPartsArb = fc.record({

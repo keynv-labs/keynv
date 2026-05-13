@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   findEnvFiles,
@@ -34,7 +34,7 @@ describe('findProjectRoot', () => {
   it('falls back to folder basename when package.json has no name', () => {
     writeFileSync(join(root, 'package.json'), '{}');
     const r = findProjectRoot(root);
-    expect(r?.suggestedName).toBe(root.split('/').pop());
+    expect(r?.suggestedName).toBe(basename(root));
   });
 
   it('extracts scripts from package.json', () => {

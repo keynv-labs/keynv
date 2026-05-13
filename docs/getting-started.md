@@ -20,30 +20,29 @@ plan to run the server.
 If you prefer Compose over Coolify, the repo ships a reference
 `deploy/docker-compose.yml` that runs the server + Litestream sidecar.
 
+The full step-by-step guide (config, TLS proxy, ops commands, disaster recovery)
+lives in [`deploy/README.md`](../deploy/README.md). Quick summary:
+
 ```bash
 git clone https://github.com/keynv-labs/keynv
 cd keynv/deploy
 
-# Generate secrets
-export KEYNV_JWT_SECRET=$(openssl rand -base64 48)
-export KEYNV_MASTER_KEY=$(openssl rand -base64 32)
+# 1. configure (fill in JWT secret, owner email/password)
+cp .env.example .env
+$EDITOR .env
 
-# Start
-docker compose up -d
+# 2. start — the server auto-bootstraps on first launch
+docker compose --env-file .env up -d
 
-# Bootstrap the first user
-docker compose exec server node dist/bootstrap.js \
-  --owner-email alice@example.com \
-  --owner-password '<a long random password>' \
-  --org-name 'Acme Inc'
-```
-
-The server listens on `:8080`. Verify:
-
-```bash
+# 3. verify
 curl http://localhost:8080/v1/health
-# {"ok":true,"capabilities":{...}}
+# {"ok":true,"version":"...","db":"ok"}
 ```
+
+The server creates the owner account automatically on first start using the
+credentials in `.env`. No manual bootstrap command is needed. See
+[`deploy/README.md`](../deploy/README.md) for the expected log output and
+the mandatory master-key backup step.
 
 Then pick up at [Quickstart Step 4](./quickstart.md#4--install-the-cli).
 
@@ -56,23 +55,30 @@ For experimentation you can run the server directly on your laptop:
 ```bash
 # From the repo root
 pnpm install && pnpm build
+
+# Required — server refuses to start without this
 export KEYNV_JWT_SECRET=$(openssl rand -base64 48)
+
+# Bootstrap credentials for the auto-created owner account
+export KEYNV_BOOTSTRAP_OWNER_EMAIL=dev@localhost
+export KEYNV_BOOTSTRAP_OWNER_PASSWORD=a-local-dev-password
+
 pnpm --filter @keynv/server dev
 ```
 
-In a separate terminal, bootstrap:
+The server auto-bootstraps the owner account on first start. You will see:
 
-```bash
-pnpm --filter @keynv/server bootstrap \
-  --owner-email dev@localhost \
-  --owner-password 'a-local-dev-password' \
-  --org-name 'local'
+```text
+[auto-bootstrap] master key missing — initializing fresh deployment
+[auto-bootstrap] created org "default" (id=org_...)
+[auto-bootstrap] created owner dev@localhost (id=u_...)
+keynv-server listening on http://localhost:8080
 ```
 
 Then log in:
 
 ```bash
-pnpm --filter @keynv/cli dev login --server http://localhost:8080
+keynv login --server http://localhost:8080
 ```
 
 The local server stores its SQLite database at `./keynv.db` and the master key

@@ -104,6 +104,27 @@ describe('pattern bank — false positives (innocent fixtures must NOT be redact
     const { matches } = redact(input, { entropy: { enabled: false } });
     expect(matches).toEqual([]);
   });
+
+  it('does not entropy-flag npm package-lock.json sha512 integrity hashes', () => {
+    const hash =
+      'sha512-YFlf4sNAz0cAFGY0SGOC4V9T3zDIJUyCJmI6EMbqTX4UPIxw9VpBBPuRgL3Q3eD7F3m7ixFW7Lh6wj3fIlzg==';
+    const { matches } = redact(hash);
+    expect(matches).toEqual([]);
+  });
+
+  it('does not entropy-flag Docker image digests (sha256:hex)', () => {
+    const digest =
+      'sha256:a3f9b8c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a74f3b1c9d2e8a0f5b7c6d4e2f1';
+    const { matches } = redact(digest);
+    expect(matches).toEqual([]);
+  });
+
+  it('does not entropy-flag sha384 subresource integrity attributes', () => {
+    const sri =
+      'sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC';
+    const { matches } = redact(sri);
+    expect(matches).toEqual([]);
+  });
 });
 
 describe('redact — overlap and ordering', () => {

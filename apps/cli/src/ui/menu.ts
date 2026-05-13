@@ -1,5 +1,6 @@
 import { cancel, confirm, intro, isCancel, log, outro, select } from '@clack/prompts';
 import { ApiClient } from '../client/http.js';
+import { findProjectRoot, hasExistingKeynvEnv } from '../init/detect.js';
 import { clearCredentials } from '../client/store.js';
 import { VERSION } from '../version.js';
 import { runAuditFlow } from './flows/audit.js';
@@ -42,13 +43,17 @@ export async function runMenu(): Promise<number> {
   }
 
   if (didLogin) {
-    const setup = await confirm({
-      message: 'Set up this project now?',
-      initialValue: true,
-    });
-    if (!isCancel(setup) && setup) {
-      const { runInitFlow } = await import('./flows/init.js');
-      await runInitFlow(client, { cwd: process.cwd(), dryRun: false, noScripts: false });
+    const root = findProjectRoot(process.cwd());
+    const alreadyInitialized = root !== null && hasExistingKeynvEnv(root.path);
+    if (!alreadyInitialized) {
+      const setup = await confirm({
+        message: 'Set up this project now?',
+        initialValue: true,
+      });
+      if (!isCancel(setup) && setup) {
+        const { runInitFlow } = await import('./flows/init.js');
+        await runInitFlow(client, { cwd: process.cwd(), dryRun: false, noScripts: false });
+      }
     }
   }
 

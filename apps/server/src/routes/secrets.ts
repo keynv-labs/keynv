@@ -20,7 +20,7 @@ interface SecretDeps {
   getKek: () => Uint8Array;
 }
 
-const KEY_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const KEY_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 
 const CreateSecretBody = z.object({
   env: z

@@ -4,10 +4,19 @@ import type { EntropyOptions } from './types.js';
  * separators that appear around credential-shaped substrings. */
 const TOKEN_BOUNDARY_RE = /[\s,;:'"<>(){}[\]=]+/;
 
+const DEFAULT_EXCLUDE_PREFIXES: ReadonlyArray<string> = [
+  'sha1-',
+  'sha256:',
+  'sha256-',
+  'sha384-',
+  'sha512-',
+];
+
 const DEFAULTS: Required<EntropyOptions> = {
   enabled: true,
   minLength: 24,
   minBitsPerChar: 4.5,
+  excludePrefixes: DEFAULT_EXCLUDE_PREFIXES,
 };
 
 /**
@@ -55,9 +64,13 @@ export function findEntropyMatches(text: string, opts: EntropyOptions = {}): Ent
     const token = text.slice(start, end);
 
     if (token.length >= cfg.minLength) {
-      const h = shannonEntropy(token);
-      if (h >= cfg.minBitsPerChar) {
-        matches.push({ start, end, token });
+      const lower = token.toLowerCase();
+      const excluded = cfg.excludePrefixes.some((p) => lower.startsWith(p));
+      if (!excluded) {
+        const h = shannonEntropy(token);
+        if (h >= cfg.minBitsPerChar) {
+          matches.push({ start, end, token });
+        }
       }
     }
   }

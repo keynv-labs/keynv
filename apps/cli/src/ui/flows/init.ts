@@ -673,7 +673,8 @@ function composeKeynvEnv(opts: ComposeOpts): string[] {
   const { uploadedAliases, literals, mergeWithExisting } = opts;
   const lines: string[] = [];
   if (mergeWithExisting !== null) {
-    const trimmed = mergeWithExisting.replace(/\n+$/, '');
+    const normalized = mergeWithExisting.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const trimmed = normalized.replace(/\n+$/, '');
     if (trimmed.length > 0) {
       lines.push(...trimmed.split('\n'));
       lines.push('');

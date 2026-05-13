@@ -4,7 +4,7 @@ import { type ApiError, api } from '@/lib/api';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-const KEY_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const KEY_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 
 const CreateBody = z.object({
   project_id: z.string().min(1),

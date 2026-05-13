@@ -100,16 +100,29 @@ export async function loadCredentialsBlob(): Promise<Uint8Array | null> {
   }
 }
 
-export function clearCredentialsFile(): void {
+/**
+ * Removes the credentials file and the OS keychain entry.
+ * Returns true if both were cleaned up. Returns false (and writes a
+ * message to stderr) if the keychain entry could not be deleted — the
+ * credentials file is still removed so the user is effectively logged
+ * out, but an orphaned keychain entry may remain on Windows Credential
+ * Manager or macOS Keychain. In that case the user can remove it
+ * manually via the OS credential manager UI.
+ */
+export function clearCredentialsFile(): boolean {
   const path = defaultPath();
   if (existsSync(path)) rmSync(path, { force: true });
   const legacy = legacyPath();
   if (existsSync(legacy)) rmSync(legacy, { force: true });
-  // Best-effort: remove the OS keychain key as well so the next login
-  // generates a fresh one.
   try {
     entry().deletePassword();
-  } catch {
-    /* ignore */
+    return true;
+  } catch (err) {
+    process.stderr.write(
+      `keynv: warning — could not remove OS keychain entry (${err instanceof Error ? err.message : String(err)}).\n` +
+        `  You may need to remove the '${SERVICE}' / '${KEY_ACCOUNT}' entry manually\n` +
+        `  via your OS credential manager (Windows Credential Manager, macOS Keychain, or libsecret).\n`,
+    );
+    return false;
   }
 }
