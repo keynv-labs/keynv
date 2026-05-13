@@ -17,10 +17,10 @@ import {
   DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
 import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
-import { ErrorBlock } from '@/components/ui/error-block';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';

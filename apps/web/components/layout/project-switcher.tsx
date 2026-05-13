@@ -69,7 +69,6 @@ export function ProjectSwitcher({ current, projects }: Props) {
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter projects…"
-              // biome-ignore lint/a11y/noAutofocus: this filter only mounts when the dropdown opens via an explicit user click, so focus-stealing concerns don't apply.
               autoFocus
               className="h-7 px-2"
             />

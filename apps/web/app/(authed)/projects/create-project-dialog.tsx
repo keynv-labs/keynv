@@ -114,11 +114,9 @@ export function CreateProjectDialog({
               Environments
             </div>
             <p className="text-xs text-fg-muted mb-3">
-              Mark as{' '}
-              <span className="font-mono text-env-prod-fg">Prod</span> to apply production
-              security policies. Enable{' '}
-              <span className="font-medium text-fg">Approval</span> to require a lead to grant
-              access before developers can read secrets.
+              Mark as <span className="font-mono text-env-prod-fg">Prod</span> to apply production
+              security policies. Enable <span className="font-medium text-fg">Approval</span> to
+              require a lead to grant access before developers can read secrets.
             </p>
 
             <div className="space-y-2">
@@ -174,16 +172,18 @@ function EnvRowEditor({
 }) {
   return (
     <div className="flex items-center gap-2.5 px-3 py-2 rounded-md border border-border bg-bg-inset">
-      <Input
-        value={row.name}
-        onChange={(e) =>
-          onChange({ name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })
-        }
-        placeholder="name"
-        required
-        className="w-28 h-7 text-[12px] font-mono shrink-0"
-        autoComplete="off"
-      />
+      <div className="w-24 shrink-0">
+        <Input
+          value={row.name}
+          onChange={(e) =>
+            onChange({ name: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })
+          }
+          placeholder="name"
+          required
+          className="h-7 text-[12px] font-mono"
+          autoComplete="off"
+        />
+      </div>
 
       <div className="flex divide-x divide-border rounded-md border border-border overflow-hidden shrink-0">
         <TierButton

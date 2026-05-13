@@ -18,8 +18,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { ErrorBlock } from '@/components/ui/error-block';
+import { Input } from '@/components/ui/input';
 import { Select, SelectItem } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Plus, Trash2 } from 'lucide-react';

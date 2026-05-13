@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -8,10 +9,9 @@ import {
   DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
 import { Select, SelectItem } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ErrorBlock } from '@/components/ui/error-block';
 import { cn } from '@/lib/cn';
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -69,11 +69,7 @@ export function TestSecretDialog({ projectId, env, keyName, alias, open, onOpenC
           <input type="hidden" name="key" value={keyName} />
 
           <Field label="Tester type">
-            <Select
-              name="tester"
-              value={tester}
-              onValueChange={(v) => setTester(v as TesterType)}
-            >
+            <Select name="tester" value={tester} onValueChange={(v) => setTester(v as TesterType)}>
               {(['postgres', 'mysql', 'redis', 'ssh', 'http'] as const).map((t) => (
                 <SelectItem key={t} value={t}>
                   {TESTER_LABELS[t]}

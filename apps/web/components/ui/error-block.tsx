@@ -29,15 +29,14 @@ export function SuccessBlock({
   className?: string;
 }) {
   return (
-    <p
-      role="status"
+    <output
       aria-live="polite"
       className={cn(
-        'rounded-md border border-success-soft-border bg-success-soft px-3 py-2 text-xs text-success',
+        'block rounded-md border border-success-soft-border bg-success-soft px-3 py-2 text-xs text-success',
         className,
       )}
     >
       {message}
-    </p>
+    </output>
   );
 }
