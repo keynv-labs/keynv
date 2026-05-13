@@ -77,8 +77,8 @@ export function CreateSecretDialog({
             <Input
               name="key"
               required
-              placeholder="db_password"
-              pattern="^[a-z0-9][a-z0-9_-]{0,63}$"
+              placeholder="DATABASE_URL"
+              pattern="^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
               autoComplete="off"
             />
           </Field>
