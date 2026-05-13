@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { InitCommand } from '../commands/init.js';
-import { resolveProjectId, isProjectId } from '../commands/project.js';
+import type { ApiClient } from '../client/http.js';
+import { InitCommand } from './init.js';
+import { isProjectId, resolveProjectId } from './project.js';
 
 vi.mock('../client/http.js', () => ({
   ApiClient: vi.fn().mockImplementation(() => ({
@@ -28,32 +29,29 @@ describe('InitCommand non-interactive mode', () => {
 
   describe('resolveProjectId', () => {
     it('returns ID as-is when it starts with p_', async () => {
-      const mockClient = {
-        request: vi.fn(),
-      };
-      const result = await resolveProjectId(mockClient as any, 'p_go6rqgwz0wlokdsl55ikn');
+      const request = vi.fn();
+      const mockClient = { request } as unknown as ApiClient;
+      const result = await resolveProjectId(mockClient, 'p_go6rqgwz0wlokdsl55ikn');
       expect(result).toBe('p_go6rqgwz0wlokdsl55ikn');
-      expect(mockClient.request).not.toHaveBeenCalled();
+      expect(request).not.toHaveBeenCalled();
     });
 
     it('looks up project by name when not an ID', async () => {
-      const mockClient = {
-        request: vi.fn().mockResolvedValue({
-          projects: [{ id: 'p_abc123', name: 'myproject' }],
-        }),
-      };
-      const result = await resolveProjectId(mockClient as any, 'myproject');
+      const request = vi.fn().mockResolvedValue({
+        projects: [{ id: 'p_abc123', name: 'myproject' }],
+      });
+      const mockClient = { request } as unknown as ApiClient;
+      const result = await resolveProjectId(mockClient, 'myproject');
       expect(result).toBe('p_abc123');
-      expect(mockClient.request).toHaveBeenCalledWith('/v1/projects');
+      expect(request).toHaveBeenCalledWith('/v1/projects');
     });
 
     it('throws when project name not found', async () => {
-      const mockClient = {
-        request: vi.fn().mockResolvedValue({
-          projects: [{ id: 'p_abc123', name: 'otherproject' }],
-        }),
-      };
-      await expect(resolveProjectId(mockClient as any, 'nonexistent')).rejects.toThrow(
+      const request = vi.fn().mockResolvedValue({
+        projects: [{ id: 'p_abc123', name: 'otherproject' }],
+      });
+      const mockClient = { request } as unknown as ApiClient;
+      await expect(resolveProjectId(mockClient, 'nonexistent')).rejects.toThrow(
         'project not found: nonexistent',
       );
     });
