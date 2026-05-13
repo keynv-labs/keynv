@@ -4,7 +4,8 @@
  * once a root is found, lists the .env-family files inside it.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, join } from 'node:path';
+import { walkUp } from '../util/fs.js';
 
 const PROJECT_MARKERS = [
   'package.json',
@@ -38,26 +39,21 @@ export interface ProjectRoot {
 /**
  * Walk up from `startDir` looking for the nearest project marker.
  * Returns null if the filesystem root is reached with no marker.
- *
- * Bound at 64 levels to defend against pathological symlink trees.
  */
 export function findProjectRoot(startDir: string): ProjectRoot | null {
-  let dir = resolve(startDir);
-  for (let i = 0; i < 64; i++) {
+  const result = walkUp(startDir, (dir) => {
     for (const marker of PROJECT_MARKERS) {
-      const candidate = join(dir, marker);
-      if (existsSync(candidate)) {
-        return buildRoot(dir, marker);
+      if (existsSync(join(dir, marker))) {
+        return { dir, marker };
       }
     }
     if (existsSync(join(dir, GIT_MARKER))) {
-      return buildRoot(dir, GIT_MARKER);
+      return { dir, marker: GIT_MARKER };
     }
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
-  return null;
+    return null;
+  });
+  if (!result) return null;
+  return buildRoot(result.dir, result.marker);
 }
 
 function buildRoot(dir: string, marker: string): ProjectRoot {

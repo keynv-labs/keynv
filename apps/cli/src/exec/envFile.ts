@@ -11,8 +11,9 @@
  * file can carry NODE_ENV, PORT, etc. alongside real secrets.
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { parseAlias } from '@keynv/core';
+import { walkUp } from '../util/fs.js';
 
 const MAX_FILE_BYTES = 1_000_000;
 const KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -149,25 +150,15 @@ export function parseEnvFile(content: string, filename: string): EnvFileEntry[] 
  * root without finding one.
  */
 export function findEnvFile(startDir: string): string | null {
-  let dir = resolve(startDir);
-  // Bound the loop to a sane depth so a pathological symlink tree
-  // can't hang us. 64 levels is far more than any real layout.
-  for (let i = 0; i < 64; i++) {
+  return walkUp(startDir, (dir) => {
     const candidate = join(dir, ENV_FILE_BASENAME);
-    if (existsSync(candidate)) {
-      try {
-        if (statSync(candidate).isFile()) return candidate;
-      } catch {
-        // Permission error reading stat — treat as not found here;
-        // the loader will surface a clearer error if the user passed
-        // an explicit path.
-      }
+    try {
+      if (statSync(candidate).isFile()) return candidate;
+    } catch {
+      // Permission error — treat as not found.
     }
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
-  return null;
+    return null;
+  });
 }
 
 export interface LoadOptions {

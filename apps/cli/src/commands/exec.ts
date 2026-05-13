@@ -115,7 +115,10 @@ spelled \`--from\` to avoid the collision.)
         this.context.stderr.write(`keynv: ${err.message}\n`);
         return 2;
       }
-      throw err;
+      this.context.stderr.write(
+        `keynv: unexpected error loading env file: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+      return 2;
     }
 
     // Parse --via-env entries (NAME=@alias).

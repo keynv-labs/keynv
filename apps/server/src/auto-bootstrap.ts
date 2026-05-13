@@ -23,8 +23,10 @@ import { openDb, schema } from './db/index.js';
 import { loadOrCreateKek } from './kek/load.js';
 import type { ServerEnvT } from './lib/env.js';
 import { newOrgId, newUserId } from './lib/id.js';
+import { makeLogger } from './lib/logger.js';
 
 export async function maybeAutoBootstrap(env: ServerEnvT): Promise<void> {
+  const log = makeLogger('info');
   if (existsSync(env.KEYNV_MASTER_KEY_FILE)) return;
 
   const ownerEmail = process.env['KEYNV_BOOTSTRAP_OWNER_EMAIL'];
@@ -37,14 +39,14 @@ export async function maybeAutoBootstrap(env: ServerEnvT): Promise<void> {
     throw new Error('KEYNV_BOOTSTRAP_OWNER_PASSWORD must be at least 12 characters');
   }
 
-  console.log('[auto-bootstrap] master key missing — initializing fresh deployment');
+  log.info('master key missing — initializing fresh deployment');
 
   await loadOrCreateKek({ path: env.KEYNV_MASTER_KEY_FILE, generateIfMissing: true });
   const { db } = openDb({ path: env.KEYNV_DB_PATH, migrate: true, verbose: false });
 
   const existing = await db.select().from(schema.orgs).limit(1);
   if (existing.length > 0) {
-    console.log('[auto-bootstrap] org row already present — skipping owner creation');
+    log.info('org row already present — skipping owner creation');
     return;
   }
 
@@ -59,9 +61,9 @@ export async function maybeAutoBootstrap(env: ServerEnvT): Promise<void> {
     org_role: 'owner',
   });
 
-  console.log(`[auto-bootstrap] created org "${orgName}" (id=${orgId})`);
-  console.log(`[auto-bootstrap] created owner ${ownerEmail} (id=${userId})`);
-  console.log('[auto-bootstrap] you can now unset KEYNV_BOOTSTRAP_* env vars from the deployment');
+  log.info({ orgId, orgName }, 'created org');
+  log.info({ userId, email: ownerEmail }, 'created owner');
+  log.info('you can now unset KEYNV_BOOTSTRAP_* env vars from the deployment');
 
   // Defensive: don't keep the password in this process's env after use.
   delete process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD'];
