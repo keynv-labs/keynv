@@ -170,7 +170,7 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
  * Returns the full path if found, or null if we should let spawn() try
  * as-is (absolute path, or .exe that spawn handles natively).
  */
-function resolveWindowsCmd(command: string, subprocessEnv: Record<string, string>): string | null {
+export function resolveWindowsCmd(command: string, subprocessEnv: Record<string, string>): string | null {
   // Already has an explicit extension — don't second-guess it.
   if (nodePath.extname(command)) return null;
   // Absolute or relative path — don't search.
