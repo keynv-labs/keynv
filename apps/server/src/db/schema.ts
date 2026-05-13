@@ -123,6 +123,30 @@ export const secrets = sqliteTable(
 );
 
 /**
+ * Organization memberships. A user can belong to multiple orgs.
+ * The primary org (users.org_id) is the org the user registered
+ * under; additional orgs are tracked here with their own role.
+ */
+export const org_memberships = sqliteTable(
+  'org_memberships',
+  {
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    org_id: text('org_id')
+      .notNull()
+      .references(() => orgs.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: ['owner', 'admin', 'developer', 'reader'] }).notNull(),
+    created_at: text('created_at').notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.user_id, t.org_id] }),
+    by_user: index('org_memberships_by_user').on(t.user_id),
+    by_org: index('org_memberships_by_org').on(t.org_id),
+  }),
+);
+
+/**
  * Project memberships. A user can hold different project roles on
  * different projects; org owners/admins have implicit access without
  * needing a row here.

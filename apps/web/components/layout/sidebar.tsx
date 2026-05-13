@@ -1,21 +1,21 @@
 'use client';
 
-import { logoutAction } from '@/app/(authed)/actions';
+import { logoutAction, switchOrgAction } from '@/app/(authed)/actions';
 import { Logomark } from '@/components/brand/logomark';
 import { cn } from '@/lib/cn';
 import {
   Activity,
+  ChevronDown,
   FolderKanban,
   Inbox,
   LogOut,
   ScrollText,
   Settings,
-  ShieldCheck,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ComponentType } from 'react';
+import { useState, type ComponentType } from 'react';
 
 interface NavItem {
   href: string;
@@ -100,17 +100,23 @@ function buildGroups(role: string): NavGroup[] {
 interface SidebarContentProps {
   email: string;
   role: string;
+  orgId: string;
+  activeOrgId: string;
+  activeOrgName: string;
+  orgs: Array<{ id: string; name: string }>;
   /** Called after a nav link click — used by the mobile drawer to close itself. */
   onNavigate?: () => void;
 }
 
 const NOOP = () => {};
 
-export function SidebarContent({ email, role, onNavigate }: SidebarContentProps) {
+export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, onNavigate }: SidebarContentProps) {
   const pathname = usePathname() ?? '';
   const initials = email.slice(0, 2).toUpperCase();
   const handleNavigate = onNavigate ?? NOOP;
   const navGroups = buildGroups(role);
+  const isMultiOrg = orgs.length > 1;
+  const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
@@ -170,21 +176,60 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
         ))}
       </nav>
 
-      <Link
-        href={{ pathname: '/audit' }}
-        onClick={handleNavigate}
-        className="mx-3 mb-3 flex items-center gap-2.5 rounded-md border border-border bg-bg-inset px-2.5 py-2 text-xs hover:border-border-strong transition-colors duration-fast ease-snap"
-      >
-        <span className="relative inline-flex shrink-0">
-          <ShieldCheck size={14} className="text-success" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-fg leading-tight">Chain healthy</div>
-          <div className="text-fg-subtle leading-tight mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em]">
-            tamper-evident · verify
+      {/* Org switcher */}
+      <div className="mx-3 mb-3">
+        <button
+          type="button"
+          onClick={() => isMultiOrg && setOrgSwitcherOpen(!orgSwitcherOpen)}
+          className={cn(
+            'flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-xs transition-colors duration-fast ease-snap',
+            isMultiOrg
+              ? 'border-border hover:border-border-strong cursor-pointer'
+              : 'border-border cursor-default',
+          )}
+        >
+          <div className="flex-1 min-w-0 text-left">
+            <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-fg-subtle">Org</div>
+            <div className="text-fg leading-tight truncate mt-0.5">{activeOrgName}</div>
           </div>
-        </div>
-      </Link>
+          {isMultiOrg ? (
+            <ChevronDown
+              size={12}
+              strokeWidth={2}
+              className={cn(
+                'shrink-0 text-fg-subtle transition-transform duration-fast ease-snap',
+                orgSwitcherOpen ? 'rotate-180' : '',
+              )}
+            />
+          ) : null}
+        </button>
+
+        {orgSwitcherOpen && isMultiOrg ? (
+          <div className="mt-1 rounded-md border border-border bg-bg-elevated shadow-lg overflow-hidden">
+            {orgs.map((o) => {
+              const isActive = o.id === activeOrgId;
+              return (
+                <form key={o.id} action={switchOrgAction.bind(null, o.id)}>
+                  <button
+                    type="submit"
+                    className={cn(
+                      'flex w-full items-center gap-2 px-3 py-2 text-xs text-left transition-colors duration-fast ease-snap',
+                      isActive
+                        ? 'bg-accent-soft text-accent'
+                        : 'text-fg-muted hover:bg-bg-elevated-hover hover:text-fg',
+                    )}
+                  >
+                    <span className="flex-1 truncate">{o.name}</span>
+                    {isActive ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                    ) : null}
+                  </button>
+                </form>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
 
       <div className="border-t border-border px-3 py-3 flex items-center gap-2.5">
         <span

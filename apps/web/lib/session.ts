@@ -19,6 +19,10 @@ export interface Session {
   email: string;
   org_id: string;
   org_role: string;
+  /** Every org the user belongs to. Populated on login; refreshed via whoami. */
+  org_ids?: string[];
+  /** The org the user is currently acting as. Defaults to org_id. */
+  active_org_id?: string;
   access_token: string;
   refresh_token: string;
   access_expires_at: string;

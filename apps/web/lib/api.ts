@@ -59,7 +59,11 @@ export async function api<T = unknown>(path: string, opts: RequestOpts = {}): Pr
     'content-type': 'application/json',
     'x-keynv-agent': opts.agentSuffix ? `${AGENT} ${opts.agentSuffix}` : AGENT,
   };
-  if (session) headers.authorization = `Bearer ${session.access_token}`;
+  if (session) {
+    headers.authorization = `Bearer ${session.access_token}`;
+    const activeOrg = session.active_org_id || session.org_id;
+    if (activeOrg) headers['x-keynv-org'] = activeOrg;
+  }
 
   const res = await fetch(buildUrl(path, opts.query), {
     method: opts.method ?? 'GET',

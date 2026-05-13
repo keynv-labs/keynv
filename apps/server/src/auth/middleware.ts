@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Context, MiddlewareHandler } from 'hono';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
@@ -9,8 +9,13 @@ import { verifyAccessToken } from './jwt.js';
 export interface AuthedUser {
   id: string;
   email: string;
+  /** The resolved active org for this request (from header or primary org). */
   org_id: string;
+  /** The user's role in the *active* org. */
   org_role: 'owner' | 'admin' | 'developer' | 'reader';
+  /** Every org the user belongs to (primary + org_memberships). */
+  org_ids: string[];
+  /** Project-level memberships for RBAC. */
   memberships: Array<{ project_id: string; role: 'lead' | 'developer' | 'reader' }>;
 }
 
@@ -23,8 +28,16 @@ declare module 'hono' {
 type DepsFn = () => { db: Db; jwtSecret: string };
 
 /**
- * Bearer-token auth middleware. Loads the user (and project memberships
- * for RBAC checks) into c.var.user.
+ * Bearer-token auth middleware. Loads the user (and org/project
+ * memberships for RBAC checks) into c.var.user.
+ *
+ * Active org resolution (multi-org Phase 6):
+ *   1. X-Keynv-Org header — explicit override from the web panel or CLI.
+ *   2. Fallback to users.org_id (the primary org the user registered under).
+ *
+ * The JWT's embedded org_id is NOT the active-org source of truth —
+ * a user may belong to multiple orgs and switch between them without
+ * re-authenticating.
  */
 export function authMiddleware(deps: DepsFn): MiddlewareHandler {
   return async (c: Context, next) => {
@@ -65,6 +78,34 @@ export function authMiddleware(deps: DepsFn): MiddlewareHandler {
       return jsonError(c, 'auth.invalid_credentials', 'Token references unknown user.');
     }
 
+    // Collect all org IDs the user belongs to.
+    const primaryOrgId = userRow.org_id;
+    const omRows = await db
+      .select({ org_id: schema.org_memberships.org_id })
+      .from(schema.org_memberships)
+      .where(eq(schema.org_memberships.user_id, userRow.id));
+    const allOrgIds: string[] = [primaryOrgId, ...omRows.map((r) => r.org_id).filter((id) => id !== primaryOrgId)];
+
+    // Resolve the active org for this request.
+    const requestedOrgId = c.req.header('x-keynv-org');
+    const activeOrgId = requestedOrgId && allOrgIds.includes(requestedOrgId) ? requestedOrgId : primaryOrgId;
+
+    // Determine the user's role in the active org.
+    let activeRole = userRow.org_role;
+    if (activeOrgId !== primaryOrgId) {
+      const match = await db
+        .select({ role: schema.org_memberships.role })
+        .from(schema.org_memberships)
+        .where(
+          and(
+            eq(schema.org_memberships.user_id, userRow.id),
+            eq(schema.org_memberships.org_id, activeOrgId),
+          ),
+        )
+        .limit(1);
+      if (match[0]) activeRole = match[0].role;
+    }
+
     const memberRows = await db
       .select({ project_id: schema.memberships.project_id, role: schema.memberships.role })
       .from(schema.memberships)
@@ -73,8 +114,9 @@ export function authMiddleware(deps: DepsFn): MiddlewareHandler {
     c.set('user', {
       id: userRow.id,
       email: userRow.email,
-      org_id: userRow.org_id,
-      org_role: userRow.org_role,
+      org_id: activeOrgId,
+      org_role: activeRole,
+      org_ids: allOrgIds,
       memberships: memberRows,
     });
     return next();

@@ -2,20 +2,46 @@ import { AppPalette } from '@/components/command-palette/app-palette';
 import { MobileTopBar } from '@/components/layout/mobile-top-bar';
 import { Sidebar } from '@/components/layout/sidebar';
 import { SkipLink } from '@/components/ui/skip-link';
+import { api } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+
+interface OrgInfo {
+  id: string;
+  name: string;
+}
 
 export default async function AuthedLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
   if (!session) redirect('/login');
 
+  // Fetch org info for the sidebar switcher.
+  let orgs: OrgInfo[] = [];
+  let activeOrgName = session.org_id;
+  try {
+    const data = await api<{ orgs?: OrgInfo[]; org_name?: string }>('/v1/whoami');
+    orgs = data.orgs ?? [];
+    activeOrgName = data.org_name ?? session.org_id;
+  } catch {
+    orgs = [{ id: session.org_id, name: session.org_id }];
+  }
+
+  const activeOrgId = session.active_org_id || session.org_id;
+
   return (
     <div className="flex min-h-screen">
       <SkipLink />
-      <Sidebar email={session.email} role={session.org_role} />
+      <Sidebar
+        email={session.email}
+        role={session.org_role}
+        orgId={session.org_id}
+        activeOrgId={activeOrgId}
+        activeOrgName={activeOrgName}
+        orgs={orgs}
+      />
       <div className="flex-1 min-w-0 flex flex-col">
-        <MobileTopBar email={session.email} role={session.org_role} />
+        <MobileTopBar email={session.email} role={session.org_role} orgId={session.org_id} activeOrgId={activeOrgId} activeOrgName={activeOrgName} orgs={orgs} />
         <main id="main" className="flex-1 min-w-0">
           <div className="mx-auto max-w-6xl px-4 py-7 md:px-8 md:py-10">{children}</div>
         </main>

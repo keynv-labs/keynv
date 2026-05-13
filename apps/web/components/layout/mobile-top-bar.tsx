@@ -11,9 +11,13 @@ import { SidebarContent } from './sidebar';
 interface Props {
   email: string;
   role: string;
+  orgId: string;
+  activeOrgId: string;
+  activeOrgName: string;
+  orgs: Array<{ id: string; name: string }>;
 }
 
-export function MobileTopBar({ email, role }: Props) {
+export function MobileTopBar({ email, role, orgId, activeOrgId, activeOrgName, orgs }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -40,7 +44,7 @@ export function MobileTopBar({ email, role }: Props) {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <SidebarContent email={email} role={role} onNavigate={() => setOpen(false)} />
+          <SidebarContent email={email} role={role} orgId={orgId} activeOrgId={activeOrgId} activeOrgName={activeOrgName} orgs={orgs} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
     </>

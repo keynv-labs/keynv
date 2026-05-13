@@ -17,12 +17,22 @@ export function whoamiRoute(deps: WhoamiDeps): Hono {
     const u = c.var.user;
     const { db } = deps;
 
+    // Active org info.
     const orgRows = await db
       .select({ name: schema.orgs.name })
       .from(schema.orgs)
       .where(eq(schema.orgs.id, u.org_id))
       .limit(1);
-    const org_name = orgRows[0]?.name ?? u.org_id;
+    const active_org_name = orgRows[0]?.name ?? u.org_id;
+
+    // All orgs the user belongs to.
+    const allOrgRows = await db
+      .select({ id: schema.orgs.id, name: schema.orgs.name })
+      .from(schema.orgs)
+      .where(inArray(schema.orgs.id, u.org_ids));
+    const orgs = allOrgRows.length > 0
+      ? allOrgRows.map((o) => ({ id: o.id, name: o.name }))
+      : [{ id: u.org_id, name: active_org_name }];
 
     let memberships: Array<{ project_id: string; project_name: string; role: string }> = [];
     if (u.memberships.length > 0) {
@@ -43,8 +53,9 @@ export function whoamiRoute(deps: WhoamiDeps): Hono {
       id: u.id,
       email: u.email,
       org_id: u.org_id,
-      org_name,
+      org_name: active_org_name,
       org_role: u.org_role,
+      orgs,
       memberships,
     });
   });

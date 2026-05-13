@@ -28,6 +28,24 @@ export async function logoutAction(): Promise<void> {
   redirect('/login?toast=signed_out');
 }
 
+export async function switchOrgAction(orgId: string): Promise<void> {
+  const { getSession, setSession } = await import('@/lib/session');
+  const session = await getSession();
+  if (!session) redirect('/login');
+  session.active_org_id = orgId;
+  await setSession(session);
+  redirect('/dashboard');
+}
+
+export async function createOrgAction(orgName: string): Promise<{ org_id?: string; error?: string }> {
+  try {
+    const result = await api<{ id: string }>('/v1/org', { method: 'POST', body: { name: orgName } });
+    return { org_id: result.id };
+  } catch (err) {
+    return { error: (err as { message?: string }).message || 'Failed to create org.' };
+  }
+}
+
 export async function loadMoreAuditAction(cursor: number): Promise<{
   entries: Array<{
     id: number;
