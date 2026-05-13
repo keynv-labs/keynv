@@ -1,6 +1,6 @@
 import { parseAlias } from '@keynv/core';
 import { redact } from '@keynv/redactor';
-import { TESTERS, type TesterType, findTester, runTest } from '@keynv/testers';
+import { TESTERS, runTest } from '@keynv/testers';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -106,6 +106,14 @@ export function buildServer(deps: ServerDeps): Server {
   );
   const api = new McpApiClient(deps.creds);
 
+  async function resolveProjectId(projectName: string): Promise<string | null> {
+    const projects = await api.request<{
+      projects: Array<{ id: string; name: string }>;
+    }>('/v1/projects');
+    const found = projects.projects.find((p) => p.name === projectName);
+    return found?.id ?? null;
+  }
+
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...TOOLS] }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -127,13 +135,9 @@ export function buildServer(deps: ServerDeps): Server {
         case 'keynv.list_secrets': {
           const project = String(args.project ?? '');
           if (!project) return jsonError('project is required');
-          // Resolve project name → id.
-          const projects = await api.request<{
-            projects: Array<{ id: string; name: string }>;
-          }>('/v1/projects');
-          const found = projects.projects.find((p) => p.name === project);
-          if (!found) return jsonError(`unknown project: ${project}`);
-          const data = await api.request(`/v1/projects/${found.id}/secrets`);
+          const projectId = await resolveProjectId(project);
+          if (!projectId) return jsonError(`unknown project: ${project}`);
+          const data = await api.request(`/v1/projects/${projectId}/secrets`);
           return jsonContent(data);
         }
 
@@ -143,15 +147,12 @@ export function buildServer(deps: ServerDeps): Server {
           if (!parsed) return jsonError(`invalid alias: ${alias}`);
           // Verify the alias resolves (RBAC / existence) without
           // returning the value to the caller.
-          const projects = await api.request<{
-            projects: Array<{ id: string; name: string }>;
-          }>('/v1/projects');
-          const found = projects.projects.find((p) => p.name === parsed.project);
-          if (!found) return jsonError(`unknown project: ${parsed.project}`);
+          const projectId = await resolveProjectId(parsed.project);
+          if (!projectId) return jsonError(`unknown project: ${parsed.project}`);
           // Probe with a HEAD-equivalent: list and check the alias is present.
           const list = await api.request<{
             secrets: Array<{ alias: string }>;
-          }>(`/v1/projects/${found.id}/secrets`);
+          }>(`/v1/projects/${projectId}/secrets`);
           if (!list.secrets.some((s) => s.alias === parsed.literal)) {
             return jsonError(`alias not found or no permission: ${parsed.literal}`);
           }
@@ -169,8 +170,8 @@ export function buildServer(deps: ServerDeps): Server {
           const alias = String(args.alias ?? '');
           const parsed = parseAlias(alias);
           if (!parsed) return jsonError(`invalid alias: ${alias}`);
-          const testerType = String(args.tester ?? '') as TesterType;
-          const tester = findTester(testerType);
+          const testerType = String(args.tester ?? '');
+          const tester = TESTERS.find((t) => t.type === testerType);
           if (!tester) {
             return jsonError(
               `unknown tester '${testerType}'. Try one of: ${TESTERS.map((t) => t.type).join(', ')}`,
@@ -178,13 +179,10 @@ export function buildServer(deps: ServerDeps): Server {
           }
           const target = (args.target ?? {}) as Record<string, unknown>;
 
-          const projects = await api.request<{
-            projects: Array<{ id: string; name: string }>;
-          }>('/v1/projects');
-          const found = projects.projects.find((p) => p.name === parsed.project);
-          if (!found) return jsonError(`unknown project: ${parsed.project}`);
+          const projectId = await resolveProjectId(parsed.project);
+          if (!projectId) return jsonError(`unknown project: ${parsed.project}`);
           const data = await api.request<{ value: string }>(
-            `/v1/projects/${found.id}/secrets/${parsed.environment}/${parsed.key}`,
+            `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
           );
           resolvedValue = data.value;
 

@@ -1,14 +1,10 @@
 import { type Alias, findAliasesInArgv } from '@keynv/core';
 import type { ApiClient } from '../client/http.js';
+import type { ProjectListItem } from '../commands/project.js';
 
 export interface ResolvedAlias {
   alias: Alias;
   value: string;
-}
-
-interface ProjectListItem {
-  id: string;
-  name: string;
 }
 
 /**
@@ -67,11 +63,11 @@ export async function resolveAllAliases(
  * Used both for argv substitution and for `--via-env` value rewrites.
  */
 export function substitute(text: string, resolved: ReadonlyArray<ResolvedAlias>): string {
+  // Process longer literals first to prevent partial prefix substitution.
+  const sorted = [...resolved].sort((a, b) => b.alias.literal.length - a.alias.literal.length);
   let out = text;
-  for (const r of resolved) {
-    if (out.includes(r.alias.literal)) {
-      out = out.split(r.alias.literal).join(r.value);
-    }
+  for (const r of sorted) {
+    out = out.split(r.alias.literal).join(r.value);
   }
   return out;
 }

@@ -8,18 +8,7 @@ import { pickProject } from '../ui/helpers/pickProject.js';
 import { pickSecret } from '../ui/helpers/pickSecret.js';
 import { isInteractive } from '../ui/helpers/tty.js';
 import { promptHidden } from '../ui/input.js';
-
-interface ProjectListItem {
-  id: string;
-  name: string;
-}
-
-async function findProjectIdByName(client: ApiClient, name: string): Promise<string> {
-  const data = await client.request<{ projects: ProjectListItem[] }>('/v1/projects');
-  const match = data.projects.find((p) => p.name === name);
-  if (!match) throw new Error(`unknown project: ${name}`);
-  return match.id;
-}
+import { resolveProjectId } from './project.js';
 
 function missingAlias(stderr: NodeJS.WritableStream): number {
   stderr.write('keynv: missing <alias> (TTY required for interactive prompt).\n');
@@ -90,7 +79,7 @@ export class SecretCreateCommand extends Command {
       value = await promptHidden('value: ');
     }
 
-    const projectId = await findProjectIdByName(client, parsed.project);
+    const projectId = await resolveProjectId(client, parsed.project);
     await client.request<{ alias: string; version: number }>(`/v1/projects/${projectId}/secrets`, {
       method: 'POST',
       body: { env: parsed.environment, key: parsed.key, value },
@@ -129,7 +118,7 @@ export class SecretGetCommand extends Command {
       this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
       return 1;
     }
-    const projectId = await findProjectIdByName(client, parsed.project);
+    const projectId = await resolveProjectId(client, parsed.project);
     const data = await client.request<{ alias: string; value: string; version: number }>(
       `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
     );
@@ -172,7 +161,7 @@ export class SecretListCommand extends Command {
       }
     }
 
-    const projectId = await findProjectIdByName(client, projectName);
+    const projectId = await resolveProjectId(client, projectName);
     const data = await client.request<{
       secrets: Array<{ alias: string; version: number; created_at: string }>;
     }>(`/v1/projects/${projectId}/secrets`);
@@ -234,7 +223,7 @@ export class SecretRotateCommand extends Command {
     } else {
       value = await promptHidden('new value: ');
     }
-    const projectId = await findProjectIdByName(client, parsed.project);
+    const projectId = await resolveProjectId(client, parsed.project);
     const data = await client.request<{ alias: string; version: number }>(
       `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}/rotate`,
       { method: 'POST', body: { new_value: value } },
@@ -270,7 +259,7 @@ export class SecretDeleteCommand extends Command {
       this.context.stderr.write(`keynv: invalid alias '${alias}'.\n`);
       return 1;
     }
-    const projectId = await findProjectIdByName(client, parsed.project);
+    const projectId = await resolveProjectId(client, parsed.project);
     await client.request(`/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`, {
       method: 'DELETE',
     });

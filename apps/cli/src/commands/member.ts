@@ -1,15 +1,7 @@
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { table } from '../ui/format.js';
-
-async function findProjectIdByName(client: ApiClient, name: string): Promise<string> {
-  const data = await client.request<{ projects: Array<{ id: string; name: string }> }>(
-    '/v1/projects',
-  );
-  const match = data.projects.find((p) => p.name === name);
-  if (!match) throw new Error(`unknown project: ${name}`);
-  return match.id;
-}
+import { resolveProjectId } from './project.js';
 
 export class MemberAddCommand extends Command {
   static override paths = [['member', 'add']];
@@ -29,7 +21,7 @@ export class MemberAddCommand extends Command {
       return 1;
     }
     const client = new ApiClient();
-    const projectId = await findProjectIdByName(client, this.project);
+    const projectId = await resolveProjectId(client, this.project);
     await client.request(`/v1/projects/${projectId}/members`, {
       method: 'POST',
       body: { email: this.email, role },
@@ -48,7 +40,7 @@ export class MemberRemoveCommand extends Command {
 
   async execute(): Promise<number> {
     const client = new ApiClient();
-    const projectId = await findProjectIdByName(client, this.project);
+    const projectId = await resolveProjectId(client, this.project);
     const members = await client.request<{
       members: Array<{ user_id: string; email: string; role: string }>;
     }>(`/v1/projects/${projectId}/members`);
@@ -74,7 +66,7 @@ export class MemberListCommand extends Command {
 
   async execute(): Promise<number> {
     const client = new ApiClient();
-    const projectId = await findProjectIdByName(client, this.project);
+    const projectId = await resolveProjectId(client, this.project);
     const data = await client.request<{
       members: Array<{ user_id: string; email: string; role: string; granted_at: string }>;
     }>(`/v1/projects/${projectId}/members`);

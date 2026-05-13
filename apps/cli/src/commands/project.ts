@@ -2,7 +2,7 @@ import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { table } from '../ui/format.js';
 
-interface ProjectListItem {
+export interface ProjectListItem {
   id: string;
   name: string;
   created_at: string;

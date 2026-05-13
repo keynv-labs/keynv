@@ -1,19 +1,8 @@
 import { parseAlias } from '@keynv/core';
-import { TESTERS, type TesterType, findTester, runTest } from '@keynv/testers';
+import { TESTERS, runTest } from '@keynv/testers';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
-
-interface ProjectListItem {
-  id: string;
-  name: string;
-}
-
-async function findProjectIdByName(client: ApiClient, name: string): Promise<string> {
-  const data = await client.request<{ projects: ProjectListItem[] }>('/v1/projects');
-  const match = data.projects.find((p) => p.name === name);
-  if (!match) throw new Error(`unknown project: ${name}`);
-  return match.id;
-}
+import { resolveProjectId } from './project.js';
 
 function parseTargets(specs: ReadonlyArray<string>): Record<string, string> {
   const out: Record<string, string> = {};
@@ -69,10 +58,16 @@ the error message.
       );
       return 2;
     }
-    const tester = findTester(this.as as TesterType);
+    const tester = TESTERS.find((t) => t.type === this.as);
     if (!tester) {
       this.context.stderr.write(`keynv: unknown tester '${this.as}'\n`);
       return 1;
+    }
+
+    const timeoutMs = this.timeout ? Number.parseInt(this.timeout, 10) * 1000 : undefined;
+    if (this.timeout && (timeoutMs === undefined || Number.isNaN(timeoutMs))) {
+      this.context.stderr.write('keynv: invalid --timeout (expected integer seconds)\n');
+      return 2;
     }
 
     let target: Record<string, string>;
@@ -92,7 +87,7 @@ the error message.
 
     let value: string;
     try {
-      const projectId = await findProjectIdByName(client, parsedAlias.project);
+      const projectId = await resolveProjectId(client, parsedAlias.project);
       const data = await client.request<{ value: string }>(
         `/v1/projects/${projectId}/secrets/${parsedAlias.environment}/${parsedAlias.key}`,
       );
@@ -101,12 +96,6 @@ the error message.
       const msg = err instanceof Error ? err.message : String(err);
       this.context.stderr.write(`keynv: failed to resolve ${parsedAlias.literal}: ${msg}\n`);
       return 1;
-    }
-
-    const timeoutMs = this.timeout ? Number.parseInt(this.timeout, 10) * 1000 : undefined;
-    if (this.timeout && (timeoutMs === undefined || Number.isNaN(timeoutMs))) {
-      this.context.stderr.write('keynv: invalid --timeout (expected integer seconds)\n');
-      return 2;
     }
 
     const result = await runTest({
