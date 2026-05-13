@@ -150,7 +150,7 @@ For Phase 0 we walk through the [OWASP LLM Top 10 (2025 update)](https://genai.o
 |---|---|
 | LLM01: Prompt Injection | Privileged subprocess + RBAC + approval workflow limit blast radius. Cannot prevent injection itself. |
 | LLM02: Sensitive Information Disclosure | Core focus. Covered by safety layer in full. |
-| LLM03: Supply Chain | Per-agent installers ship from versioned repo, signature verified. MCP transport returns reference tokens not values. |
+| LLM03: Supply Chain | `keynv init` walks `.env` files and uploads secrets to the vault. MCP transport returns reference tokens not values. |
 | LLM04: Data and Model Poisoning | Out of scope (we're not training). |
 | LLM05: Improper Output Handling | Redactor sanitizes both inputs and outputs around the agent. |
 | LLM06: Excessive Agency | RBAC + approvals constrain what aliases the agent can resolve. |

@@ -63,8 +63,7 @@ The primary developer-facing tool. Shipped as a single platform binary (~30 MB).
 - `member add|remove|list`
 - `exec -- <cmd args...>` (the privileged subprocess wrapper)
 - `test <alias>` (Phase 3)
-- `audit list|export`
-- `install <agent>` (Phase 2: writes per-agent config templates)
+- `audit list|verify`
 - `status` (Phase 3)
 
 Local cache lives at `~/.keynv/cache.db` (SQLite, age-sealed). The KEK for the cache is stored in the OS keychain.
