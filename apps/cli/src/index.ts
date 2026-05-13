@@ -18,6 +18,7 @@ import {
   SecretListCommand,
   SecretRotateCommand,
 } from './commands/secret.js';
+import { ServerInitCommand } from './commands/server.js';
 import { TestCommand } from './commands/test.js';
 import { fmtError } from './ui/format.js';
 import { VERSION } from './version.js';
@@ -60,6 +61,7 @@ cli.register(RedactCommand);
 cli.register(RedactStreamCommand);
 
 cli.register(TestCommand);
+cli.register(ServerInitCommand);
 
 const argv = process.argv.slice(2);
 

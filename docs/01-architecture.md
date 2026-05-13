@@ -323,6 +323,47 @@ Cache TTL defaults to 5 minutes. `keynv exec` may operate offline if the cache i
 | Master KEK lost | All wrapped DEKs are unrecoverable. The KEK is held by the org owner; lost-KEK recovery requires re-keying every secret manually from a backup snapshot taken before the loss. |
 | Audit hash chain broken | `keynv audit verify` flags the break point. The CLI refuses to write further until an admin acknowledges (forks the chain). |
 
+## Operational procedures
+
+### JWT signing key rotation
+
+keynv uses symmetric HS256 JWTs signed with `KEYNV_JWT_SECRET`. The secret is loaded once at server start; all access tokens issued before a restart carry the old signature.
+
+**Rotation steps:**
+
+1. Generate a new secret: `openssl rand -base64 48`
+2. Set `KEYNV_JWT_SECRET=<new-secret>` on the server environment (or update the Coolify / Compose env).
+3. **Restart the server.** The new process picks up the new secret.
+4. Existing access tokens (15-min TTL) and refresh tokens (7-day TTL) issued with the old secret **remain valid until they expire naturally**. The server verifies them against the new secret, so verification will fail. All callers must re-authenticate.
+
+**Zero-downtime rotation** (for operators who cannot accept a re-auth window):
+
+1. Deploy a second server instance with the new `KEYNV_JWT_SECRET` alongside the old.
+2. Switch the load balancer / reverse proxy to the new instance.
+3. Drain the old instance after 15 minutes (max access-token TTL).
+4. Tear down the old instance.
+
+**Revocation emergency** (suspected key compromise):
+
+1. Rotate `KEYNV_JWT_SECRET` immediately (steps 1-3 above).
+2. Run `DELETE /v1/auth/refresh` to revoke all outstanding refresh tokens (CLI: `keynv auth revoke-all`). This forces every user to log in again.
+3. Audit the window between compromise detection and rotation via `keynv audit list --since <time>`.
+4. If the compromise window is unknown, rotate all secrets in the vault (`keynv secret rotate --all`).
+
+**Security note:** The JWT secret is a high-entropy opaque string that lives only in `KEYNV_JWT_SECRET`. It must never be committed to version control. In keynv's own Coolify deployment, it is injected via the Coolify env-secrets UI and never touches a `.env` file. Rotate it at least once per quarter and immediately if any credential with server access is rotated.
+
+### Argon2id parameter tuning
+
+Password hashing uses Argon2id with configurable parameters exposed as environment variables:
+
+| Variable | Default | OWASP 2024 guidance |
+|---|---|---|
+| `KEYNV_ARGON2_MEMORY_KIB` | 19456 (19 MiB) | 19 MiB minimum; 46 MiB recommended |
+| `KEYNV_ARGON2_TIME_COST` | 2 | 2 minimum; 3+ for higher security |
+| `KEYNV_ARGON2_PARALLELISM` | 1 | 1 (single-threaded interactive auth) |
+
+Self-hosters with ≥ 4 GB RAM available should raise memory to 46080 (45 MiB) and time cost to 3 for stronger brute-force resistance. Login latency scales ~linearly with timeCost and inversely with parallelism; verify latency < 500 ms under your expected load before increasing.
+
 ## Why not X?
 
 - **Why not Postgres for the MVP?** A 15-person team writes <50 audit rows / second peak. SQLite's WAL handles that with microsecond latency. A separate Postgres instance is operational overhead with no benefit at this scale. Phase 6 adds Postgres for teams that need multi-instance HA.

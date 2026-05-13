@@ -43,6 +43,15 @@ const ServerEnv = z.object({
    * (not recommended in production).
    */
   KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).default(5),
+  /**
+   * Argon2id parameters for password hashing. Defaults are OWASP
+   * 2024 minimums (19 MiB memory, 2 iterations, 1 thread). Raise
+   * on beefier hardware for stronger resistance; individual login
+   * latency scales ~linearly with timeCost and parallelism.
+   */
+  KEYNV_ARGON2_MEMORY_KIB: z.coerce.number().int().positive().default(19_456),
+  KEYNV_ARGON2_TIME_COST: z.coerce.number().int().positive().default(2),
+  KEYNV_ARGON2_PARALLELISM: z.coerce.number().int().positive().default(1),
 });
 
 export type ServerEnvT = z.infer<typeof ServerEnv>;

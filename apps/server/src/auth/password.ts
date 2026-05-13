@@ -1,14 +1,24 @@
 import argon2 from 'argon2';
 
-const OPTIONS: argon2.Options = {
+const opts: argon2.Options = {
   type: argon2.argon2id,
   memoryCost: 19_456,
   timeCost: 2,
   parallelism: 1,
 };
 
-export async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password, OPTIONS);
+export function configureArgon2(overrides: {
+  memoryKib?: number;
+  timeCost?: number;
+  parallelism?: number;
+}): void {
+  if (overrides.memoryKib !== undefined) opts.memoryCost = overrides.memoryKib;
+  if (overrides.timeCost !== undefined) opts.timeCost = overrides.timeCost;
+  if (overrides.parallelism !== undefined) opts.parallelism = overrides.parallelism;
+}
+
+export function hashPassword(password: string): Promise<string> {
+  return argon2.hash(password, opts);
 }
 
 /**

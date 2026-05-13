@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
+import { configureArgon2 } from './auth/password.js';
 import { maybeAutoBootstrap } from './auto-bootstrap.js';
 import { openDb } from './db/index.js';
 import { loadOrCreateKek } from './kek/load.js';
@@ -9,6 +10,11 @@ export const VERSION = '0.1.0-rc.11';
 
 async function main(): Promise<void> {
   const env = loadEnv();
+  configureArgon2({
+    memoryKib: env.KEYNV_ARGON2_MEMORY_KIB,
+    timeCost: env.KEYNV_ARGON2_TIME_COST,
+    parallelism: env.KEYNV_ARGON2_PARALLELISM,
+  });
   await maybeAutoBootstrap(env);
   const { db } = openDb({ path: env.KEYNV_DB_PATH, migrate: true, verbose: true });
   const kek = await loadOrCreateKek({ path: env.KEYNV_MASTER_KEY_FILE, generateIfMissing: false });

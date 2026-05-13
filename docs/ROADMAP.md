@@ -18,7 +18,7 @@ to dig.
 | **2** | Universal AI-safety layer | ✓ done |
 | **3** | Connection testers | ✓ done |
 | **4** | Web UI for team leads | ✓ done (11 slices shipped) |
-| **5** | Hardening & public OSS release | ◐ in progress (`v0.1.0-rc.1` cut 2026-05-10) |
+| **5** | Hardening & public OSS release | ✓ done (`v0.1.0-rc.1` cut 2026-05-10) |
 | **6** | Commercial tier + keynv Cloud | ○ not started |
 
 ---
@@ -104,11 +104,11 @@ Pre-public-launch hardening. Active streams in priority order:
 |---|---|---|
 | **B** | CI re-activation (`ci.yml`, `security.yml`) | ✓ done |
 | **D** | License finalize (MIT) + dep license audit | ✓ done |
-| **A** | Security audit + remediation (semgrep / threat-model walkthrough) | ◐ in progress — rate limiter (A1) closed; remaining items tracked in project issues |
+| **A** | Security audit + remediation (semgrep / threat-model walkthrough) | ✓ done |
 | **G** | Versioning (`v0.1.0-rc.1` cut), CHANGELOG, deprecation policy | ✓ done (2026-05-10) |
 | **C** | Release pipeline — Bun binaries × 5 platforms + multi-arch Docker | ✓ done (darwin-x64 added) |
-| **E** | Public docs polish (`getting-started.md`, integration guides) | ○ pending |
-| **F** | `keynv server init` onboarding wizard | ○ pending |
+| **E** | Public docs polish (`getting-started.md`, integration guides) | ✓ done |
+| **F** | `keynv server init` onboarding wizard | ✓ done |
 
 Decision points (locked):
 

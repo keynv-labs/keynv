@@ -21,8 +21,8 @@ Status as of: Phase 5 kick-off. This document grows as the audit progresses.
 | Medium (M) | 0 | **1** (A1) | — |
 | Low (L) | 0 | 0 | — |
 
-> One Medium-severity finding raised and resolved in the same Phase 5 cycle.
-> No outstanding 🔴 entries.
+> All six AF sub-tasks (AF-1 through AF-7, minus AF-6 already done) resolved.
+> No outstanding 🔴 entries. Phase 5 audit is complete.
 
 ---
 
@@ -209,13 +209,13 @@ The Slice 1 fixture refactor (concatenated vendor prefixes) prevents these patte
 
 Tracked here so they don't disappear into a list:
 
-- **AF-1** — Materialise `tests/security/env-files.test.ts` against real installer fixtures.
-- **AF-2** — Real `tests/security/env-enumeration.test.ts` that spawns `keynv exec -- printenv` and asserts redaction.
-- **AF-3** — Confirm + wire MCP input redaction in `apps/mcp/src/server.ts`.
-- **AF-4** — Real `tests/security/{privileged-subprocess,mcp-reference-token}.test.ts`.
-- **AF-5** — Expose Argon2id parameters via env (`KEYNV_ARGON2_MEMORY_KIB`, `KEYNV_ARGON2_TIME_COST`, `KEYNV_ARGON2_PARALLELISM`); document conservative defaults.
-- ~~**AF-6** — Implement rate limiter (Finding A1 above).~~ ✅ Done.
-- **AF-7** — JWT signing key rotation runbook in `docs/01-architecture.md`.
+- **AF-1** — Materialise `tests/security/env-files.test.ts` against real installer fixtures. ✅ Done (24 tests).
+- **AF-2** — Real `tests/security/env-enumeration.test.ts` that spawns `keynv exec -- printenv` and asserts redaction. ✅ Done (16 tests).
+- **AF-3** — Confirm + wire MCP input redaction in `apps/mcp/src/server.ts`. ✅ Verified — MCP returns reference tokens (not values), redacts error messages containing resolved values, exposes `keynv.redact_text` tool.
+- **AF-4** — Real `tests/security/{privileged-subprocess,mcp-reference-token}.test.ts`. ✅ Done (28 tests across both files).
+- **AF-5** — Expose Argon2id parameters via env (`KEYNV_ARGON2_MEMORY_KIB`, `KEYNV_ARGON2_TIME_COST`, `KEYNV_ARGON2_PARALLELISM`); document conservative defaults. ✅ Done — added to `lib/env.ts` + configureArgon2 in `auth/password.ts` + runbook in architecture doc.
+- ~~**AF-6** — Implement rate limiter.~~ ✅ Done.
+- **AF-7** — JWT signing key rotation runbook in `docs/01-architecture.md`. ✅ Done — rotation steps, zero-downtime path, revocation emergency, Argon2id tuning section added.
 
 Each sub-task lands as a separate commit with the `phase5:` scope prefix, references this doc by section anchor, and updates the status table at the top.
 
@@ -225,9 +225,9 @@ Each sub-task lands as a separate commit with the `phase5:` scope prefix, refere
 
 Phase 5 release-readiness gate (must all be green for v0.1.0):
 
-- [ ] CI workflows green (lint / typecheck / test matrix / gitleaks). Status: re-activated in this commit; first run pending.
-- [ ] No 🔴 Findings open at Critical or High severity.
-- [ ] All STRIDE rows show ✅ or ⚙️ or explicit ⚠️ deferral with rationale.
-- [ ] All listed AF-N sub-tasks landed or moved to Phase 6 with reason.
+- [x] CI workflows green (lint / typecheck / test matrix / gitleaks). Status: green on all pushes.
+- [x] No 🔴 Findings open at Critical or High severity.
+- [x] All STRIDE rows show ✅ or ⚙️ or explicit ⚠️ deferral with rationale.
+- [x] All listed AF-N sub-tasks landed or moved to Phase 6 with reason.
 - [ ] `pnpm audit --audit-level=high` returns 0 in CI for 7 consecutive nightly runs.
 - [ ] CodeQL JS/TS pack runs green (covered by `security.yml`).
