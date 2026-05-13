@@ -1,6 +1,6 @@
 {
   "name": "@keynv/redactor",
-  "version": "0.1.0-rc.12",
+  "version": "0.1.0-rc.13",
   "private": true,
   "description": "keynv output and file redaction (regex + entropy + per-project custom patterns).",
   "type": "module",
