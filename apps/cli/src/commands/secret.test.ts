@@ -1,7 +1,7 @@
+import { parseAlias } from '@keynv/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiClient } from '../client/http.js';
 import { resolveProjectId } from './project.js';
-import { parseAlias } from '@keynv/core';
 
 vi.mock('../client/http.js', () => ({
   ApiClient: vi.fn().mockImplementation(() => ({
