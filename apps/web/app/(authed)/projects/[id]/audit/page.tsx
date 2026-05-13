@@ -1,6 +1,10 @@
 import { type AuditEntry, AuditTimeline } from '@/components/audit/audit-timeline';
-import { ChainBanner } from '@/components/audit/chain-banner';
 import { api } from '@/lib/api';
+
+interface AuditResponse {
+  entries: AuditEntry[];
+  next_cursor: number | null;
+}
 
 export default async function ProjectAuditPage({
   params,
@@ -11,7 +15,7 @@ export default async function ProjectAuditPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const audit = await api<{ entries: AuditEntry[] }>('/v1/audit', {
+  const audit = await api<AuditResponse>('/v1/audit', {
     query: { event_type: sp.event_type, limit: sp.limit ?? 200 },
   });
 
@@ -25,11 +29,15 @@ export default async function ProjectAuditPage({
       (e.payload as { project_id?: string }).project_id === undefined ||
       (e.payload as { project_id?: string }).project_id === id,
   );
+  // Cursor-based pagination is page-wide; client-side project filter
+  // means load-more may show entries from other projects. Acceptable
+  // until a dedicated project-scoped endpoint lands.
+  const nextCursor = entries.length > 0 && audit.next_cursor ? audit.next_cursor : null;
 
   return (
     <div className="space-y-5">
-      <ChainBanner />
-      <AuditTimeline entries={entries} />
+      <h2 className="display text-lg tracking-tight text-fg">Audit log</h2>
+      <AuditTimeline entries={entries} nextCursor={nextCursor} />
     </div>
   );
 }

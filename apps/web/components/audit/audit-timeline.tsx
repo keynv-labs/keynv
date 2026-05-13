@@ -2,8 +2,8 @@
 
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
-import { ChevronDown, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ChevronDown, Loader2, Search } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   CATEGORY_LABELS,
   type Category,
@@ -25,6 +25,7 @@ export interface AuditEntry {
 
 interface Props {
   entries: AuditEntry[];
+  nextCursor: number | null;
 }
 
 const FILTER_ORDER: Category[] = [
@@ -37,19 +38,22 @@ const FILTER_ORDER: Category[] = [
   'other',
 ];
 
-export function AuditTimeline({ entries }: Props) {
+export function AuditTimeline({ entries: initialEntries, nextCursor: initialCursor }: Props) {
+  const [allEntries, setAllEntries] = useState<AuditEntry[]>(initialEntries);
+  const [cursor, setCursor] = useState<number | null>(initialCursor);
+  const [loading, setLoading] = useState(false);
   const [activeCategories, setActiveCategories] = useState<Set<Category>>(new Set());
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   const availableCategories = useMemo(() => {
     const set = new Set<Category>();
-    for (const e of entries) set.add(categoryOf(e.event_type));
+    for (const e of allEntries) set.add(categoryOf(e.event_type));
     return FILTER_ORDER.filter((c) => set.has(c));
-  }, [entries]);
+  }, [allEntries]);
 
   const filtered = useMemo(() => {
-    return entries.filter((e) => {
+    return allEntries.filter((e) => {
       if (activeCategories.size > 0 && !activeCategories.has(categoryOf(e.event_type))) {
         return false;
       }
@@ -61,7 +65,7 @@ export function AuditTimeline({ entries }: Props) {
       }
       return true;
     });
-  }, [entries, activeCategories, search]);
+  }, [allEntries, activeCategories, search]);
 
   const grouped = useMemo(() => {
     const buckets = new Map<string, { label: string; entries: AuditEntry[] }>();
@@ -73,6 +77,21 @@ export function AuditTimeline({ entries }: Props) {
     }
     return Array.from(buckets.entries());
   }, [filtered]);
+
+  const loadMore = useCallback(async () => {
+    if (cursor === null || loading) return;
+    setLoading(true);
+    try {
+      const { loadMoreAuditAction } = await import('@/app/(authed)/actions');
+      const result = await loadMoreAuditAction(cursor);
+      setAllEntries((prev) => [...prev, ...result.entries]);
+      setCursor(result.next_cursor);
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setLoading(false);
+    }
+  }, [cursor, loading]);
 
   function toggleCategory(c: Category) {
     setActiveCategories((prev) => {
@@ -149,13 +168,17 @@ export function AuditTimeline({ entries }: Props) {
 
         <div className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
           <span className="text-fg tabular">{filtered.length}</span> of{' '}
-          <span className="tabular">{entries.length}</span>
+          <span className="tabular">{allEntries.length}</span>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {allEntries.length === 0 ? (
         <div className="rounded-lg border border-border bg-bg-elevated p-10 text-center text-sm text-fg-muted">
-          {entries.length === 0 ? 'No audit entries yet.' : 'No audit entries match those filters.'}
+          No audit entries yet.
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-lg border border-border bg-bg-elevated p-10 text-center text-sm text-fg-muted">
+          No audit entries match those filters.
         </div>
       ) : (
         <div className="space-y-5">
@@ -180,6 +203,32 @@ export function AuditTimeline({ entries }: Props) {
           ))}
         </div>
       )}
+
+      {cursor !== null ? (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loading}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.14em]',
+              'transition-colors duration-fast ease-snap',
+              loading
+                ? 'text-fg-subtle cursor-not-allowed'
+                : 'text-fg-muted hover:text-fg hover:border-border-strong',
+            )}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={12} className="animate-spin" />
+                loading
+              </>
+            ) : (
+              'load more'
+            )}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

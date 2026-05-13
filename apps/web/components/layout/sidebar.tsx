@@ -217,7 +217,7 @@ export function SidebarContent({ email, role, onNavigate }: SidebarContentProps)
 
 export function Sidebar(props: SidebarContentProps) {
   return (
-    <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-bg-elevated">
+    <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-bg-elevated sticky top-0 h-screen self-start">
       <SidebarContent {...props} />
     </aside>
   );

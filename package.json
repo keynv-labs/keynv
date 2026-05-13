@@ -10,7 +10,7 @@
   },
   "packageManager": "pnpm@9.12.0",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": " keynv --exec pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "test": "pnpm -r test",
     "test:security": "pnpm -r test:security",

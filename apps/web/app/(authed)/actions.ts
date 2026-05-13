@@ -27,3 +27,17 @@ export async function logoutAction(): Promise<void> {
   await clearSession();
   redirect('/login?toast=signed_out');
 }
+
+export async function loadMoreAuditAction(cursor: number): Promise<{
+  entries: Array<{
+    id: number;
+    ts: string;
+    actor_user_id: string | null;
+    actor_agent: string;
+    event_type: string;
+    payload: Record<string, unknown> | null;
+  }>;
+  next_cursor: number | null;
+}> {
+  return api('/v1/audit', { query: { limit: 200, since_id: cursor } });
+}
