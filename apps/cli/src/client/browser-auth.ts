@@ -69,10 +69,7 @@ export async function runBrowserAuth(serverUrl: string): Promise<Credentials> {
     );
   } else {
     process.stderr.write(
-      `\n  Could not open a browser automatically.\n` +
-        `  Open this URL manually:\n\n    ${start.verification_uri_complete}\n\n` +
-        `  Your code: ${start.user_code}\n` +
-        `  Waiting for you to complete auth in the browser...\n\n`,
+      `\n  Could not open a browser automatically.\n  Open this URL manually:\n\n    ${start.verification_uri_complete}\n\n  Your code: ${start.user_code}\n  Waiting for you to complete auth in the browser...\n\n`,
     );
   }
 
