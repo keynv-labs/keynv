@@ -1,6 +1,6 @@
 {
   "name": "@keynv/web",
-  "version": "0.1.0-rc.13",
+  "version": "0.1.0-rc.14",
   "private": true,
   "description": "keynv web dashboard for team leads — Next.js 15 + App Router.",
   "type": "module",

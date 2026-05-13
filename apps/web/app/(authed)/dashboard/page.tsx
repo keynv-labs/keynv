@@ -75,7 +75,8 @@ async function ActivityContent() {
     safeFetchOnboarding(),
   ]);
 
-  const showChecklist = onboarding !== null && !isOnboardingComplete(onboarding);
+  const showChecklist =
+    onboarding !== null && !isOnboardingComplete(onboarding) && !onboarding.dismissed;
 
   if (projects.length === 0) {
     return showChecklist ? <OnboardingChecklist initialStatus={onboarding} /> : <FirstRunEmpty />;

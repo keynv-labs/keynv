@@ -122,6 +122,13 @@ spelled \`--from\` to avoid the collision.)
       return 2;
     }
 
+    if (!envFileLoaded && !this.noEnvFile && !this.envFile && !process.env.KEYNV_ENV_FILE) {
+      this.context.stderr.write(
+        `keynv: no ${ENV_FILE_BASENAME} found in this directory or any parent.\n` +
+          `       Run \`keynv init\` in your project root to migrate secrets and create one.\n`,
+      );
+    }
+
     // Parse --via-env entries (NAME=@alias).
     const viaEnvSpecs: Array<{ name: string; aliasLiteral: string }> = [];
     for (const spec of this.viaEnv ?? []) {

@@ -1,9 +1,9 @@
 'use client';
 
+import { dismissOnboardingAction } from '@/app/(authed)/actions';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import {
-  DISMISS_STORAGE_KEY,
   ONBOARDING_STEPS,
   type OnboardingStatus,
   completedStepCount,
@@ -12,7 +12,7 @@ import {
 import { notify } from '@/lib/toast';
 import { ArrowRight, Check, CheckCircle2, Circle, Copy, Terminal, X } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface Props {
   initialStatus: OnboardingStatus;
@@ -30,21 +30,17 @@ interface StepDef {
 
 export function OnboardingChecklist({ initialStatus, compact = false }: Props) {
   const [status] = useState(initialStatus);
-  const [dismissed, setDismissed] = useState<boolean>(false);
-
-  useEffect(() => {
-    setDismissed(window.localStorage.getItem(DISMISS_STORAGE_KEY) === '1');
-  }, []);
+  const [dismissed, setDismissed] = useState<boolean>(initialStatus.dismissed);
 
   const completed = completedStepCount(status);
   const allDone = isOnboardingComplete(status);
 
   if (dismissed || allDone) return null;
 
-  function handleDismiss() {
-    window.localStorage.setItem(DISMISS_STORAGE_KEY, '1');
+  async function handleDismiss() {
     setDismissed(true);
     notify.info('Hidden. You can re-enable from Settings if you change your mind.');
+    await dismissOnboardingAction();
   }
 
   const steps = buildSteps();

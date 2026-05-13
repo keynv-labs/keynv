@@ -1,6 +1,7 @@
 import { Logomark } from '@/components/brand/logomark';
 import { Button } from '@/components/ui/button';
 import { ErrorBlock } from '@/components/ui/error-block';
+import { Input } from '@/components/ui/input';
 import { SkipLink } from '@/components/ui/skip-link';
 import { getSession } from '@/lib/session';
 import Link from 'next/link';
@@ -71,11 +72,11 @@ export default async function CliAuthorizePage({
                   <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
                     CLI code
                   </span>
-                  <input
+                  <Input
                     name="user_code"
                     required
                     defaultValue={code}
-                    className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-fg outline-none focus:border-accent"
+                    className="font-mono bg-bg focus:border-accent"
                     placeholder="ABCD-2345"
                   />
                 </label>

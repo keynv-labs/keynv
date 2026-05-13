@@ -107,22 +107,22 @@ open https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md
 open https://github.com/keynv-labs/keynv/blob/main/deploy/README.md
 ```
 
-Install the CLI:
+Once deployed, verify your server is up:
+
+```bash
+curl https://api.keynv.example.com/v1/health
+# → {"ok":true,"version":"0.1.0",...}
+```
+
+Install the CLI and log in to your self-hosted instance:
 
 ```bash
 npm install -g @keynv/cli
-
-# Hosted default: opens browser auth, then offers to set up this project.
-keynv
+keynv login --server https://api.keynv.example.com
 ```
 
 The first run opens your browser, stores the session in the OS keychain, then
-asks whether to initialize the current project. Self-hosted instances use the
-same browser flow with an explicit server URL:
-
-```bash
-keynv login --server https://api.keynv.example.com
-```
+asks whether to initialize the current project.
 
 From the menu you create projects, add environments, and load secrets without
 memorizing subcommands.

@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -63,14 +64,14 @@ export function ProjectSwitcher({ current, projects }: Props) {
       <DropdownMenuContent align="start" className="w-72 max-h-[60vh] overflow-y-auto">
         {projects.length > 6 ? (
           <div className="px-2 pt-1 pb-2 border-b border-border">
-            <input
+            <Input
               type="text"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter projects…"
               // biome-ignore lint/a11y/noAutofocus: this filter only mounts when the dropdown opens via an explicit user click, so focus-stealing concerns don't apply.
               autoFocus
-              className="block h-7 w-full rounded border border-border bg-bg-inset px-2 text-sm text-fg placeholder:text-fg-subtle focus:border-border-bright focus:bg-bg outline-none"
+              className="h-7 px-2"
             />
           </div>
         ) : null}

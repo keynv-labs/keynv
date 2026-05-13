@@ -90,7 +90,8 @@ export default async function ProjectsPage() {
 
 async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
   const [projects, onboarding] = await Promise.all([loadProjects(), safeFetchOnboarding()]);
-  const showChecklist = onboarding !== null && !isOnboardingComplete(onboarding);
+  const showChecklist =
+    onboarding !== null && !isOnboardingComplete(onboarding) && !onboarding.dismissed;
 
   if (projects.length === 0) {
     return showChecklist ? (

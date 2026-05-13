@@ -10,6 +10,7 @@ export interface OnboardingStatus {
   secret_added: boolean;
   cli_authenticated: boolean;
   integration_installed: boolean;
+  dismissed: boolean;
 }
 
 /**

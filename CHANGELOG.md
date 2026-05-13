@@ -12,9 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- `keynv project describe <name>` now accepts project name (in addition to ID). Previously only accepted ID.
-- `keynv init` gains `--env-file`, `--project`, `--env`, `--secret` flags for non-interactive/CI usage.
+## [0.1.0-rc.14] — 2026-05-13
 
 ### Added
 - Public registration endpoint `POST /v1/auth/register` — opt-in via
@@ -33,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   out.
 - Audit chain learned an `auth.register` event type (validated payload
   schema in `@keynv/core`).
+
+### Fixed
+- `keynv project describe <name>` now accepts project name (in addition to ID). Previously only accepted ID.
+- `keynv init` gains `--env-file`, `--project`, `--env`, `--secret` flags for non-interactive/CI usage.
+- CLI authorize page and project-switcher filter now use the shared `<Input />` component for visual consistency.
+- Onboarding step 4 ("Onboard your AI agents") now marks complete once the user has resolved a secret via `keynv exec`, instead of always showing as incomplete.
+- `keynv exec` warns when no `.keynv.env` is found and suggests running `keynv init`.
+- Network errors in CLI commands now include the server URL and a `curl /v1/health` hint.
+- Keychain load failures are surfaced with an explicit error message instead of a silent "not logged in".
+- Onboarding checklist dismissal is now persisted server-side (`users.onboarding_dismissed_at`) so it persists across devices and browsers. DB migration: `0005_onboarding_dismissed.sql`.
 
 ### Notes
 - During public beta no usage limits are enforced. Free-tier quotas

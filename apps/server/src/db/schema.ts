@@ -34,6 +34,7 @@ export const users = sqliteTable(
     password_hash: text('password_hash').notNull(),
     org_role: text('org_role', { enum: ['owner', 'admin', 'developer', 'reader'] }).notNull(),
     mfa_enrolled: integer('mfa_enrolled', { mode: 'boolean' }).notNull().default(false),
+    onboarding_dismissed_at: text('onboarding_dismissed_at'),
     created_at: text('created_at').notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
   },
   (t) => ({

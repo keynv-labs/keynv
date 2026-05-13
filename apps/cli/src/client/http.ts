@@ -91,7 +91,18 @@ export class ApiClient {
   }
 
   async ensureHydrated(): Promise<void> {
-    if (this.hydrated) await this.hydrated;
+    if (this.hydrated) {
+      try {
+        await this.hydrated;
+      } catch (err) {
+        // Keychain / credential-store failure. Surface the message so the
+        // user understands why they're seeing "not logged in" instead of
+        // silently treating it as a missing session.
+        process.stderr.write(
+          `${err instanceof Error ? err.message : `keynv: credential load failed — ${String(err)}`}\n`,
+        );
+      }
+    }
   }
 
   async setCredentials(creds: Credentials): Promise<void> {
@@ -116,11 +127,21 @@ export class ApiClient {
       headers.authorization = `Bearer ${this.creds.access_token}`;
     }
     const url = this.creds ? buildUrl(this.creds.server_url, path, opts.query) : path;
-    let res = await fetch(url, {
-      method: opts.method ?? 'GET',
-      headers,
-      ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: opts.method ?? 'GET',
+        headers,
+        ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
+      });
+    } catch (err) {
+      const cause = err instanceof Error ? err.message : String(err);
+      const serverUrl = this.creds?.server_url ?? url;
+      throw new Error(
+        `keynv: cannot reach server '${serverUrl}' — ${cause}\n` +
+          `       Check the server is running: curl ${serverUrl}/v1/health`,
+      );
+    }
 
     // 401 → try refresh once
     if (res.status === 401 && this.creds && opts.authed !== false) {
@@ -128,11 +149,20 @@ export class ApiClient {
       if (refreshed) {
         this.creds = refreshed;
         headers.authorization = `Bearer ${refreshed.access_token}`;
-        res = await fetch(url, {
-          method: opts.method ?? 'GET',
-          headers,
-          ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
-        });
+        try {
+          res = await fetch(url, {
+            method: opts.method ?? 'GET',
+            headers,
+            ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
+          });
+        } catch (err) {
+          const cause = err instanceof Error ? err.message : String(err);
+          const serverUrl = this.creds?.server_url ?? url;
+          throw new Error(
+            `keynv: cannot reach server '${serverUrl}' — ${cause}\n` +
+              `       Check the server is running: curl ${serverUrl}/v1/health`,
+          );
+        }
       }
     }
 
