@@ -1,4 +1,6 @@
 import { type StdioOptions, spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import * as nodePath from 'node:path';
 import { createRedactStream } from '@keynv/redactor';
 import type { ResolvedAlias } from './resolve.js';
 
@@ -40,6 +42,7 @@ const ENV_ALLOWLIST: ReadonlyArray<string> = [
   'COMSPEC',
   'APPDATA',
   'LOCALAPPDATA',
+  'PATHEXT', // needed so child processes can resolve executables by name
 ];
 
 export interface SpawnArgs {
@@ -93,9 +96,26 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
   ]);
   let spawnCmd = opts.command;
   let spawnArgs = opts.args;
-  if (process.platform === 'win32' && WIN_BUILTINS.has(opts.command.toLowerCase())) {
-    spawnCmd = process.env.COMSPEC ?? 'cmd.exe';
-    spawnArgs = ['/d', '/s', '/c', opts.command, ...opts.args];
+  if (process.platform === 'win32') {
+    const comspec = env.COMSPEC ?? process.env.COMSPEC ?? 'cmd.exe';
+    if (WIN_BUILTINS.has(opts.command.toLowerCase())) {
+      spawnCmd = comspec;
+      spawnArgs = ['/d', '/s', '/c', opts.command, ...opts.args];
+    } else {
+      // Node's spawn() on Windows won't resolve .cmd/.bat executables
+      // without shell:true. Resolve explicitly so `next`, `npx`, `jest`,
+      // etc. work when they're node_modules/.bin/<name>.cmd wrappers.
+      const resolved = resolveWindowsCmd(opts.command, env);
+      if (resolved !== null) {
+        const ext = nodePath.extname(resolved).toLowerCase();
+        if (ext === '.cmd' || ext === '.bat') {
+          spawnCmd = comspec;
+          spawnArgs = ['/d', '/s', '/c', resolved, ...opts.args];
+        } else {
+          spawnCmd = resolved;
+        }
+      }
+    }
   }
 
   const child = spawn(spawnCmd, spawnArgs, {
@@ -140,4 +160,39 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
       });
     });
   });
+}
+
+/**
+ * On Windows, Node's spawn() with shell:false won't resolve .cmd/.bat
+ * executables (e.g. node_modules/.bin/next.cmd). We do the PATHEXT
+ * search ourselves so the caller can wrap the result in cmd.exe.
+ *
+ * Returns the full path if found, or null if we should let spawn() try
+ * as-is (absolute path, or .exe that spawn handles natively).
+ */
+function resolveWindowsCmd(command: string, subprocessEnv: Record<string, string>): string | null {
+  // Already has an explicit extension — don't second-guess it.
+  if (nodePath.extname(command)) return null;
+  // Absolute or relative path — don't search.
+  if (command.includes('/') || command.includes('\\')) return null;
+
+  const pathExt = (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD')
+    .split(';')
+    .map((e) => e.toLowerCase())
+    .filter(Boolean);
+
+  const pathStr = subprocessEnv.PATH ?? process.env.PATH ?? '';
+  const pathDirs = pathStr.split(nodePath.delimiter).filter(Boolean);
+
+  for (const dir of pathDirs) {
+    for (const ext of pathExt) {
+      try {
+        const full = nodePath.join(dir, command + ext);
+        if (existsSync(full)) return full;
+      } catch {
+        // skip dirs that can't be stat'd
+      }
+    }
+  }
+  return null;
 }

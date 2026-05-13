@@ -69,7 +69,10 @@ spelled \`--from\` to avoid the collision.)
     description: `Suppress the "loaded N vars from ${ENV_FILE_BASENAME}" status line.`,
   });
 
-  rest = Option.Rest();
+  // Option.Proxy (not Rest) so that flags in the subprocess argv like
+  // `--port 3005` or `-v` are passed through as-is instead of being
+  // intercepted by clipanion's option parser.
+  rest = Option.Proxy();
 
   async execute(): Promise<number> {
     if (!this.rest || this.rest.length === 0) {
