@@ -106,7 +106,7 @@ Pre-public-launch hardening. Active streams in priority order:
 | **D** | License finalize (MIT) + dep license audit | ✓ done |
 | **A** | Security audit + remediation (semgrep / threat-model walkthrough) | ◐ in progress — rate limiter (A1) closed; remaining items tracked in project issues |
 | **G** | Versioning (`v0.1.0-rc.1` cut), CHANGELOG, deprecation policy | ✓ done (2026-05-10) |
-| **C** | Release pipeline — Bun binaries × 5 platforms + multi-arch Docker | ○ next |
+| **C** | Release pipeline — Bun binaries × 5 platforms + multi-arch Docker | ✓ done (darwin-x64 added) |
 | **E** | Public docs polish (`getting-started.md`, integration guides) | ○ pending |
 | **F** | `keynv server init` onboarding wizard | ○ pending |
 
