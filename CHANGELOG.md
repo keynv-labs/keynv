@@ -18,6 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0-rc.14] — 2026-05-13
 
 ### Added
+- `keynv init --yes` flag — auto-scans .env files, classifies entries, creates project, uploads secrets, and writes `.keynv.env` without any prompts. Enables fully automated CI/CD migration.
+- `resolveProjectId` now performs case-insensitive project name matching.
+- `keynv exec` subprocess PATH now includes nearest `node_modules/.bin` so project-local tools (`next`, `vite`, etc.) work without `npx`.
+
+### Fixed
+- CLI no longer stays stuck in the interactive menu loop after completing login + init — auto-exits with a clean "All set." message.
+- `keynv init --dry-run` no longer requires an interactive terminal; works in CI with `--env-file` and `--secret` flags.
+- `keynv secret list` now correctly extracts project names from `@project.env.key` aliases via `parseAlias()` instead of naive string splitting.
+- Secret key format preserved — env var names like `DATABASE_URL` or `OPENAI_API_KEY` keep their original case and underscores instead of being lowercased to kebab-case.
+- Server VERSION now reads from `package.json` instead of a hardcoded string that went out of sync.
+- Onboarding checklist in web dashboard uses a placeholder server URL instead of hardcoded `https://api.keynv.dev`.
+
+## [0.1.0-rc.14] — 2026-05-13
+
+### Added
 - Public registration endpoint `POST /v1/auth/register` — opt-in via
   `KEYNV_PUBLIC_REGISTRATION=true`. Creates a fresh org + owner user
   atomically and returns a JWT pair. Tighter per-IP rate limit
