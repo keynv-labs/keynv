@@ -35,6 +35,13 @@ export const DOC_REGISTRY: ReadonlyArray<DocSection> = [
         title: 'Quickstart',
         summary: 'Self-host keynv on Coolify and wire your first AI agent in 15 minutes.',
       },
+      {
+        slug: 'ai-setup',
+        file: 'docs/ai-setup.md',
+        title: 'Set up with your AI agent',
+        summary:
+          'Copy-paste prompts and AGENTS.md setup for Claude Code, Cursor, Aider, and any other agent.',
+      },
     ],
   },
   {

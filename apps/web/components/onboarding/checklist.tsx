@@ -204,17 +204,25 @@ function buildSteps(): StepDef[] {
             <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
               keynv init
             </code>{' '}
-            in your project root. It scans existing
+            in your project root. It scans{' '}
             <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
               .env
             </code>{' '}
-            files, migrates secrets to the vault, and writes a
+            files, migrates secrets to the vault, writes{' '}
             <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
               .keynv.env
             </code>{' '}
-            that maps alias names — safe to commit.
+            (safe to commit), and writes{' '}
+            <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
+              AGENTS.md
+            </code>{' '}
+            so Claude Code, Cursor, and any other agent understands keynv immediately.
           </p>
           <CommandSnippet command="keynv init" />
+          <p className="text-fg-muted text-xs pt-0.5">
+            Or paste this into your agent&apos;s chat to let it set everything up:
+          </p>
+          <CommandSnippet command="Install keynv: npm install -g @keynv/cli && keynv login && keynv init" />
         </div>
       ),
     },
