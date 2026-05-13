@@ -12,7 +12,47 @@ export function SkipLink({ targetId = 'main' }: { targetId?: string }) {
   return (
     <a
       href={`#${targetId}`}
-      className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:border focus:border-accent focus:bg-bg-elevated focus:px-3 focus:py-2 focus:text-sm focus:text-fg focus:shadow-[0_0_0_3px_rgba(255,183,77,0.3)]"
+      style={{
+        position: 'absolute',
+        width: '1px',
+        height: '1px',
+        padding: 0,
+        margin: '-1px',
+        overflow: 'hidden',
+        clip: 'rect(0,0,0,0)',
+        whiteSpace: 'nowrap',
+        border: 0,
+      }}
+      onFocus={(e) => {
+        const el = e.currentTarget;
+        el.style.position = 'fixed';
+        el.style.width = 'auto';
+        el.style.height = 'auto';
+        el.style.margin = '0';
+        el.style.overflow = 'visible';
+        el.style.clip = 'auto';
+        el.style.top = '12px';
+        el.style.left = '12px';
+        el.style.zIndex = '50';
+        el.style.borderRadius = '6px';
+        el.style.border = '1px solid var(--color-accent)';
+        el.style.background = 'var(--color-bg-elevated)';
+        el.style.padding = '8px 12px';
+        el.style.fontSize = '14px';
+        el.style.color = 'var(--color-fg)';
+      }}
+      onBlur={(e) => {
+        const el = e.currentTarget;
+        el.style.position = 'absolute';
+        el.style.width = '1px';
+        el.style.height = '1px';
+        el.style.padding = '0';
+        el.style.margin = '-1px';
+        el.style.overflow = 'hidden';
+        el.style.clip = 'rect(0,0,0,0)';
+        el.style.whiteSpace = 'nowrap';
+        el.style.border = '0';
+      }}
     >
       Skip to content
     </a>

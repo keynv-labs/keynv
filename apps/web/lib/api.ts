@@ -83,23 +83,19 @@ export async function api<T = unknown>(path: string, opts: RequestOpts = {}): Pr
       parsed as { error?: { code?: string; message?: string; details?: unknown } }
     )?.error;
 
-    // If we presented a session token and the server rejected it, the
-    // session is dead (expired access token, JWT secret rotated on a
-    // server restart, refresh token revoked, password changed). Bounce
-    // to /login; the loginAction's setSession will overwrite the stale
-    // cookie. We can't call clearSession from here — Next.js forbids
-    // modifying cookies in a Server Component context, and api() is
-    // most often invoked from one.
-    //
-    // Login + refresh flows pass authed: false, so they never hit this
-    // branch — wrong-password errors still surface to the form.
+    // If the server rejected our access token, bounce through the
+    // refresh route handler instead of dumping straight to /login.
+    // The handler reads the session cookie, calls POST /v1/auth/refresh,
+    // sets a fresh cookie, and redirects back to the original page.
+    // This avoids the "kicked to login" loop every ~15 minutes (the
+    // default access token TTL).
     if (
       res.status === 401 &&
       session &&
       typeof errPayload?.code === 'string' &&
       errPayload.code.startsWith('auth.')
     ) {
-      redirect('/login');
+      redirect('/api/auth/refresh');
     }
 
     throw apiError(
