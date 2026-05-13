@@ -45,8 +45,8 @@
         "id": "p_aanuek60gwpnak98submy",
         "name": "testproject",
         "environments": [
-          {"name": "dev", "tier": "non-production", "require_approval": false},
-          {"name": "prod", "tier": "production", "require_approval": true}
+          { "name": "dev", "tier": "non-production", "require_approval": false },
+          { "name": "prod", "tier": "production", "require_approval": true }
         ]
       },
       "findings": []
@@ -58,10 +58,7 @@
         "GET /v1/projects/:id/secrets",
         "GET /v1/projects/:id/secrets/:env/:key"
       ],
-      "secrets_created": [
-        "@testproject.dev.api_key",
-        "@testproject.dev.database_password"
-      ],
+      "secrets_created": ["@testproject.dev.api_key", "@testproject.dev.database_password"],
       "findings": []
     },
     "cli_login": {
@@ -73,14 +70,46 @@
     "cli_project_operations": {
       "status": "partial",
       "commands_tested": [
-        {"command": "keynv whoami", "status": "pass", "output": "user: test+opencode001@example.com, org: org_jmymypsz09tsf9vo73iss, role: owner"},
-        {"command": "keynv project list", "status": "pass", "output": "testproject listed correctly"},
-        {"command": "keynv project describe testproject", "status": "fail", "error": "Project not found - but project list shows it exists"},
-        {"command": "keynv secret list @testproject", "status": "fail", "error": "unknown project: @testproject"},
-        {"command": "keynv secret list @testproject.dev", "status": "fail", "error": "unknown project: @testproject.dev"},
-        {"command": "keynv secret list @testproject.dev.database_password", "status": "fail", "error": "unknown project: @testproject.dev.database_password"},
-        {"command": "keynv secret get @testproject.dev.api_key", "status": "fail", "error": "unknown project: @testproject.dev.api_key"},
-        {"command": "keynv secret create @testproject.dev.another_secret --value test", "status": "pass", "secret_created": true}
+        {
+          "command": "keynv whoami",
+          "status": "pass",
+          "output": "user: test+opencode001@example.com, org: org_jmymypsz09tsf9vo73iss, role: owner"
+        },
+        {
+          "command": "keynv project list",
+          "status": "pass",
+          "output": "testproject listed correctly"
+        },
+        {
+          "command": "keynv project describe testproject",
+          "status": "fail",
+          "error": "Project not found - but project list shows it exists"
+        },
+        {
+          "command": "keynv secret list @testproject",
+          "status": "fail",
+          "error": "unknown project: @testproject"
+        },
+        {
+          "command": "keynv secret list @testproject.dev",
+          "status": "fail",
+          "error": "unknown project: @testproject.dev"
+        },
+        {
+          "command": "keynv secret list @testproject.dev.database_password",
+          "status": "fail",
+          "error": "unknown project: @testproject.dev.database_password"
+        },
+        {
+          "command": "keynv secret get @testproject.dev.api_key",
+          "status": "fail",
+          "error": "unknown project: @testproject.dev.api_key"
+        },
+        {
+          "command": "keynv secret create @testproject.dev.another_secret --value test",
+          "status": "pass",
+          "secret_created": true
+        }
       ],
       "findings": [
         {
@@ -116,7 +145,11 @@
     "keynv_init": {
       "status": "not_fully_testable",
       "commands_tested": [
-        {"command": "keynv init --dry-run", "status": "fail", "error": "keynv init requires an interactive terminal. Use the lower-level commands (`keynv project`, `keynv secret`) for scripted setup."}
+        {
+          "command": "keynv init --dry-run",
+          "status": "fail",
+          "error": "keynv init requires an interactive terminal. Use the lower-level commands (`keynv project`, `keynv secret`) for scripted setup."
+        }
       ],
       "findings": [
         {
@@ -131,9 +164,9 @@
     "web_dashboard": {
       "status": "cannot_test_fully",
       "pages_tested": [
-        {"page": "/projects", "status": "redirects_to_login", "requires": "session_cookie_auth"},
-        {"page": "/login", "status": "renders_correctly"},
-        {"page": "/register", "status": "renders_correctly"}
+        { "page": "/projects", "status": "redirects_to_login", "requires": "session_cookie_auth" },
+        { "page": "/login", "status": "renders_correctly" },
+        { "page": "/register", "status": "renders_correctly" }
       ],
       "findings": [
         {

@@ -110,8 +110,7 @@
       "issue_id": "secret-key-format-restriction",
       "title": "Secret keys must be lowercase/kebab-case",
       "description": "Alias format @project.env.key does not allow UPPERCASE or underscore in key names. DATABASE_URL fails but database-url works.",
-      "example": "keynv secret create @project.dev.DATABASE_URL --value x → fails
-keynv secret create @project.dev.database-url --value x → succeeds",
+      "example": "keynv secret create @project.dev.DATABASE_URL --value x fails | keynv secret create @project.dev.database-url --value x succeeds",
       "impact": "Developers must rename their env vars to use keynv (e.g., OPENAI_API_KEY → openai-api-key)",
       "related_github_issue": "#1 - Secret key validation rejects uppercase characters"
     },
