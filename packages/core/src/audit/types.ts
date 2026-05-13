@@ -34,6 +34,7 @@ export type AuditEventType =
   | 'approval.requested'
   | 'approval.granted'
   | 'approval.denied'
+  | 'org.updated'
   | 'kek.rotated';
 
 /**

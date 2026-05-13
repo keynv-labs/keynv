@@ -82,6 +82,7 @@ export const PAYLOAD_SCHEMAS = {
   'approval.requested': z.object({ alias }).strict(),
   'approval.granted': z.object({ alias, granted_by: userId }).strict(),
   'approval.denied': z.object({ alias, denied_by: userId }).strict(),
+  'org.updated': z.object({ org_id: orgId, name: z.string().min(1) }).strict(),
   'kek.rotated': empty,
 } as const satisfies Record<AuditEventType, z.ZodType<Record<string, unknown>>>;
 

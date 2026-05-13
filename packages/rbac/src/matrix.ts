@@ -5,6 +5,7 @@ import type { Action, Role } from './types.js';
  * membership lookup is performed.
  */
 export const ORG_LEVEL_ACTIONS = new Set<Action>([
+  'org.update',
   'org.transfer',
   'org.billing',
   'org.kek_rotate',
@@ -25,6 +26,7 @@ export const ORG_LEVEL_ACTIONS = new Set<Action>([
  */
 export const ROLE_ALLOWS_ACTION: Record<Action, ReadonlyArray<Role>> = {
   // Org-level
+  'org.update': ['owner', 'admin'],
   'org.transfer': ['owner'],
   'org.billing': ['owner'],
   'org.kek_rotate': ['owner'],

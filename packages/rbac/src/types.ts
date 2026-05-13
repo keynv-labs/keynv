@@ -25,6 +25,7 @@ export type Role = OrgRole | ProjectRole;
  */
 export type Action =
   // Org-level
+  | 'org.update'
   | 'org.transfer'
   | 'org.billing'
   | 'org.kek_rotate'
