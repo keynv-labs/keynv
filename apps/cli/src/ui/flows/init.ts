@@ -43,6 +43,20 @@ import { applyWraps, planScriptWrap } from '../../init/scriptWrap.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
 import { listProjects } from '../helpers/pickProject.js';
 
+/**
+ * Normalise a raw env-var name to a vault alias key. Preserves the
+ * original case when valid; falls back to lowercase + underscore→dash
+ * for names that would otherwise fail KEY_RE validation.
+ */
+function toAliasKey(name: string): string {
+  if (!name) return name;
+  const KEY_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
+  if (KEY_RE.test(name)) return name;
+  const normalised = name.toLowerCase().replace(/_/g, '-');
+  if (KEY_RE.test(normalised)) return normalised;
+  return normalised.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'key';
+}
+
 export interface RunInitOptions {
   cwd: string;
   dryRun: boolean;
@@ -291,7 +305,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
         if (!selected.has(`${env}|${e.name}`)) continue;
         i++;
         s.message(`Uploading (${i}/${totalToUpload}) [${env}] ${e.name}`);
-        const aliasKey = e.name.toLowerCase().replace(/_/g, '-');
+        const aliasKey = toAliasKey(e.name);
         try {
           await client.request(`/v1/projects/${projectId}/secrets`, {
             method: 'POST',
@@ -357,9 +371,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   );
   for (const env of otherEnvsWithAliases) {
     const envUploaded = uploadedByEnv.get(env) ?? new Map<string, string>();
-    const envLiterals = (perEnv.get(env) ?? []).filter(
-      (e) => !selected.has(`${env}|${e.name}`),
-    );
+    const envLiterals = (perEnv.get(env) ?? []).filter((e) => !selected.has(`${env}|${e.name}`));
     const envFilePath = join(root.path, `.keynv.${env}.env`);
     try {
       const lines = composeKeynvEnv({

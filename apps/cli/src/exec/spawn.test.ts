@@ -221,10 +221,7 @@ describe('spawnPrivileged — Windows .cmd resolution', () => {
     // Simulates the `next --version` / `next dev --port 3005` pattern.
     const cmdPath = join(tmp, 'fakecli.cmd');
     // Exit 0 if --port flag is present, 1 otherwise.
-    writeFileSync(
-      cmdPath,
-      '@echo off\r\nif "%1"=="--port" (exit /b 0) else (exit /b 1)\r\n',
-    );
+    writeFileSync(cmdPath, '@echo off\r\nif "%1"=="--port" (exit /b 0) else (exit /b 1)\r\n');
 
     const origPath = process.env.PATH ?? '';
     process.env.PATH = `${tmp}${delimiter}${origPath}`;

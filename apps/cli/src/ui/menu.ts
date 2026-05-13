@@ -1,7 +1,7 @@
 import { cancel, confirm, intro, isCancel, log, outro, select } from '@clack/prompts';
 import { ApiClient } from '../client/http.js';
-import { findProjectRoot, hasExistingKeynvEnv } from '../init/detect.js';
 import { clearCredentials } from '../client/store.js';
+import { findProjectRoot, hasExistingKeynvEnv } from '../init/detect.js';
 import { VERSION } from '../version.js';
 import { runAuditFlow } from './flows/audit.js';
 import { runLoginFlow } from './flows/login.js';
@@ -52,7 +52,15 @@ export async function runMenu(): Promise<number> {
       });
       if (!isCancel(setup) && setup) {
         const { runInitFlow } = await import('./flows/init.js');
-        await runInitFlow(client, { cwd: process.cwd(), dryRun: false, noScripts: false });
+        const outcome = await runInitFlow(client, {
+          cwd: process.cwd(),
+          dryRun: false,
+          noScripts: false,
+        });
+        if (outcome.exitCode === 0) {
+          outro('All set. Run keynv again anytime to manage secrets.');
+          return 0;
+        }
       }
     }
   }

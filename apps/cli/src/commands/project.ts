@@ -17,7 +17,8 @@ export async function resolveProjectId(client: ApiClient, input: string): Promis
     return input;
   }
   const data = await client.request<{ projects: ProjectListItem[] }>('/v1/projects');
-  const match = data.projects.find((p) => p.name === input);
+  const lowerInput = input.toLowerCase();
+  const match = data.projects.find((p) => p.name.toLowerCase() === lowerInput);
   if (!match) throw new Error(`project not found: ${input}`);
   return match.id;
 }

@@ -210,7 +210,9 @@ describe('buildAlias', () => {
   });
 
   it('accepts uppercase keys', () => {
-    expect(buildAlias({ project: 'billing', environment: 'prod', key: 'DATABASE_URL' })).toMatchObject({
+    expect(
+      buildAlias({ project: 'billing', environment: 'prod', key: 'DATABASE_URL' }),
+    ).toMatchObject({
       key: 'DATABASE_URL',
       literal: '@billing.prod.DATABASE_URL',
     });

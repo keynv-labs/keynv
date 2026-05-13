@@ -1,5 +1,5 @@
-import { Command, Option } from 'clipanion';
 import { relative } from 'node:path';
+import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import {
   ENV_FILE_BASENAME,

@@ -84,10 +84,13 @@ export class SecretCreateCommand extends Command {
       }
 
       const projectId = await resolveProjectId(client, parsed.project);
-      await client.request<{ alias: string; version: number }>(`/v1/projects/${projectId}/secrets`, {
-        method: 'POST',
-        body: { env: parsed.environment, key: parsed.key, value },
-      });
+      await client.request<{ alias: string; version: number }>(
+        `/v1/projects/${projectId}/secrets`,
+        {
+          method: 'POST',
+          body: { env: parsed.environment, key: parsed.key, value },
+        },
+      );
       this.context.stdout.write(`created ${parsed.literal}\n`);
       return 0;
     } catch (err) {
@@ -174,9 +177,16 @@ export class SecretListCommand extends Command {
       }
 
       // Allow "@project.env" or "@project.env.KEY" as a shorthand — extract project name.
-      const resolvedProjectName = projectName.startsWith('@')
-        ? (projectName.slice(1).split('.')[0] ?? projectName)
-        : projectName;
+      let resolvedProjectName = projectName;
+      if (projectName.startsWith('@')) {
+        const parsed = parseAlias(projectName);
+        if (parsed) {
+          resolvedProjectName = parsed.project;
+        } else {
+          // Fallback: strip @ and take first component.
+          resolvedProjectName = projectName.slice(1).split('.')[0] ?? projectName;
+        }
+      }
       const projectId = await resolveProjectId(client, resolvedProjectName);
       const data = await client.request<{
         secrets: Array<{ alias: string; version: number; created_at: string }>;
@@ -284,9 +294,12 @@ export class SecretDeleteCommand extends Command {
         return 1;
       }
       const projectId = await resolveProjectId(client, parsed.project);
-      await client.request(`/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`, {
-        method: 'DELETE',
-      });
+      await client.request(
+        `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
+        {
+          method: 'DELETE',
+        },
+      );
       this.context.stdout.write(`deleted ${parsed.literal}\n`);
       return 0;
     } catch (err) {

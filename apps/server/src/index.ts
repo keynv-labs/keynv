@@ -6,7 +6,15 @@ import { openDb } from './db/index.js';
 import { loadOrCreateKek } from './kek/load.js';
 import { loadEnv } from './lib/env.js';
 
-export const VERSION = '0.1.0-rc.11';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg: { version: string } = JSON.parse(
+  readFileSync(resolve(__dirname, '../package.json'), 'utf8'),
+);
+export const VERSION = pkg.version;
 
 async function main(): Promise<void> {
   const env = loadEnv();

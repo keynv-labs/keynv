@@ -190,7 +190,7 @@ function buildSteps(): StepDef[] {
             The CLI lives on your laptop and talks to this server. Install + log in:
           </p>
           <CommandSnippet command="npm install -g @keynv/cli" />
-          <CommandSnippet command="keynv login --server https://api.keynv.dev" />
+          <CommandSnippet command="keynv login --server <your-server-url>" />
         </div>
       ),
     },

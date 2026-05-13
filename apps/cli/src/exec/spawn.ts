@@ -78,6 +78,18 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
     const v = process.env[name];
     if (v !== undefined) env[name] = v;
   }
+
+  // Add node_modules/.bin to PATH so project-local tools (next, vite, etc.)
+  // are resolvable without wrapping in npx. Walk up from cwd to find the
+  // nearest node_modules/.bin, or use the common one in the repo root.
+  const nmBin = findNodeModulesBin(process.cwd());
+  if (nmBin) {
+    const existingPath = env.PATH ?? '';
+    env.PATH = existingPath.startsWith(nmBin + nodePath.delimiter)
+      ? existingPath
+      : nmBin + nodePath.delimiter + existingPath;
+  }
+
   if (opts.injectedEnv) {
     for (const [k, v] of Object.entries(opts.injectedEnv)) env[k] = v;
   }
@@ -91,8 +103,23 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
   // executables. We wrap them transparently instead of using shell:true,
   // which triggers DEP0190 and complicates argument quoting semantics.
   const WIN_BUILTINS = new Set([
-    'echo', 'dir', 'type', 'copy', 'del', 'move', 'ren', 'md', 'mkdir', 'rd',
-    'rmdir', 'cd', 'cls', 'set', 'pause', 'find', 'where',
+    'echo',
+    'dir',
+    'type',
+    'copy',
+    'del',
+    'move',
+    'ren',
+    'md',
+    'mkdir',
+    'rd',
+    'rmdir',
+    'cd',
+    'cls',
+    'set',
+    'pause',
+    'find',
+    'where',
   ]);
   let spawnCmd = opts.command;
   let spawnArgs = opts.args;
@@ -180,7 +207,10 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
  * Returns the full path if found, or null if we should let spawn() try
  * as-is (absolute path, or .exe that spawn handles natively).
  */
-export function resolveWindowsCmd(command: string, subprocessEnv: Record<string, string>): string | null {
+export function resolveWindowsCmd(
+  command: string,
+  subprocessEnv: Record<string, string>,
+): string | null {
   // Already has an explicit extension — don't second-guess it.
   if (nodePath.extname(command)) return null;
   // Absolute or relative path — don't search.
@@ -203,6 +233,23 @@ export function resolveWindowsCmd(command: string, subprocessEnv: Record<string,
         // skip dirs that can't be stat'd
       }
     }
+  }
+  return null;
+}
+
+/**
+ * Walk up from `cwd` to find the nearest `node_modules/.bin` directory.
+ * Returns the full path or null if none is found (e.g. the project does
+ * not have node_modules installed).
+ */
+function findNodeModulesBin(cwd: string): string | null {
+  let dir = nodePath.resolve(cwd);
+  for (let i = 0; i < 20; i++) {
+    const candidate = nodePath.join(dir, 'node_modules', '.bin');
+    if (existsSync(candidate)) return candidate;
+    const parent = nodePath.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
   }
   return null;
 }
