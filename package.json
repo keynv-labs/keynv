@@ -1,6 +1,6 @@
 {
   "name": "keynv",
-  "version": "0.1.0-rc.2",
+  "version": "0.1.0-rc.3",
   "private": true,
   "description": "AI-safe secrets management. Aliases instead of values; AI agents never see real secrets.",
   "license": "MIT",
