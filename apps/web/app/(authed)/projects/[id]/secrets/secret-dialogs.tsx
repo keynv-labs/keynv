@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -62,17 +63,13 @@ export function CreateSecretDialog({
           <input type="hidden" name="project_id" value={projectId} />
 
           <Field label="Environment">
-            <select
-              name="env"
-              required
-              className="block h-8 w-full rounded-md border border-border bg-bg px-2.5 text-sm text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
-            >
+            <Select name="env" defaultValue={environments[0] ?? ''} required>
               {environments.map((e) => (
-                <option key={e} value={e}>
+                <SelectItem key={e} value={e}>
                   {e}
-                </option>
+                </SelectItem>
               ))}
-            </select>
+            </Select>
           </Field>
 
           <Field label="Key">
@@ -270,7 +267,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle mb-1.5">
+      <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
         {label}
       </span>
       {children}

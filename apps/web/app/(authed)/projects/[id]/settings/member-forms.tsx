@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectItem } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
@@ -64,15 +65,11 @@ export function AddMemberDialog({ projectId }: { projectId: string }) {
           </Field>
 
           <Field label="Role">
-            <select
-              name="role"
-              defaultValue="developer"
-              className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
-            >
-              <option value="lead">Lead</option>
-              <option value="developer">Developer</option>
-              <option value="reader">Reader</option>
-            </select>
+            <Select name="role" defaultValue="developer">
+              <SelectItem value="lead">Lead</SelectItem>
+              <SelectItem value="developer">Developer</SelectItem>
+              <SelectItem value="reader">Reader</SelectItem>
+            </Select>
           </Field>
 
           {state.error ? (

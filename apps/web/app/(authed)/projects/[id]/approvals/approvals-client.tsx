@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
 import { Check, ShieldAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -246,17 +247,13 @@ function GrantDialog({
               label="Window"
               hint="How long the grant stays active. Range: 1 minute to 7 days."
             >
-              <select
-                name="expires_in_seconds"
-                defaultValue="3600"
-                className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
-              >
-                <option value="900">15 minutes</option>
-                <option value="3600">1 hour</option>
-                <option value="14400">4 hours</option>
-                <option value="86400">1 day</option>
-                <option value="604800">7 days</option>
-              </select>
+              <Select name="expires_in_seconds" defaultValue="3600">
+                <SelectItem value="900">15 minutes</SelectItem>
+                <SelectItem value="3600">1 hour</SelectItem>
+                <SelectItem value="14400">4 hours</SelectItem>
+                <SelectItem value="86400">1 day</SelectItem>
+                <SelectItem value="604800">7 days</SelectItem>
+              </Select>
             </Field>
 
             <Field label="Reason (optional)" hint="Lands in the audit chain.">

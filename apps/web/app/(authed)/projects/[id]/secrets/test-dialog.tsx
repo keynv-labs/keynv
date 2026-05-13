@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -66,18 +67,17 @@ export function TestSecretDialog({ projectId, env, keyName, alias, open, onOpenC
           <input type="hidden" name="key" value={keyName} />
 
           <Field label="Tester type">
-            <select
+            <Select
               name="tester"
               value={tester}
-              onChange={(e) => setTester(e.target.value as TesterType)}
-              className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
+              onValueChange={(v) => setTester(v as TesterType)}
             >
               {(['postgres', 'mysql', 'redis', 'ssh', 'http'] as const).map((t) => (
-                <option key={t} value={t}>
+                <SelectItem key={t} value={t}>
                   {TESTER_LABELS[t]}
-                </option>
+                </SelectItem>
               ))}
-            </select>
+            </Select>
           </Field>
 
           <TargetForm tester={tester} />
@@ -262,18 +262,17 @@ function BuildJson({ fields }: { fields: FieldDef[] }) {
                 <span className="text-fg-muted text-xs">enable</span>
               </label>
             ) : f.type === 'select' ? (
-              <select
+              <Select
                 value={String(values[f.name] ?? '')}
-                onChange={(e) => setField(f.name, e.target.value)}
-                className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
+                onValueChange={(v) => setField(f.name, v)}
               >
-                <option value="">—</option>
+                <SelectItem value="">—</SelectItem>
                 {f.options?.map((opt) => (
-                  <option key={opt} value={opt}>
+                  <SelectItem key={opt} value={opt}>
                     {opt}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+              </Select>
             ) : (
               <Input
                 type={f.type === 'number' ? 'number' : 'text'}

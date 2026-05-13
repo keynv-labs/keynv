@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
 import {
   Check,
@@ -337,7 +338,7 @@ function InviteUserDialog() {
                 type="button"
                 onClick={() => setPassword(generateTempPassword())}
                 aria-label="Regenerate password"
-                className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted hover:bg-bg-elevated-hover hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+                className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted hover:bg-bg-elevated-hover hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
               >
                 <RefreshCw size={13} strokeWidth={2} />
               </button>
@@ -345,7 +346,7 @@ function InviteUserDialog() {
                 type="button"
                 onClick={onCopy}
                 aria-label="Copy password"
-                className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted hover:bg-bg-elevated-hover hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+                className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted hover:bg-bg-elevated-hover hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
               >
                 {copied ? (
                   <Check size={13} strokeWidth={2.25} className="text-success" />
@@ -357,15 +358,11 @@ function InviteUserDialog() {
           </Field>
 
           <Field label="Org role">
-            <select
-              name="org_role"
-              defaultValue="developer"
-              className="block h-9 w-full rounded-md border border-border bg-bg-inset px-3 text-sm text-fg hover:border-border-strong focus:border-border-bright transition-colors duration-fast ease-snap"
-            >
-              <option value="admin">Admin</option>
-              <option value="developer">Developer</option>
-              <option value="reader">Reader</option>
-            </select>
+            <Select name="org_role" defaultValue="developer">
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="developer">Developer</SelectItem>
+              <SelectItem value="reader">Reader</SelectItem>
+            </Select>
           </Field>
 
           {state.error ? (
