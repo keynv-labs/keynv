@@ -3,7 +3,7 @@ import { runBrowserAuth } from '../client/browser-auth.js';
 import { DEFAULT_SERVER_URL } from '../client/defaults.js';
 import { ApiClient } from '../client/http.js';
 import { saveCredentials } from '../client/store.js';
-import { fmtError } from '../ui/format.js';
+import { fmtError, handleExecError } from '../ui/format.js';
 import { promptHidden, promptLine } from '../ui/input.js';
 import { AGENT } from '../version.js';
 
@@ -45,6 +45,13 @@ export class LoginCommand extends Command {
   async execute(): Promise<number> {
     const finalServerUrl = this.server ?? DEFAULT_SERVER_URL;
 
+    try {
+      new URL(finalServerUrl);
+    } catch {
+      this.context.stderr.write(`keynv: invalid server URL '${finalServerUrl}'\n`);
+      return 1;
+    }
+
     if (this.token) {
       return this.loginWithToken(finalServerUrl, this.token);
     }
@@ -67,11 +74,19 @@ export class LoginCommand extends Command {
     const email = this.email ?? (await promptLine('email: '));
     const password = this.password ?? (await promptHidden('password: '));
 
-    const res = await fetch(new URL('/v1/auth/login', finalServerUrl).toString(), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-keynv-agent': AGENT },
-      body: JSON.stringify({ email, password }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(new URL('/v1/auth/login', finalServerUrl).toString(), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-keynv-agent': AGENT },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch (err) {
+      this.context.stderr.write(
+        `keynv: cannot reach server '${finalServerUrl}' — ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+      return 1;
+    }
 
     if (!res.ok) {
       const text = await res.text();
@@ -116,9 +131,17 @@ export class LoginCommand extends Command {
   }
 
   private async loginWithToken(serverUrl: string, token: string): Promise<number> {
-    const res = await fetch(new URL('/v1/whoami', serverUrl).toString(), {
-      headers: { authorization: `Bearer ${token}`, 'x-keynv-agent': AGENT },
-    });
+    let res: Response;
+    try {
+      res = await fetch(new URL('/v1/whoami', serverUrl).toString(), {
+        headers: { authorization: `Bearer ${token}`, 'x-keynv-agent': AGENT },
+      });
+    } catch (err) {
+      this.context.stderr.write(
+        `keynv: cannot reach server '${serverUrl}' — ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+      return 1;
+    }
 
     if (!res.ok) {
       const text = await res.text();
@@ -200,37 +223,41 @@ export class WhoamiCommand extends Command {
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {
-    const client = new ApiClient();
-    await client.ensureHydrated();
-    if (!client.isLoggedIn) {
-      this.context.stderr.write('keynv: not logged in. Run `keynv login`.\n');
-      return 1;
-    }
-    const data = await client.request<{
-      id: string;
-      email: string;
-      org_id: string;
-      org_name?: string;
-      org_role: string;
-      memberships: Array<{ project_id: string; project_name?: string; role: string }>;
-    }>('/v1/whoami');
-    if (this.json) {
-      this.context.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
-      return 0;
-    }
-    this.context.stdout.write(`user:    ${data.email} (${data.id})\n`);
-    const orgDisplay = data.org_name ? `${data.org_name} (${data.org_id})` : data.org_id;
-    this.context.stdout.write(`org:     ${orgDisplay}\n`);
-    this.context.stdout.write(`role:    ${data.org_role}\n`);
-    if (data.memberships.length === 0) {
-      this.context.stdout.write('memberships: (none)\n');
-    } else {
-      this.context.stdout.write('memberships:\n');
-      for (const m of data.memberships) {
-        const proj = m.project_name ? `${m.project_name} (${m.project_id})` : m.project_id;
-        this.context.stdout.write(`  ${proj}: ${m.role}\n`);
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
+      if (!client.isLoggedIn) {
+        this.context.stderr.write('keynv: not logged in. Run `keynv login`.\n');
+        return 1;
       }
+      const data = await client.request<{
+        id: string;
+        email: string;
+        org_id: string;
+        org_name?: string;
+        org_role: string;
+        memberships: Array<{ project_id: string; project_name?: string; role: string }>;
+      }>('/v1/whoami');
+      if (this.json) {
+        this.context.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+        return 0;
+      }
+      this.context.stdout.write(`user:    ${data.email} (${data.id})\n`);
+      const orgDisplay = data.org_name ? `${data.org_name} (${data.org_id})` : data.org_id;
+      this.context.stdout.write(`org:     ${orgDisplay}\n`);
+      this.context.stdout.write(`role:    ${data.org_role}\n`);
+      if (data.memberships.length === 0) {
+        this.context.stdout.write('memberships: (none)\n');
+      } else {
+        this.context.stdout.write('memberships:\n');
+        for (const m of data.memberships) {
+          const proj = m.project_name ? `${m.project_name} (${m.project_id})` : m.project_id;
+          this.context.stdout.write(`  ${proj}: ${m.role}\n`);
+        }
+      }
+      return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
     }
-    return 0;
   }
 }

@@ -12,6 +12,10 @@ export interface ClientError extends Error {
   details?: unknown;
 }
 
+export function isClientError(err: unknown): err is ClientError {
+  return err instanceof Error && typeof (err as { status?: unknown }).status === 'number';
+}
+
 function clientError(
   status: number,
   code: string,

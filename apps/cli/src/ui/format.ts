@@ -1,3 +1,5 @@
+import { isClientError } from '../client/http.js';
+
 /**
  * Lightweight table renderer. ASCII output by default; the only
  * external dependency we want is none.
@@ -19,4 +21,21 @@ export function fmtError(err: { code?: string; message: string; status?: number 
   const code = err.code ? ` [${err.code}]` : '';
   const status = err.status ? ` (${err.status})` : '';
   return `keynv:${code}${status} ${err.message}`;
+}
+
+/**
+ * Catches expected errors (API errors, network errors, logical errors) and
+ * prints a clean single-line message. Returns 1. Re-throws only for
+ * programming bugs that are not Error instances.
+ */
+export function handleExecError(stderr: NodeJS.WritableStream, err: unknown): 1 {
+  if (isClientError(err)) {
+    const code = err.code ? `[${err.code}] ` : '';
+    stderr.write(`keynv: ${code}${err.message}\n`);
+  } else if (err instanceof Error) {
+    stderr.write(`keynv: ${err.message}\n`);
+  } else {
+    stderr.write(`keynv: unexpected error\n`);
+  }
+  return 1;
 }

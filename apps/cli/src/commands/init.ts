@@ -119,7 +119,7 @@ commands directly.
         const content = readFileSync(this.envFile, 'utf8');
         const entries = parseEnvFile(content, this.envFile);
         for (const e of entries) {
-          if (classifyEntry(e.name, e.value).verdict !== 'skip') {
+          if (classifyEntry(e.name, e.value).verdict === 'secret') {
             secrets.push({ name: e.name, value: e.value });
           }
         }

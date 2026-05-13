@@ -2,7 +2,7 @@ import { parseAlias } from '@keynv/core';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { promptNewSecret } from '../ui/flows/secret.js';
-import { table } from '../ui/format.js';
+import { handleExecError, table } from '../ui/format.js';
 import { UserCancelled } from '../ui/helpers/cancel.js';
 import { pickProject } from '../ui/helpers/pickProject.js';
 import { pickSecret } from '../ui/helpers/pickSecret.js';
@@ -47,48 +47,52 @@ export class SecretCreateCommand extends Command {
   stdin = Option.Boolean('--stdin', false);
 
   async execute(): Promise<number> {
-    const client = new ApiClient();
-    await client.ensureHydrated();
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
 
-    let alias = this.alias;
-    let value = this.value;
+      let alias = this.alias;
+      let value = this.value;
 
-    if (!alias) {
-      if (!isInteractive()) return missingAlias(this.context.stderr);
-      try {
-        const built = await promptNewSecret(client);
-        if (!built) return 1;
-        alias = built.alias;
-        value = built.value;
-      } catch (err) {
-        if (err instanceof UserCancelled) return 130;
-        throw err;
+      if (!alias) {
+        if (!isInteractive()) return missingAlias(this.context.stderr);
+        try {
+          const built = await promptNewSecret(client);
+          if (!built) return 1;
+          alias = built.alias;
+          value = built.value;
+        } catch (err) {
+          if (err instanceof UserCancelled) return 130;
+          throw err;
+        }
       }
-    }
 
-    const parsed = parseAlias(alias);
-    if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
-      return 1;
-    }
-
-    if (this.stdin) {
-      const chunks: Buffer[] = [];
-      for await (const chunk of this.context.stdin) {
-        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
+      const parsed = parseAlias(alias);
+      if (!parsed) {
+        this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
+        return 1;
       }
-      value = Buffer.concat(chunks).toString('utf8').replace(/\n$/, '');
-    } else if (value === undefined) {
-      value = await promptHidden('value: ');
-    }
 
-    const projectId = await resolveProjectId(client, parsed.project);
-    await client.request<{ alias: string; version: number }>(`/v1/projects/${projectId}/secrets`, {
-      method: 'POST',
-      body: { env: parsed.environment, key: parsed.key, value },
-    });
-    this.context.stdout.write(`created ${parsed.literal}\n`);
-    return 0;
+      if (this.stdin) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of this.context.stdin) {
+          chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
+        }
+        value = Buffer.concat(chunks).toString('utf8').replace(/\n$/, '');
+      } else if (value === undefined) {
+        value = await promptHidden('value: ');
+      }
+
+      const projectId = await resolveProjectId(client, parsed.project);
+      await client.request<{ alias: string; version: number }>(`/v1/projects/${projectId}/secrets`, {
+        method: 'POST',
+        body: { env: parsed.environment, key: parsed.key, value },
+      });
+      this.context.stdout.write(`created ${parsed.literal}\n`);
+      return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
+    }
   }
 }
 
@@ -101,38 +105,42 @@ export class SecretGetCommand extends Command {
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {
-    const client = new ApiClient();
-    await client.ensureHydrated();
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
 
-    let alias = this.alias;
-    if (!alias) {
-      if (!isInteractive()) return missingAlias(this.context.stderr);
-      try {
-        alias = (await pickAliasInteractive(client)) ?? undefined;
-      } catch (err) {
-        if (err instanceof UserCancelled) return 130;
-        throw err;
+      let alias = this.alias;
+      if (!alias) {
+        if (!isInteractive()) return missingAlias(this.context.stderr);
+        try {
+          alias = (await pickAliasInteractive(client)) ?? undefined;
+        } catch (err) {
+          if (err instanceof UserCancelled) return 130;
+          throw err;
+        }
+        if (!alias) return 1;
       }
-      if (!alias) return 1;
-    }
 
-    const parsed = parseAlias(alias);
-    if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
-      return 1;
-    }
-    const projectId = await resolveProjectId(client, parsed.project);
-    const data = await client.request<{ alias: string; value: string; version: number }>(
-      `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
-    );
-    if (this.json) {
-      this.context.stdout.write(
-        `${JSON.stringify({ alias: data.alias, version: data.version, value: data.value })}\n`,
+      const parsed = parseAlias(alias);
+      if (!parsed) {
+        this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
+        return 1;
+      }
+      const projectId = await resolveProjectId(client, parsed.project);
+      const data = await client.request<{ alias: string; value: string; version: number }>(
+        `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
       );
-    } else {
-      this.context.stdout.write(`${data.value}\n`);
+      if (this.json) {
+        this.context.stdout.write(
+          `${JSON.stringify({ alias: data.alias, version: data.version, value: data.value })}\n`,
+        );
+      } else {
+        this.context.stdout.write(`${data.value}\n`);
+      }
+      return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
     }
-    return 0;
   }
 }
 
@@ -145,44 +153,52 @@ export class SecretListCommand extends Command {
   json = Option.Boolean('--json', false);
 
   async execute(): Promise<number> {
-    const client = new ApiClient();
-    await client.ensureHydrated();
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
 
-    let projectName = this.project;
-    if (!projectName) {
-      if (!isInteractive()) {
-        this.context.stderr.write('keynv: missing <project>.\n');
-        return 1;
+      let projectName = this.project;
+      if (!projectName) {
+        if (!isInteractive()) {
+          this.context.stderr.write('keynv: missing <project>.\n');
+          return 1;
+        }
+        try {
+          const picked = await pickProject(client, 'Project');
+          if (!picked) return 1;
+          projectName = picked.name;
+        } catch (err) {
+          if (err instanceof UserCancelled) return 130;
+          throw err;
+        }
       }
-      try {
-        const picked = await pickProject(client, 'Project');
-        if (!picked) return 1;
-        projectName = picked.name;
-      } catch (err) {
-        if (err instanceof UserCancelled) return 130;
-        throw err;
-      }
-    }
 
-    const projectId = await resolveProjectId(client, projectName);
-    const data = await client.request<{
-      secrets: Array<{ alias: string; version: number; created_at: string }>;
-    }>(`/v1/projects/${projectId}/secrets`);
-    if (this.json) {
-      this.context.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+      // Allow "@project.env" or "@project.env.KEY" as a shorthand — extract project name.
+      const resolvedProjectName = projectName.startsWith('@')
+        ? (projectName.slice(1).split('.')[0] ?? projectName)
+        : projectName;
+      const projectId = await resolveProjectId(client, resolvedProjectName);
+      const data = await client.request<{
+        secrets: Array<{ alias: string; version: number; created_at: string }>;
+      }>(`/v1/projects/${projectId}/secrets`);
+      if (this.json) {
+        this.context.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+        return 0;
+      }
+      if (data.secrets.length === 0) {
+        this.context.stdout.write('no secrets\n');
+        return 0;
+      }
+      this.context.stdout.write(
+        `${table(
+          ['alias', 'version', 'created_at'],
+          data.secrets.map((s) => [s.alias, String(s.version), s.created_at]),
+        )}\n`,
+      );
       return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
     }
-    if (data.secrets.length === 0) {
-      this.context.stdout.write('no secrets\n');
-      return 0;
-    }
-    this.context.stdout.write(
-      `${table(
-        ['alias', 'version', 'created_at'],
-        data.secrets.map((s) => [s.alias, String(s.version), s.created_at]),
-      )}\n`,
-    );
-    return 0;
   }
 }
 
@@ -194,45 +210,49 @@ export class SecretRotateCommand extends Command {
   stdin = Option.Boolean('--stdin', false);
 
   async execute(): Promise<number> {
-    const client = new ApiClient();
-    await client.ensureHydrated();
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
 
-    let alias = this.alias;
-    if (!alias) {
-      if (!isInteractive()) return missingAlias(this.context.stderr);
-      try {
-        alias = (await pickAliasInteractive(client)) ?? undefined;
-      } catch (err) {
-        if (err instanceof UserCancelled) return 130;
-        throw err;
+      let alias = this.alias;
+      if (!alias) {
+        if (!isInteractive()) return missingAlias(this.context.stderr);
+        try {
+          alias = (await pickAliasInteractive(client)) ?? undefined;
+        } catch (err) {
+          if (err instanceof UserCancelled) return 130;
+          throw err;
+        }
+        if (!alias) return 1;
       }
-      if (!alias) return 1;
-    }
 
-    const parsed = parseAlias(alias);
-    if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
-      return 1;
-    }
-    let value: string;
-    if (this.stdin) {
-      const chunks: Buffer[] = [];
-      for await (const chunk of this.context.stdin) {
-        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
+      const parsed = parseAlias(alias);
+      if (!parsed) {
+        this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
+        return 1;
       }
-      value = Buffer.concat(chunks).toString('utf8').replace(/\n$/, '');
-    } else if (this.value !== undefined) {
-      value = this.value;
-    } else {
-      value = await promptHidden('new value: ');
+      let value: string;
+      if (this.stdin) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of this.context.stdin) {
+          chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
+        }
+        value = Buffer.concat(chunks).toString('utf8').replace(/\n$/, '');
+      } else if (this.value !== undefined) {
+        value = this.value;
+      } else {
+        value = await promptHidden('new value: ');
+      }
+      const projectId = await resolveProjectId(client, parsed.project);
+      const data = await client.request<{ alias: string; version: number }>(
+        `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}/rotate`,
+        { method: 'POST', body: { new_value: value } },
+      );
+      this.context.stdout.write(`rotated ${data.alias} → v${data.version}\n`);
+      return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
     }
-    const projectId = await resolveProjectId(client, parsed.project);
-    const data = await client.request<{ alias: string; version: number }>(
-      `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}/rotate`,
-      { method: 'POST', body: { new_value: value } },
-    );
-    this.context.stdout.write(`rotated ${data.alias} → v${data.version}\n`);
-    return 0;
   }
 }
 
@@ -242,31 +262,35 @@ export class SecretDeleteCommand extends Command {
   alias = Option.String({ required: false });
 
   async execute(): Promise<number> {
-    const client = new ApiClient();
-    await client.ensureHydrated();
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
 
-    let alias = this.alias;
-    if (!alias) {
-      if (!isInteractive()) return missingAlias(this.context.stderr);
-      try {
-        alias = (await pickAliasInteractive(client)) ?? undefined;
-      } catch (err) {
-        if (err instanceof UserCancelled) return 130;
-        throw err;
+      let alias = this.alias;
+      if (!alias) {
+        if (!isInteractive()) return missingAlias(this.context.stderr);
+        try {
+          alias = (await pickAliasInteractive(client)) ?? undefined;
+        } catch (err) {
+          if (err instanceof UserCancelled) return 130;
+          throw err;
+        }
+        if (!alias) return 1;
       }
-      if (!alias) return 1;
-    }
 
-    const parsed = parseAlias(alias);
-    if (!parsed) {
-      this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
-      return 1;
+      const parsed = parseAlias(alias);
+      if (!parsed) {
+        this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
+        return 1;
+      }
+      const projectId = await resolveProjectId(client, parsed.project);
+      await client.request(`/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`, {
+        method: 'DELETE',
+      });
+      this.context.stdout.write(`deleted ${parsed.literal}\n`);
+      return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
     }
-    const projectId = await resolveProjectId(client, parsed.project);
-    await client.request(`/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`, {
-      method: 'DELETE',
-    });
-    this.context.stdout.write(`deleted ${parsed.literal}\n`);
-    return 0;
   }
 }

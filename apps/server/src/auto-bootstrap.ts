@@ -42,29 +42,33 @@ export async function maybeAutoBootstrap(env: ServerEnvT): Promise<void> {
   log.info('master key missing — initializing fresh deployment');
 
   await loadOrCreateKek({ path: env.KEYNV_MASTER_KEY_FILE, generateIfMissing: true });
-  const { db } = openDb({ path: env.KEYNV_DB_PATH, migrate: true, verbose: false });
+  const { db, raw } = openDb({ path: env.KEYNV_DB_PATH, migrate: true, verbose: false });
 
-  const existing = await db.select().from(schema.orgs).limit(1);
-  if (existing.length > 0) {
-    log.info('org row already present — skipping owner creation');
-    return;
+  try {
+    const existing = await db.select().from(schema.orgs).limit(1);
+    if (existing.length > 0) {
+      log.info('org row already present — skipping owner creation');
+      return;
+    }
+
+    const orgId = newOrgId();
+    const userId = newUserId();
+    await db.insert(schema.orgs).values({ id: orgId, name: orgName });
+    await db.insert(schema.users).values({
+      id: userId,
+      org_id: orgId,
+      email: ownerEmail,
+      password_hash: await hashPassword(ownerPassword),
+      org_role: 'owner',
+    });
+
+    log.info({ orgId, orgName }, 'created org');
+    log.info({ userId, email: ownerEmail }, 'created owner');
+    log.info('you can now unset KEYNV_BOOTSTRAP_* env vars from the deployment');
+
+    // Defensive: don't keep the password in this process's env after use.
+    delete process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD'];
+  } finally {
+    raw.close();
   }
-
-  const orgId = newOrgId();
-  const userId = newUserId();
-  await db.insert(schema.orgs).values({ id: orgId, name: orgName });
-  await db.insert(schema.users).values({
-    id: userId,
-    org_id: orgId,
-    email: ownerEmail,
-    password_hash: await hashPassword(ownerPassword),
-    org_role: 'owner',
-  });
-
-  log.info({ orgId, orgName }, 'created org');
-  log.info({ userId, email: ownerEmail }, 'created owner');
-  log.info('you can now unset KEYNV_BOOTSTRAP_* env vars from the deployment');
-
-  // Defensive: don't keep the password in this process's env after use.
-  delete process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD'];
 }
