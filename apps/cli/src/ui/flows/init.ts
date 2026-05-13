@@ -351,6 +351,33 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     return { exitCode: 1 };
   }
 
+  // 12b. Compose .keynv.<env>.env for each non-default env -------------------
+  const otherEnvsWithAliases = distinctEnvs.filter(
+    (env) => env !== defaultEnv && (uploadedByEnv.get(env)?.size ?? 0) > 0,
+  );
+  for (const env of otherEnvsWithAliases) {
+    const envUploaded = uploadedByEnv.get(env) ?? new Map<string, string>();
+    const envLiterals = (perEnv.get(env) ?? []).filter(
+      (e) => !selected.has(`${env}|${e.name}`),
+    );
+    const envFilePath = join(root.path, `.keynv.${env}.env`);
+    try {
+      const lines = composeKeynvEnv({
+        uploadedAliases: envUploaded,
+        literals: envLiterals,
+        mergeWithExisting: null,
+      });
+      writeFileSync(envFilePath, `${lines.join('\n')}\n`);
+      log.success(
+        `Wrote .keynv.${env}.env (${envUploaded.size} secret alias${envUploaded.size === 1 ? '' : 'es'} from "${env}")`,
+      );
+    } catch (err) {
+      log.warn(
+        `Could not write .keynv.${env}.env: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   // 13. AGENTS.md (always) ---------------------------------------------------
   try {
     const outcome = writeAiContext(root.path);
@@ -389,15 +416,15 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     }
   }
 
-  // 16. Mention non-default envs so the user knows their secrets are
-  // safely in the vault even though `.keynv.env` only references the
-  // default. They'll need a separate file or a deploy-time `keynv
-  // exec --from .keynv.<env>.env` to use them.
+  // 16. Mention non-default envs and the files we wrote for them.
   const otherEnvs = distinctEnvs.filter((e) => e !== defaultEnv);
   if (otherEnvs.length > 0) {
     const lines = otherEnvs.map((env) => {
       const count = uploadedByEnv.get(env)?.size ?? 0;
-      return `  ${env}: ${count} secret${count === 1 ? '' : 's'} in vault (use \`keynv exec --from .keynv.${env}.env -- <cmd>\` after creating that file)`;
+      const hasFile = count > 0;
+      return hasFile
+        ? `  ${env}: ${count} secret${count === 1 ? '' : 's'} → .keynv.${env}.env (use \`keynv exec --from .keynv.${env}.env -- <cmd>\`)`
+        : `  ${env}: 0 secrets in vault (no alias file written)`;
     });
     note(lines.join('\n'), 'Secrets in other envs');
   }

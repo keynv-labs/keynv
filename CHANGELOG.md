@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `keynv init` now auto-generates `.keynv.<env>.env` files for each non-default environment (e.g. `.keynv.prod.env`) so `keynv exec --from .keynv.prod.env` works immediately after init without manual file creation.
+
 ## [0.1.0-rc.14] — 2026-05-13
 
 ### Added
