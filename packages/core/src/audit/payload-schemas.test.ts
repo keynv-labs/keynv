@@ -74,11 +74,11 @@ describe('validateAuditPayload — rejections', () => {
     expect(() => validateAuditPayload('secret.created', { project_id: 'p_1' })).toThrow();
   });
 
-  it('rejects non-JSON values (zod cannot parse Date as object)', () => {
+  it('rejects non-JSON values (object cannot be coerced to number)', () => {
     expect(() =>
       validateAuditPayload('secret.read.allowed', {
         alias: '@p.dev.k',
-        version: new Date() as unknown as number,
+        version: { not: 'a number' } as unknown as number,
       }),
     ).toThrow();
   });

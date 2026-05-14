@@ -59,7 +59,15 @@ export function DeleteProjectDialog({ projectId, projectName }: { projectId: str
             </div>
           </div>
 
-          <form action={deleteProjectAction} className="mt-5 space-y-4">
+          <form
+            action={async (fd) => {
+              const result = await deleteProjectAction({}, fd);
+              if (result?.error) {
+                setOpen(false);
+              }
+            }}
+            className="mt-5 space-y-4"
+          >
             <input type="hidden" name="project_id" value={projectId} />
 
             <label className="block">

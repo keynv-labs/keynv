@@ -19,7 +19,7 @@ const key = z.string().min(1);
 const role = z.enum(['lead', 'developer', 'reader']);
 const orgRole = z.enum(['owner', 'admin', 'developer', 'reader']);
 const email = z.string().email();
-const version = z.number().int().positive();
+const version = z.coerce.number().int().positive();
 
 const empty = z.object({}).strict();
 const orgId = z.string().min(1);
