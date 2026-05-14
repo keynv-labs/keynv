@@ -44,7 +44,8 @@ COPY docs ./docs
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
-RUN cd apps/web && pnpm exec next build > /tmp/next-build.log 2>&1 || { echo "=== NEXT BUILD FAILED ==="; cat /tmp/next-build.log; exit 1; }
+COPY apps/web/build.sh /tmp/build.sh
+RUN chmod +x /tmp/build.sh && sh /tmp/build.sh
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
