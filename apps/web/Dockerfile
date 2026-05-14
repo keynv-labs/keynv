@@ -42,8 +42,9 @@ COPY CHANGELOG.md ./CHANGELOG.md
 COPY docs ./docs
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
-RUN cd apps/web && pnpm exec next build 2>&1 || { ec=$?; echo "=== NEXT BUILD FAILED (exit $ec) ==="; exit $ec; }
+RUN cd apps/web && pnpm exec next build
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
