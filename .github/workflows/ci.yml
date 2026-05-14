@@ -87,7 +87,23 @@ jobs:
           GL_VERSION=8.21.2
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/gitleaks_${GL_VERSION}_linux_x64.tar.gz" \
             | tar -xz -C /tmp gitleaks
-          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          sudo mv /tmp gitleaks /usr/local/bin/gitleaks
           gitleaks version
       - name: Scan committed history
         run: gitleaks git -v --redact
+
+  build-web:
+    name: build (next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter '!@keynv/cli' --filter '!@keynv/web' build
+      - run: pnpm --filter @keynv/web build
