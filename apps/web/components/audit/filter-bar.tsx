@@ -2,7 +2,9 @@
 
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
-import { Search } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
+import { useTransition } from 'react';
+import { exportAuditAction } from '@/app/(authed)/audit/_actions/export-action';
 import { CATEGORY_LABELS, type Category, categoryOf } from './event';
 import type { AuditEntry } from './types';
 
@@ -15,6 +17,50 @@ export const FILTER_ORDER: Category[] = [
   'user',
   'other',
 ];
+
+function ExportDropdown() {
+  const [pending, start] = useTransition();
+
+  function download(content: string, filename: string, mime: string) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExport(format: 'csv' | 'json') {
+    start(async () => {
+      const content = await exportAuditAction(format);
+      download(content, `audit-export.${format}`, format === 'csv' ? 'text/csv' : 'application/json');
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => handleExport('csv')}
+        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-fg-muted hover:text-fg hover:border-border-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Download size={10} strokeWidth={2} />
+        {pending ? '…' : 'CSV'}
+      </button>
+      <span className="text-fg-subtle">/</span>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => handleExport('json')}
+        className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-fg transition-colors disabled:opacity-50"
+      >
+        JSON
+      </button>
+    </div>
+  );
+}
 
 export function FilterBar({
   entries,
@@ -91,9 +137,12 @@ export function FilterBar({
         </button>
       ) : null}
 
-      <div className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-        <span className="text-fg tabular">{filteredCount}</span> of{' '}
-        <span className="tabular">{entries.length}</span>
+      <div className="ml-auto flex items-center gap-3">
+        <ExportDropdown />
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+          <span className="text-fg tabular">{filteredCount}</span> of{' '}
+          <span className="tabular">{entries.length}</span>
+        </span>
       </div>
     </div>
   );
