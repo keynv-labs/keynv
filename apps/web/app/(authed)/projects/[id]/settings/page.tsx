@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { formatRelative } from '@/lib/time';
 import { Users } from 'lucide-react';
 import { AddMemberDialog, RemoveMemberAction } from './_components/member-forms';
+import { DeleteProjectDialog } from './_components/delete-project-dialog';
 import { InfoRow } from './_components/info-row';
 import { roleTone } from './_components/role-tone';
 
@@ -152,6 +153,9 @@ export default async function ProjectSettingsPage({
           <InfoRow label="environments" value={`${project.environments.length} configured`} />
         </dl>
       </Card>
+
+      {/* ─── Danger zone ──────────────────────────────────────────────────── */}
+      <DeleteProjectDialog projectId={project.id} projectName={project.name} />
     </div>
   );
 }
