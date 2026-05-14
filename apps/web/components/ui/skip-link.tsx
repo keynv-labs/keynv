@@ -1,13 +1,5 @@
-/**
- * Accessibility helper. Renders a "Skip to content" link that is
- * visually hidden until it receives keyboard focus, then becomes a
- * prominent top-left chip. Pairs with a `<main id="main">` landmark
- * elsewhere on the page so keyboard + screen-reader users can bypass
- * the nav chrome.
- *
- * Mount as the FIRST child of <body> (or of the page wrapper) so the
- * Tab key reaches it before anything else.
- */
+'use client';
+
 export function SkipLink({ targetId = 'main' }: { targetId?: string }) {
   return (
     <a

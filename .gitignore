@@ -69,5 +69,10 @@ tmp/
 temp/
 .keynv-data/
 
-# Local agent settings
-.claude/settings.local.json
+# Agent / IDE local state
+.claude/
+.continuum/
+
+# Playwright
+tests/e2e/playwright-report/
+tests/e2e/test-results/

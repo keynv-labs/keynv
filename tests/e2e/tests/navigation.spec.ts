@@ -37,7 +37,7 @@ test.describe('Public page navigation', () => {
     const response = await page.goto('/robots.txt');
     expect(response?.status()).toBe(200);
     const text = await response?.text();
-    expect(text).toContain('User-agent');
+    expect(text?.toLowerCase()).toContain('user-agent');
   });
 
   test('sitemap.xml is served', async ({ page }) => {

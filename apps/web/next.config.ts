@@ -6,13 +6,8 @@ const config: NextConfig = {
   // Docker image can ship without the full node_modules tree.
   // Required for the apps/web Dockerfile multi-stage build.
   output: 'standalone',
-  // Resolve the workspace root explicitly so Next picks the right
-  // monorepo root when bundling traced files (we live two levels
-  // below the repo root inside apps/web).
   outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
-  experimental: {
-    typedRoutes: true,
-  },
+  typedRoutes: true,
   poweredByHeader: false,
   reactStrictMode: true,
   // Strip the X-Frame-Options sniffing surface; everything is same-origin.

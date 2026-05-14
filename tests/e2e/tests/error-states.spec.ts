@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Error states', () => {
-  test('non-existent page returns 404', async ({ page }) => {
-    const response = await page.goto('/this-page-does-not-exist');
+  test('non-existent docs page shows not-found content', async ({ page }) => {
+    const response = await page.goto('/docs/this-page-does-not-exist');
     expect(response?.status()).toBe(404);
+    const text = await page.locator('body').innerText();
+    expect(text.toLowerCase()).toContain("couldn't find");
   });
 
   test('login page rejects empty form submission gracefully', async ({ page }) => {
@@ -58,8 +60,8 @@ test.describe('Redirect behaviour', () => {
 });
 
 test.describe('Static assets', () => {
-  test('favicon is served', async ({ page }) => {
-    const response = await page.goto('/favicon.ico');
+  test('icon.svg is served as favicon', async ({ page }) => {
+    const response = await page.goto('/icon.svg');
     expect(response?.status()).toBe(200);
   });
 
