@@ -44,8 +44,9 @@ COPY docs ./docs
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
-COPY apps/web/build.sh /tmp/build.sh
-RUN chmod +x /tmp/build.sh && (sh /tmp/build.sh && echo "BUILD_OK" || { cat /tmp/build.log; exit 1; })
+WORKDIR /repo/apps/web
+RUN node --version && pnpm --version && ls -la node_modules/.bin/next
+RUN ./node_modules/.bin/next build
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
