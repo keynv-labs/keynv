@@ -17,7 +17,7 @@ FROM node:20-alpine AS builder
 RUN apk add --no-cache python3 make g++ libc6-compat
 
 WORKDIR /repo
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+RUN corepack enable
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/core/package.json packages/core/tsconfig.json ./packages/core/
@@ -26,7 +26,8 @@ COPY packages/redactor/package.json packages/redactor/tsconfig.json ./packages/r
 COPY packages/testers/package.json packages/testers/tsconfig.json ./packages/testers/
 COPY apps/server/package.json apps/server/tsconfig.json ./apps/server/
 
-RUN pnpm install --frozen-lockfile --filter '@keynv/server...'
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+  pnpm install --frozen-lockfile --filter '@keynv/server...'
 
 COPY packages/core/src ./packages/core/src
 COPY packages/rbac/src ./packages/rbac/src

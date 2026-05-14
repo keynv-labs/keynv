@@ -14,17 +14,14 @@
 # ---- Stage 1: deps ----
 FROM node:20-alpine AS deps
 
-RUN apk add --no-cache libc6-compat
 WORKDIR /repo
 RUN corepack enable
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web/package.json ./apps/web/
 
-# Workspace deps the web app references via tsconfig path mapping but
-# does NOT import as runtime modules. Install with --filter so we
-# don't pull in the entire monorepo's dev tree.
-RUN pnpm install --frozen-lockfile --filter '@keynv/web...'
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+  pnpm install --frozen-lockfile --filter '@keynv/web...'
 
 # ---- Stage 2: builder ----
 FROM node:20-alpine AS builder
@@ -46,7 +43,8 @@ COPY docs ./docs
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN cd apps/web && pnpm exec next build
+RUN --mount=type=cache,target=/repo/apps/web/.next/cache \
+  cd apps/web && pnpm exec next build
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
