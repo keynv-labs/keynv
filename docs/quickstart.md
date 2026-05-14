@@ -29,7 +29,6 @@ Set the environment variables Coolify asks for:
 
 ```bash
 KEYNV_JWT_SECRET=<openssl rand -base64 48>
-KEYNV_MASTER_KEY=<openssl rand -base64 32>
 KEYNV_PUBLIC_REGISTRATION=false   # opt-in only; off for self-host
 KEYNV_WEB_URL=https://keynv.example.com
 COOLIFY_FQDN=api.keynv.example.com
@@ -54,20 +53,23 @@ page; you'll create your account in the next step.
 
 ## 3 · Create the first user
 
-You're hosting your own instance, so you bootstrap from the CLI. SSH
-into the box or use Coolify's terminal:
+The server auto-bootstraps the owner account on first start. Set
+these environment variables in your Coolify resource or `.env`:
 
 ```bash
-docker exec -it <keynv-server-container> sh
-node apps/server/scripts/bootstrap-owner.js \
-  --org "Acme Inc" \
-  --email alice@acme.example \
-  --password '<a long random password>'
+KEYNV_BOOTSTRAP_OWNER_EMAIL=alice@acme.example
+KEYNV_BOOTSTRAP_OWNER_PASSWORD=<a long random password>
+KEYNV_BOOTSTRAP_ORG_NAME="Acme Inc"
 ```
 
-The script prints a one-time bootstrap token; sign in at
-`https://keynv.example.com/login` and the token claims you as the first
-owner.
+Deploy or restart. The server logs:
+
+```text
+[auto-bootstrap] created org "Acme Inc" (id=org_...)
+[auto-bootstrap] created owner alice@acme.example (id=u_...)
+```
+
+Then sign in at `https://keynv.example.com/login`.
 
 ## 4 · Install the CLI
 
@@ -133,8 +135,8 @@ psql -p ****** ... (1 row)
 
 ## What's next
 
-- [Architecture overview](/docs/architecture) — what's running where.
-- [Threat model](/docs/threat-model) — what keynv defends against and
+- [Architecture overview](./01-architecture.md) — what's running where.
+- [Threat model](./02-threat-model.md) — what keynv defends against and
   what it explicitly does not.
-- [API specification](/docs/api) — full v1 surface for building
+- [API specification](./06-api-spec.md) — full v1 surface for building
   integrations.

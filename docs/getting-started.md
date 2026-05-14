@@ -54,7 +54,10 @@ For experimentation you can run the server directly on your laptop:
 
 ```bash
 # From the repo root
-pnpm install && pnpm build
+pnpm install
+
+# Build (use build:direct if keynv CLI isn't installed yet)
+pnpm build:direct
 
 # Required — server refuses to start without this
 export KEYNV_JWT_SECRET=$(openssl rand -base64 48)

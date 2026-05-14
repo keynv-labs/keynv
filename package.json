@@ -10,20 +10,21 @@
   },
   "packageManager": "pnpm@9.12.0",
   "scripts": {
-    "build": " keynv --exec pnpm -r build",
+    "build": "keynv exec -- pnpm -r build",
     "build:direct": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "test": "pnpm -r test",
     "test:security": "pnpm -r test:security",
-    "lint": "NODE_OPTIONS=--max-old-space-size=6144 biome check .",
-    "lint:fix": "NODE_OPTIONS=--max-old-space-size=6144 biome check --write .",
-    "format": "NODE_OPTIONS=--max-old-space-size=6144 biome format --write .",
+    "lint": "cross-env NODE_OPTIONS=--max-old-space-size=6144 biome check .",
+    "lint:fix": "cross-env NODE_OPTIONS=--max-old-space-size=6144 biome check --write .",
+    "format": "cross-env NODE_OPTIONS=--max-old-space-size=6144 biome format --write .",
     "typecheck": "pnpm -r typecheck",
-    "clean": "pnpm -r clean && rm -rf node_modules .turbo"
+    "clean": "pnpm -r clean && node -e \"require('fs').rmSync('node_modules',{recursive:true,force:true}); require('fs').rmSync('.turbo',{recursive:true,force:true})\""
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.9.0",
+    "cross-env": "^7.0.3",
     "typescript": "^5.6.3",
     "vite": "^8.0.11",
     "vitest": "^4.1.5"

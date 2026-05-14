@@ -18,6 +18,9 @@ cd keynv
 # Install (pnpm 9, Node 20, Bun 1.x)
 pnpm install
 
+# Build (use build:direct to skip keynv exec wrapper)
+pnpm build:direct
+
 # Install git hooks
 pnpm dlx lefthook install
 
