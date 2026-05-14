@@ -1,0 +1,12 @@
+{
+  "name": "@keynv/landing",
+  "version": "0.1.0-rc.14",
+  "private": true,
+  "description": "keynv static marketing landing page.",
+  "scripts": {
+    "build": "echo '@keynv/landing has no build step'",
+    "typecheck": "echo '@keynv/landing has no typecheck step'",
+    "test": "echo '@keynv/landing has no tests'",
+    "clean": "echo '@keynv/landing has no build artifacts'"
+  }
+}

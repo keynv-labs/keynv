@@ -1,6 +1,6 @@
 import { parseAlias } from '@keynv/core';
 import { redact } from '@keynv/redactor';
-import { TESTERS, runTest } from '@keynv/testers';
+import { testers, runTest } from '@keynv/testers';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -171,10 +171,10 @@ export function buildServer(deps: ServerDeps): Server {
           const parsed = parseAlias(alias);
           if (!parsed) return jsonError(`invalid alias: ${alias}`);
           const testerType = String(args.tester ?? '');
-          const tester = TESTERS.find((t) => t.type === testerType);
+          const tester = testers.find((t) => t.type === testerType);
           if (!tester) {
             return jsonError(
-              `unknown tester '${testerType}'. Try one of: ${TESTERS.map((t) => t.type).join(', ')}`,
+              `unknown tester '${testerType}'. Try one of: ${testers.map((t) => t.type).join(', ')}`,
             );
           }
           const target = (args.target ?? {}) as Record<string, unknown>;

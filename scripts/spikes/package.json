@@ -1,5 +1,5 @@
 {
-  "name": "@keynv/spikes",
+  "name": "keynv-bench-spikes",
   "version": "0.0.0",
   "private": true,
   "description": "Phase 0 measurement scripts for the keynv discovery & spike phase.",

@@ -1,5 +1,5 @@
 import { parseAlias } from '@keynv/core';
-import { TESTERS, runTest } from '@keynv/testers';
+import { testers, runTest } from '@keynv/testers';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { resolveProjectId } from './project.js';
@@ -54,11 +54,11 @@ the error message.
     }
     if (!this.as) {
       this.context.stderr.write(
-        `keynv: --as is required (one of: ${TESTERS.map((t) => t.type).join(', ')})\n`,
+        `keynv: --as is required (one of: ${testers.map((t) => t.type).join(', ')})\n`,
       );
       return 2;
     }
-    const tester = TESTERS.find((t) => t.type === this.as);
+    const tester = testers.find((t) => t.type === this.as);
     if (!tester) {
       this.context.stderr.write(`keynv: unknown tester '${this.as}'\n`);
       return 1;

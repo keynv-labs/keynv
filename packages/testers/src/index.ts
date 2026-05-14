@@ -16,7 +16,7 @@ export { DEFAULT_TIMEOUT_MS } from './types.js';
 export { runTest, type RunArgs } from './run.js';
 export { sanitizeResult } from './sanitize.js';
 
-export const TESTERS: ReadonlyArray<Tester> = [
+export const testers: ReadonlyArray<Tester> = [
   postgresTester as Tester,
   mysqlTester as Tester,
   redisTester as Tester,
@@ -25,7 +25,7 @@ export const TESTERS: ReadonlyArray<Tester> = [
 ];
 
 export function findTester(type: TesterType): Tester | null {
-  return TESTERS.find((t) => t.type === type) ?? null;
+  return testers.find((t) => t.type === type) ?? null;
 }
 
 export { postgresTester, mysqlTester, redisTester, sshTester, httpTester };
