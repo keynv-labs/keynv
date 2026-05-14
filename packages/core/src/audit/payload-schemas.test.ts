@@ -32,7 +32,6 @@ describe('PAYLOAD_SCHEMAS', () => {
       'approval.requested',
       'approval.granted',
       'approval.denied',
-      'kek.rotated',
     ];
     for (const t of expected) {
       expect(PAYLOAD_SCHEMAS, `missing schema for ${t}`).toHaveProperty(t);

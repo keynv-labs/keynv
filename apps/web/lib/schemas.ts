@@ -36,6 +36,7 @@ export const projectRole = z.enum(['lead', 'developer', 'reader']);
 export const orgRole = z.enum(['admin', 'developer', 'reader']);
 
 export const testerName = z.enum(['postgres', 'mysql', 'redis', 'ssh', 'http']);
+// Keep in sync with @keynv/testers/src/types.ts:testerEnum
 
 export const cliTokenName = z
   .string()

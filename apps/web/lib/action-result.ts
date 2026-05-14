@@ -1,4 +1,3 @@
-import { type ApiError } from '@/lib/api';
 import type { SafeParseError, z } from 'zod';
 
 export type ActionResult = {
@@ -58,8 +57,8 @@ export async function catchApi<T>(
     const data = await fn();
     return { success: true, data };
   } catch (err) {
-    const e = err as ApiError;
-    return { success: false, error: e.message };
+    const e = err as { message?: string };
+    return { success: false, error: e?.message ?? String(err) };
   }
 }
 

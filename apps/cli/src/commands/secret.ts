@@ -270,6 +270,7 @@ export class SecretDeleteCommand extends Command {
   static override paths = [['secret', 'delete']];
   static override usage = Command.Usage({ description: 'Soft-delete a secret.' });
   alias = Option.String({ required: false });
+  force = Option.Boolean('--force', false);
 
   async execute(): Promise<number> {
     try {
@@ -293,6 +294,23 @@ export class SecretDeleteCommand extends Command {
         this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
         return 1;
       }
+
+      if (!this.force) {
+        if (isInteractive()) {
+          const { confirm } = await import('@clack/prompts');
+          const ok = await confirm({
+            message: `Delete secret ${parsed.literal}?`,
+          });
+          if (!ok) {
+            this.context.stderr.write('Cancelled.\n');
+            return 130;
+          }
+        } else {
+          this.context.stderr.write('keynv: refusing to delete without --force\n');
+          return 2;
+        }
+      }
+
       const projectId = await resolveProjectId(client, parsed.project);
       await client.request(
         `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,

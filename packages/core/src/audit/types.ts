@@ -35,8 +35,7 @@ export type AuditEventType =
   | 'approval.granted'
   | 'approval.denied'
   | 'org.created'
-  | 'org.updated'
-  | 'kek.rotated';
+  | 'org.updated';
 
 /**
  * The pieces of an audit entry that are *input*. The server fills in

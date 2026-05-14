@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody } from '../lib/route-utils.js';
 
 interface PreferenceDeps {
   db: Db;
@@ -57,17 +58,15 @@ export function preferenceRoutes(deps: PreferenceDeps): Hono {
 
   r.patch('/', async (c) => {
     const user = c.var.user;
-    const body = await c.req.json().catch(() => ({}));
-    const parsed = UpdatePreferencesBody.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: 'Invalid preferences.' }, 400);
-    }
+    const parsed = await parseBody(c, UpdatePreferencesBody, 'Invalid preferences.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
+    const body = parsed.data;
 
     const update: Record<string, unknown> = {};
-    if (parsed.data.approval_requests !== undefined) update.approval_requests = parsed.data.approval_requests;
-    if (parsed.data.secret_changes !== undefined) update.secret_changes = parsed.data.secret_changes;
-    if (parsed.data.member_changes !== undefined) update.member_changes = parsed.data.member_changes;
-    if (parsed.data.activity_digest !== undefined) update.activity_digest = parsed.data.activity_digest;
+    if (body.approval_requests !== undefined) update.approval_requests = body.approval_requests;
+    if (body.secret_changes !== undefined) update.secret_changes = body.secret_changes;
+    if (body.member_changes !== undefined) update.member_changes = body.member_changes;
+    if (body.activity_digest !== undefined) update.activity_digest = body.activity_digest;
     update.updated_at = new Date().toISOString();
 
     await deps.db
