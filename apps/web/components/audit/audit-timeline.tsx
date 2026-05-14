@@ -2,13 +2,14 @@
 
 import { cn } from '@/lib/cn';
 import { Loader2 } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type Category,
   categoryOf,
   dayBucket,
 } from './event';
-import { FilterBar } from './filter-bar';
+import { FilterBar, FILTER_ORDER } from './filter-bar';
 import { TimelineRow } from './timeline-row';
 import type { AuditEntry } from './types';
 
@@ -19,13 +20,57 @@ interface Props {
   nextCursor: number | null;
 }
 
+const ALL_CATEGORIES = new Set<Category>(FILTER_ORDER);
+
+function parseInitialCategories(raw: string | null): Set<Category> {
+  if (!raw) return new Set();
+  const next = new Set<Category>();
+  for (const piece of raw.split(',')) {
+    const trimmed = piece.trim();
+    if (trimmed && ALL_CATEGORIES.has(trimmed as Category)) {
+      next.add(trimmed as Category);
+    }
+  }
+  return next;
+}
+
 export function AuditTimeline({ entries: initialEntries, nextCursor: initialCursor }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [allEntries, setAllEntries] = useState<AuditEntry[]>(initialEntries);
   const [cursor, setCursor] = useState<number | null>(initialCursor);
   const [loading, setLoading] = useState(false);
-  const [activeCategories, setActiveCategories] = useState<Set<Category>>(new Set());
-  const [search, setSearch] = useState('');
+  const [activeCategories, setActiveCategories] = useState<Set<Category>>(() =>
+    parseInitialCategories(searchParams?.get('cat') ?? null),
+  );
+  const [search, setSearch] = useState(() => searchParams?.get('q') ?? '');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  // Push filter state back into the URL (replace, not push, so the back
+  // button doesn't trap users in every keystroke). Skip the first render
+  // — initial state already came from the URL.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (activeCategories.size > 0) {
+      params.set('cat', Array.from(activeCategories).join(','));
+    } else {
+      params.delete('cat');
+    }
+    if (search.trim()) {
+      params.set('q', search.trim());
+    } else {
+      params.delete('q');
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [activeCategories, search, pathname, router, searchParams]);
 
   const filtered = useMemo(() => {
     return allEntries.filter((e) => {
