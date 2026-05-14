@@ -6,7 +6,6 @@ node_modules/
 dist/
 build/
 .next/
-Users/
 out/
 *.tsbuildinfo
 
@@ -61,6 +60,11 @@ litestream/
 
 # OS
 Thumbs.db
+
+# Accidental absorption of Windows home path into repo root.
+# MUST be root-anchored — otherwise it matches apps/web/.../users/ on
+# Windows where git ignores casing (core.ignorecase=true).
+/Users/
 
 # Misc
 .turbo/

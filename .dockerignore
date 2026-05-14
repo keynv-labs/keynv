@@ -19,8 +19,8 @@
 !.env.example
 scripts/
 tests/
-Users/
 deploy/
+/Users/
 CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 SECURITY.md
