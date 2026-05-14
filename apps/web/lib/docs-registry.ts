@@ -3,9 +3,8 @@
  * to import from Client Components (like the docs sidebar). The
  * server-side loaders live in lib/docs.ts.
  *
- * Explicit (not auto-walked) so internal files like
- * AUDIT-FINDINGS-PHASE5.md and UX-ROADMAP.md never accidentally ship
- * to the public site. Add a new section / page here when you publish
+ * Explicit (not auto-walked) so internal / draft files never accidentally
+ * ship to the public site. Add a new section / page here when you publish
  * a new doc.
  *
  * `slug` is the path under /docs (may contain a `/`).
@@ -83,7 +82,7 @@ export const DOC_REGISTRY: ReadonlyArray<DocSection> = [
     pages: [
       {
         slug: 'roadmap',
-        file: 'docs/ROADMAP.md',
+        file: 'docs/roadmap.md',
         title: 'Roadmap',
         summary:
           'Phase tracker. What shipped, what is in progress, what is deliberately not started.',
