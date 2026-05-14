@@ -11,6 +11,7 @@ import { memberRoutes } from './routes/members.js';
 import { onboardingRoutes } from './routes/onboarding.js';
 import { orgRoutes } from './routes/org.js';
 import { projectRoutes } from './routes/projects.js';
+import { searchRoutes } from './routes/search.js';
 import { secretRoutes } from './routes/secrets.js';
 import { userRoutes } from './routes/users.js';
 import { whoamiRoute } from './routes/whoami.js';
@@ -75,6 +76,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route('/v1/org', orgRoutes(deps));
   // approvalRoutes mounts /:projectId/approvals/* on the same prefix.
   app.route('/v1/projects', approvalRoutes(deps));
+  app.route('/v1', searchRoutes(deps));
 
   app.notFound((c) => jsonError(c, 'validation.failed', 'Not found.'));
   app.onError((err, c) => {

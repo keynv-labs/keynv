@@ -103,6 +103,13 @@ export function AppPalette() {
                     onSelect={() => { setOpen(false); router.push('/inbox'); }}
                   />
                   <PaletteItem
+                    icon={<Search size={14} strokeWidth={2} />}
+                    label="Search secrets"
+                    keywords={['search', 'find', 'secrets', 'keys', 'discover']}
+                    hint="g f"
+                    onSelect={() => { setOpen(false); router.push('/search'); }}
+                  />
+                  <PaletteItem
                     icon={<ScrollText size={14} strokeWidth={2} />}
                     label="Audit log"
                     keywords={['audit', 'log', 'history', 'events']}

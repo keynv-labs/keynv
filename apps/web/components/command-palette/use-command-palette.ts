@@ -33,6 +33,7 @@ export function useCommandPalette(onNavigate: (path: string) => void) {
           h: '/dashboard',
           p: '/projects',
           i: '/inbox',
+          f: '/search',
           a: '/audit',
           s: '/settings/account',
           u: '/admin/users',
