@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { confirm, group, log, note, password, select, text } from '@clack/prompts';
-import { buildAlias, parseAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import type { ApiClient } from '../../client/http.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
 import { pickEnv } from '../helpers/pickEnv.js';
@@ -57,7 +57,7 @@ async function runSecretMenu(
         ],
       }),
     );
-    const parsed = parseAlias(alias);
+    const parsed = reference.parseAlias(alias);
     if (!parsed) {
       log.warn(`unparseable alias: ${alias}`);
       return;
@@ -167,7 +167,7 @@ export async function promptNewSecret(
     },
   );
 
-  const built = buildAlias({ project: target.name, environment: env, key: answers.key });
+  const built = reference.buildAlias({ project: target.name, environment: env, key: answers.key });
   if (!built) return null;
   return { alias: built.literal, value: answers.value };
 }
@@ -175,7 +175,7 @@ export async function promptNewSecret(
 async function createSecretInteractive(client: ApiClient, project: ProjectSummary): Promise<void> {
   const built = await promptNewSecret(client, project);
   if (!built) return;
-  const parsed = parseAlias(built.alias);
+  const parsed = reference.parseAlias(built.alias);
   if (!parsed) {
     log.warn('Invalid alias produced by form; aborting.');
     return;

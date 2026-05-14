@@ -2,7 +2,7 @@ import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { PageHeader } from '@/components/layout/page-header';
 import { api } from '@/lib/api';
 import { getSession } from '@/lib/session';
-import { UsersClient } from './users-client';
+import { UsersClient } from './_components/users-client';
 
 interface OrgUser {
   id: string;

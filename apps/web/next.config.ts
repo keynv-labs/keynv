@@ -7,7 +7,7 @@ const config: NextConfig = {
   // Required for the apps/web Dockerfile multi-stage build.
   output: 'standalone',
   outputFileTracingRoot: new URL('../../', import.meta.url).pathname,
-  typedRoutes: true,
+  typedRoutes: false,
   poweredByHeader: false,
   reactStrictMode: true,
   // Strip the X-Frame-Options sniffing surface; everything is same-origin.

@@ -1,14 +1,12 @@
-import { authorize } from '@keynv/rbac';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newApprovalId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody, guard, audit } from '../lib/route-utils.js';
 
 interface ApprovalDeps {
   db: Db;
@@ -67,11 +65,8 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
       .limit(1);
     if (!projectRows[0]) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    const decision = authorize('project.describe', {
-      user,
-      resource: { project_id: projectId },
-    });
-    if (decision !== 'allow') return jsonError(c, 'rbac.denied', 'Permission denied.');
+    const g = guard(c, 'project.describe', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
 
     const parsed = ListQuery.safeParse(Object.fromEntries(new URL(c.req.url).searchParams));
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid query.');
@@ -113,19 +108,18 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
    * decided_by, decided_at, expires_at (default +1h, max +7d).
    */
   r.post('/:projectId/approvals/:id/grant', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
     const approvalId = c.req.param('id');
+
+    const g = guard(c, 'approval.grant', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
 
     const project = await loadProject(deps.db, projectId, user.org_id);
     if (!project) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    if (authorize('approval.grant', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-
-    const parsed = GrantBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid body.');
+    const parsed = await parseBody(c, GrantBody, 'Invalid body.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const ttl = parsed.data.expires_in_seconds ?? DEFAULT_GRANT_TTL_S;
     const expires_at = new Date(Date.now() + ttl * 1000).toISOString();
@@ -154,12 +148,7 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
     const row = updated[0];
     if (!row) return jsonError(c, 'approval.not_found', 'Approval not found or already decided.');
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'approval.granted',
-      payload: { alias: row.alias, granted_by: user.id },
-    });
+    await audit(c, deps.db, 'approval.granted', { alias: row.alias, granted_by: user.id });
 
     return c.json({ id: row.id, alias: row.alias, status: 'granted', expires_at });
   });
@@ -171,21 +160,18 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
    * reason that lands in the audit chain.
    */
   r.post('/:projectId/approvals/:id/deny', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
     const approvalId = c.req.param('id');
+
+    const gd = guard(c, 'approval.grant', { project_id: projectId });
+    if ('errorResponse' in gd) return gd.errorResponse;
+    const user = gd.user;
 
     const project = await loadProject(deps.db, projectId, user.org_id);
     if (!project) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    if (authorize('approval.grant', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-
-    const parsed = DenyBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Invalid body — reason is required.');
-    }
+    const parsed = await parseBody(c, DenyBody, 'Invalid body — reason is required.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const decided_at = new Date().toISOString();
     const updated = await deps.db
@@ -210,12 +196,7 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
     const row = updated[0];
     if (!row) return jsonError(c, 'approval.not_found', 'Approval not found or already decided.');
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'approval.denied',
-      payload: { alias: row.alias, denied_by: user.id },
-    });
+    await audit(c, deps.db, 'approval.denied', { alias: row.alias, denied_by: user.id });
 
     return c.json({ id: row.id, alias: row.alias, status: 'denied' });
   });

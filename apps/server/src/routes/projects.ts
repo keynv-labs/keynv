@@ -3,13 +3,12 @@ import { authorize } from '@keynv/rbac';
 import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newEnvironmentId, newProjectId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody, guard, audit } from '../lib/route-utils.js';
 
 interface ProjectDeps {
   db: Db;
@@ -74,16 +73,11 @@ export function projectRoutes(deps: ProjectDeps): Hono {
   });
 
   r.post('/', async (c) => {
-    const user = c.var.user;
-    if (authorize('project.create', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    const parsed = CreateProjectBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Invalid project body.', {
-        issues: parsed.error.issues,
-      });
-    }
+    const g = guard(c, 'project.create');
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+    const parsed = await parseBody(c, CreateProjectBody, 'Invalid project body.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const existing = await deps.db
       .select({ id: schema.projects.id })
@@ -122,15 +116,10 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       }
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'project.created',
-      payload: {
-        project_id: projectId,
-        name: parsed.data.name,
-        environments: parsed.data.environments.map((e) => e.name),
-      },
+    await audit(c, deps.db, 'project.created', {
+      project_id: projectId,
+      name: parsed.data.name,
+      environments: parsed.data.environments.map((e) => e.name),
     });
 
     return c.json(
@@ -146,9 +135,8 @@ export function projectRoutes(deps: ProjectDeps): Hono {
   r.get('/:id', async (c) => {
     const user = c.var.user;
     const id = c.req.param('id');
-    if (authorize('project.describe', { user, resource: { project_id: id } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const gd = guard(c, 'project.describe', { project_id: id });
+    if ('errorResponse' in gd) return gd.errorResponse;
     const projectRows = await deps.db
       .select()
       .from(schema.projects)
@@ -180,11 +168,10 @@ export function projectRoutes(deps: ProjectDeps): Hono {
   });
 
   r.post('/:id/environments', async (c) => {
-    const user = c.var.user;
     const id = c.req.param('id');
-    if (authorize('environment.create', { user, resource: { project_id: id } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const ge = guard(c, 'environment.create', { project_id: id });
+    if ('errorResponse' in ge) return ge.errorResponse;
+    const user = ge.user;
 
     const projectRows = await deps.db
       .select({ id: schema.projects.id })
@@ -199,12 +186,8 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       .limit(1);
     if (!projectRows[0]) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    const parsed = AddEnvironmentBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Invalid environment body.', {
-        issues: parsed.error.issues,
-      });
-    }
+    const parsed = await parseBody(c, AddEnvironmentBody, 'Invalid environment body.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const existing = await deps.db
       .select({ id: schema.environments.id })
@@ -230,16 +213,11 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       require_approval: parsed.data.require_approval,
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'environment.created',
-      payload: {
-        project_id: id,
-        environment: parsed.data.name,
-        tier: parsed.data.tier,
-        require_approval: parsed.data.require_approval,
-      },
+    await audit(c, deps.db, 'environment.created', {
+      project_id: id,
+      environment: parsed.data.name,
+      tier: parsed.data.tier,
+      require_approval: parsed.data.require_approval,
     });
 
     return c.json(
@@ -254,10 +232,9 @@ export function projectRoutes(deps: ProjectDeps): Hono {
   });
 
   r.delete('/:id', async (c) => {
-    const user = c.var.user;
-    if (authorize('project.delete', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const gd2 = guard(c, 'project.delete');
+    if ('errorResponse' in gd2) return gd2.errorResponse;
+    const user = gd2.user;
     const id = c.req.param('id');
     const projectRows = await deps.db
       .select({ id: schema.projects.id, name: schema.projects.name })
@@ -276,12 +253,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       .update(schema.projects)
       .set({ deleted_at: new Date().toISOString() })
       .where(eq(schema.projects.id, id));
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'project.deleted',
-      payload: { project_id: id, name: project.name },
-    });
+    await audit(c, deps.db, 'project.deleted', { project_id: id, name: project.name });
     return c.body(null, 204);
   });
 

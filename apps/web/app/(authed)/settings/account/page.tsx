@@ -3,7 +3,8 @@ import { Card, CardEyebrow, CardTitle } from '@/components/ui/card';
 import { getSession } from '@/lib/session';
 import { CheckCircle2 } from 'lucide-react';
 import { redirect } from 'next/navigation';
-import { ChangePasswordForm } from './password-form';
+import { ChangePasswordForm } from './_components/password-form';
+import { Field } from './_components/field';
 
 export default async function AccountProfilePage() {
   const session = await getSession();
@@ -78,19 +79,4 @@ export default async function AccountProfilePage() {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
-        {label}
-      </div>
-      <div className="mt-1.5">{children}</div>
-    </div>
-  );
-}
+

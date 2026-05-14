@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import type { ZodType, ZodTypeDef } from 'zod';
 
-export type TesterType = 'postgres' | 'mysql' | 'redis' | 'ssh' | 'http';
+export const testerEnum = z.enum(['postgres', 'mysql', 'redis', 'ssh', 'http']);
+export type TesterType = z.infer<typeof testerEnum>;
 
 /**
  * The plaintext value resolved from an alias, plus optional auxiliary

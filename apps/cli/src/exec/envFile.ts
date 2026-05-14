@@ -12,7 +12,7 @@
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
-import { parseAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import { walkUp } from '../util/fs.js';
 
 const MAX_FILE_BYTES = 1_000_000;
@@ -136,7 +136,7 @@ export function parseEnvFile(content: string, filename: string): EnvFileEntry[] 
     entries.push({
       name,
       value,
-      isAlias: parseAlias(value) !== null,
+      isAlias: reference.parseAlias(value) !== null,
       line: lineNo,
     });
   }

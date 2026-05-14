@@ -21,7 +21,7 @@ export function DocsSidebar() {
               return (
                 <li key={page.slug}>
                   <Link
-                    href={{ pathname: href } as never}
+                    href={href}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
                       'group relative flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-fast ease-snap',

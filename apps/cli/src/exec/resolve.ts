@@ -1,9 +1,9 @@
-import { type Alias, findAliasesInArgv } from '@keynv/core';
+import { reference } from '@keynv/core';
 import type { ApiClient } from '../client/http.js';
 import type { ProjectListItem } from '../commands/project.js';
 
 export interface ResolvedAlias {
-  alias: Alias;
+  alias: reference.Alias;
   value: string;
 }
 
@@ -24,15 +24,15 @@ export async function resolveAllAliases(
 ): Promise<ResolvedAlias[]> {
   // Collect unique aliases from argv and any extra strings (e.g.,
   // --via-env values).
-  const seen = new Map<string, Alias>();
-  const argvScans = findAliasesInArgv(argv);
+  const seen = new Map<string, reference.Alias>();
+  const argvScans = reference.findAliasesInArgv(argv);
   for (const { matches } of argvScans) {
     for (const m of matches) {
       seen.set(m.literal, m);
     }
   }
   for (const s of extraStrings) {
-    for (const m of findAliasesInArgv([s])) {
+    for (const m of reference.findAliasesInArgv([s])) {
       for (const x of m.matches) seen.set(x.literal, x);
     }
   }

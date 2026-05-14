@@ -1,16 +1,15 @@
 import { crypto } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
-import { findTester, runTest } from '@keynv/testers';
+import { findTester, runTest, testerEnum } from '@keynv/testers';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newSecretId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody, guard, audit } from '../lib/route-utils.js';
 import { ensurePendingApproval, findActiveGrant } from './approvals.js';
 
 interface SecretDeps {
@@ -20,34 +19,25 @@ interface SecretDeps {
   getKek: () => Uint8Array;
 }
 
+const envSchema = z.string().min(1).max(24).regex(/^[a-z0-9][a-z0-9-]*$/);
+const valueSchema = z.string().min(0).max(1024 * 64);
 const KEY_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 
 const CreateSecretBody = z.object({
-  env: z
-    .string()
-    .min(1)
-    .max(24)
-    .regex(/^[a-z0-9][a-z0-9-]*$/),
+  env: envSchema,
   key: z.string().min(1).max(64).regex(KEY_RE),
-  value: z
-    .string()
-    .min(0)
-    .max(1024 * 64),
+  value: valueSchema,
 });
 
 const RotateSecretBody = z.object({
-  new_value: z
-    .string()
-    .min(0)
-    .max(1024 * 64),
+  new_value: valueSchema,
 });
 
-/**
- * Loads a project + unwraps its DEK if and only if `projectId` belongs
- * to `orgId`. Returns null on cross-org access (audit finding B2);
- * callers respond with 404 so the existence of cross-org projects is
- * not disclosed.
- */
+const TestBody = z.object({
+  tester: testerEnum,
+  target: z.record(z.string(), z.unknown()),
+});
+
 async function loadProjectDek(
   db: Db,
   projectId: string,
@@ -81,18 +71,15 @@ export function secretRoutes(deps: SecretDeps): Hono {
   const r = new Hono();
   r.use('*', ...authedChain(deps));
 
-  // POST /v1/projects/:id/secrets
   r.post('/:projectId/secrets', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
-    if (authorize('secret.create', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    const parsed = CreateSecretBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid secret body.');
+    const g = guard(c, 'secret.create', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+    const body = await parseBody(c, CreateSecretBody, 'Invalid secret body.');
+    if ('errorResponse' in body) return body.errorResponse;
+    const { env: secretEnv, key: secretKey, value: secretValue } = body.data;
 
-    // Verify project belongs to caller's org BEFORE any env probing
-    // (audit B2 — env query alone would leak existence cross-org).
     const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
     if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
@@ -102,7 +89,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
       .where(
         and(
           eq(schema.environments.project_id, projectId),
-          eq(schema.environments.name, parsed.data.env),
+          eq(schema.environments.name, secretEnv),
         ),
       )
       .limit(1);
@@ -116,7 +103,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
         and(
           eq(schema.secrets.project_id, projectId),
           eq(schema.secrets.environment_id, env.id),
-          eq(schema.secrets.key, parsed.data.key),
+          eq(schema.secrets.key, secretKey),
           isNull(schema.secrets.deleted_at),
         ),
       )
@@ -125,47 +112,41 @@ export function secretRoutes(deps: SecretDeps): Hono {
       return jsonError(c, 'secret.already_exists', 'Secret already exists. Use rotate to update.');
     }
 
-    const sealed = await crypto.encryptSecret(parsed.data.value, loaded.dek);
+    const sealed = await crypto.encryptSecret(secretValue, loaded.dek);
     const id = newSecretId();
     await deps.db.insert(schema.secrets).values({
       id,
       project_id: projectId,
       environment_id: env.id,
-      key: parsed.data.key,
+      key: secretKey,
       ciphertext: Buffer.from(sealed.ciphertext),
       nonce: Buffer.from(sealed.nonce),
       version: 1,
       created_by: user.id,
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'secret.created',
-      payload: {
-        project_id: projectId,
-        env: env.name,
-        key: parsed.data.key,
-        version: 1,
-      },
+    await audit(c, deps.db, 'secret.created', {
+      project_id: projectId,
+      env: env.name,
+      key: secretKey,
+      version: 1,
     });
 
     return c.json(
       {
-        alias: `@${loaded.project.name}.${env.name}.${parsed.data.key}`,
+        alias: `@${loaded.project.name}.${env.name}.${secretKey}`,
         version: 1,
       },
       201,
     );
   });
 
-  // GET /v1/projects/:id/secrets — list alias names only
   r.get('/:projectId/secrets', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
-    if (authorize('secret.list_names', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const g = guard(c, 'secret.list_names', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+
     const projectRows = await deps.db
       .select({ name: schema.projects.name })
       .from(schema.projects)
@@ -204,16 +185,12 @@ export function secretRoutes(deps: SecretDeps): Hono {
     return c.json({ secrets: aliases });
   });
 
-  // GET /v1/projects/:id/secrets/:env/:key — resolve
   r.get('/:projectId/secrets/:env/:key', async (c) => {
     const user = c.var.user;
     const projectId = c.req.param('projectId');
     const envName = c.req.param('env');
     const keyName = c.req.param('key');
 
-    // org_id-scoped project lookup FIRST so the env query below cannot
-    // confirm the existence of cross-org projects via env probing
-    // (audit finding B2).
     const projectRows = await deps.db
       .select({ name: schema.projects.name })
       .from(schema.projects)
@@ -240,9 +217,6 @@ export function secretRoutes(deps: SecretDeps): Hono {
 
     const alias = `@${projectRow.name}.${envName}.${keyName}`;
 
-    // Pre-load any active grant so authorize() can short-circuit the
-    // pending_approval branch when the lead has already pre-authorised
-    // this developer for this alias.
     const grant = await findActiveGrant({
       db: deps.db,
       projectId,
@@ -267,26 +241,13 @@ export function secretRoutes(deps: SecretDeps): Hono {
         alias,
         requesterUserId: user.id,
       });
-      // Audit on creation only — repeated reads from the same dev
-      // shouldn't spam the chain, the existing pending row already
-      // captured the request.
       if (ensured.created) {
-        await appendAudit(deps.db, {
-          actor_user_id: user.id,
-          actor_agent: readAgent(c),
-          event_type: 'approval.requested',
-          payload: { alias },
-        });
+        await audit(c, deps.db, 'approval.requested', { alias });
       }
       return jsonError(c, 'rbac.approval_required', 'Production access requires approval.');
     }
     if (decision !== 'allow') {
-      await appendAudit(deps.db, {
-        actor_user_id: user.id,
-        actor_agent: readAgent(c),
-        event_type: 'secret.read.denied',
-        payload: { alias },
-      });
+      await audit(c, deps.db, 'secret.read.denied', { alias });
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
 
@@ -317,12 +278,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
       loaded.dek,
     );
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'secret.read.allowed',
-      payload: { alias, version: secret.version },
-    });
+    await audit(c, deps.db, 'secret.read.allowed', { alias, version: secret.version });
 
     return c.json({
       alias,
@@ -331,20 +287,17 @@ export function secretRoutes(deps: SecretDeps): Hono {
     });
   });
 
-  // POST /v1/projects/:id/secrets/:env/:key/rotate
   r.post('/:projectId/secrets/:env/:key/rotate', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
     const envName = c.req.param('env');
     const keyName = c.req.param('key');
 
-    if (authorize('secret.rotate', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    const parsed = RotateSecretBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid rotate body.');
+    const g = guard(c, 'secret.rotate', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+    const body = await parseBody(c, RotateSecretBody, 'Invalid rotate body.');
+    if ('errorResponse' in body) return body.errorResponse;
 
-    // Org-scope project lookup before any env probing (audit B2).
     const projectRows = await deps.db
       .select({ name: schema.projects.name })
       .from(schema.projects)
@@ -388,7 +341,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
     if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    const sealed = await crypto.encryptSecret(parsed.data.new_value, loaded.dek);
+    const sealed = await crypto.encryptSecret(body.data.new_value, loaded.dek);
     const newId = newSecretId();
     const newVersion = prev.version + 1;
     const now = new Date().toISOString();
@@ -412,17 +365,12 @@ export function secretRoutes(deps: SecretDeps): Hono {
         .run();
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'secret.rotated',
-      payload: {
-        project_id: projectId,
-        env: envName,
-        key: keyName,
-        from_version: prev.version,
-        to_version: newVersion,
-      },
+    await audit(c, deps.db, 'secret.rotated', {
+      project_id: projectId,
+      env: envName,
+      key: keyName,
+      from_version: prev.version,
+      to_version: newVersion,
     });
 
     return c.json({
@@ -431,16 +379,15 @@ export function secretRoutes(deps: SecretDeps): Hono {
     });
   });
 
-  // DELETE /v1/projects/:id/secrets/:env/:key
   r.delete('/:projectId/secrets/:env/:key', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
     const envName = c.req.param('env');
     const keyName = c.req.param('key');
-    if (authorize('secret.delete', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    // Org-scope project lookup before env probing (audit B2).
+
+    const g = guard(c, 'secret.delete', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+
     const projectRows = await deps.db
       .select({ id: schema.projects.id })
       .from(schema.projects)
@@ -478,38 +425,19 @@ export function secretRoutes(deps: SecretDeps): Hono {
       .returning({ id: schema.secrets.id });
     if (result.length === 0) return jsonError(c, 'secret.not_found', 'Secret not found.');
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'secret.deleted',
-      payload: { project_id: projectId, env: envName, key: keyName },
-    });
+    await audit(c, deps.db, 'secret.deleted', { project_id: projectId, env: envName, key: keyName });
     return c.body(null, 204);
   });
 
-  // POST /v1/projects/:projectId/secrets/:env/:key/test
-  // Decrypts the secret value, hands it to the requested tester
-  // alongside the caller-supplied target shape, and returns the
-  // sanitised TestResult. The plaintext value never leaves the
-  // server process — it lives in memory only for the duration of
-  // the test() call inside @keynv/testers.
-  const TestBody = z.object({
-    tester: z.enum(['postgres', 'mysql', 'redis', 'ssh', 'http']),
-    target: z.record(z.string(), z.unknown()),
-  });
-
   r.post('/:projectId/secrets/:env/:key/test', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
     const envName = c.req.param('env');
     const keyName = c.req.param('key');
 
-    const parsed = TestBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Invalid test body.', {
-        issues: parsed.error.issues,
-      });
-    }
+    const body = await parseBody(c, TestBody, 'Invalid test body.');
+    if ('errorResponse' in body) return body.errorResponse;
+
+    const user = c.var.user;
 
     const projectRows = await deps.db
       .select({ name: schema.projects.name })
@@ -535,15 +463,12 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const env = envRows[0];
     if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');
 
-    const decision = authorize('secret.test', {
-      user,
-      resource: {
-        project_id: projectId,
-        environment_tier: env.tier,
-        require_approval: env.require_approval,
-      },
+    const g = guard(c, 'secret.test', {
+      project_id: projectId,
+      environment_tier: env.tier,
+      require_approval: env.require_approval,
     });
-    if (decision !== 'allow') return jsonError(c, 'rbac.denied', 'Permission denied.');
+    if ('errorResponse' in g) return g.errorResponse;
 
     const secretRows = await deps.db
       .select()
@@ -573,27 +498,22 @@ export function secretRoutes(deps: SecretDeps): Hono {
     );
 
     const alias = `@${projectRow.name}.${envName}.${keyName}`;
-    const tester = findTester(parsed.data.tester);
+    const tester = findTester(body.data.tester);
     if (!tester) {
-      return jsonError(c, 'validation.failed', `Unknown tester type: ${parsed.data.tester}`);
+      return jsonError(c, 'validation.failed', `Unknown tester type: ${body.data.tester}`);
     }
 
     const result = await runTest({
       tester,
       secret: { alias, value },
-      target: parsed.data.target,
+      target: body.data.target,
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'secret.test.invoked',
-      payload: {
-        alias,
-        tester: parsed.data.tester,
-        ok: result.ok,
-        latency_ms: result.latency_ms,
-      },
+    await audit(c, deps.db, 'secret.test.invoked', {
+      alias,
+      tester: body.data.tester,
+      ok: result.ok,
+      latency_ms: result.latency_ms,
     });
 
     return c.json(result);

@@ -58,7 +58,7 @@ export default async function DocPage({ params }: Params) {
       <div className="flex items-center justify-between gap-4 flex-wrap text-sm">
         {doc.prev ? (
           <Link
-            href={{ pathname: `/docs/${doc.prev.slug}` } as never}
+            href={`/docs/${doc.prev.slug}`}
             className="group flex items-center gap-3 text-fg-muted hover:text-fg transition-colors duration-fast ease-snap"
           >
             <ArrowLeft
@@ -78,7 +78,7 @@ export default async function DocPage({ params }: Params) {
         )}
         {doc.next ? (
           <Link
-            href={{ pathname: `/docs/${doc.next.slug}` } as never}
+            href={`/docs/${doc.next.slug}`}
             className="group flex items-center gap-3 text-right text-fg-muted hover:text-fg transition-colors duration-fast ease-snap"
           >
             <span>

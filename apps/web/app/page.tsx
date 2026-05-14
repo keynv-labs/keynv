@@ -1,5 +1,5 @@
 import { Logomark } from '@/components/brand/logomark';
-import { InstallTabs } from '@/components/install-tabs';
+import { InstallTabs } from '@/components/cli/install-tabs';
 import { GithubStars } from '@/components/trust/github-stars';
 import { StatusPill } from '@/components/trust/status-pill';
 import { Badge } from '@/components/ui/badge';
@@ -982,7 +982,7 @@ function FooterLink({
   return (
     <li>
       <Link
-        href={{ pathname: href } as never}
+        href={href}
         className="hover:text-fg transition-colors duration-fast ease-snap"
       >
         {children}

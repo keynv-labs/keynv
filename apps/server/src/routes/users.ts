@@ -1,15 +1,13 @@
-import { authorize } from '@keynv/rbac';
 import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import { hashPassword } from '../auth/password.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newUserId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody, guard, audit } from '../lib/route-utils.js';
 
 interface UserDeps {
   db: Db;
@@ -50,12 +48,11 @@ export function userRoutes(deps: UserDeps): Hono {
 
   // Phase 1: admin-creates-user (no invite-token flow yet — that's Phase 4).
   r.post('/', async (c) => {
-    const user = c.var.user;
-    if (authorize('user.invite', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    const parsed = CreateUserBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid user body.');
+    const g = guard(c, 'user.invite');
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+    const parsed = await parseBody(c, CreateUserBody, 'Invalid user body.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const existing = await deps.db
       .select({ id: schema.users.id })
@@ -75,29 +72,23 @@ export function userRoutes(deps: UserDeps): Hono {
       password_hash,
       org_role: parsed.data.org_role,
     });
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'user.invited',
-      payload: { target_user_id: id, email: parsed.data.email, org_role: parsed.data.org_role },
-    });
+    await audit(c, deps.db, 'user.invited', { target_user_id: id, email: parsed.data.email, org_role: parsed.data.org_role });
     return c.json({ id, email: parsed.data.email, org_role: parsed.data.org_role }, 201);
   });
 
   // PATCH /v1/users/:id/org-role  (audit finding M5; docs/06-api-spec.md §69-72)
   r.patch('/:id/org-role', async (c) => {
-    const user = c.var.user;
-    if (authorize('user.role_change', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const g = guard(c, 'user.role_change');
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
     const targetId = c.req.param('id');
     if (targetId === user.id) {
       // Refuse self-modification — prevents an admin from accidentally
       // demoting themselves out of admin or promoting to owner.
       return jsonError(c, 'rbac.denied', 'Cannot change your own org role.');
     }
-    const parsed = PatchOrgRoleBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid body.');
+    const parsed = await parseBody(c, PatchOrgRoleBody, 'Invalid body.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const targets = await deps.db
       .select({ id: schema.users.id, org_role: schema.users.org_role })
@@ -116,22 +107,16 @@ export function userRoutes(deps: UserDeps): Hono {
       .set({ org_role: parsed.data.org_role })
       .where(eq(schema.users.id, targetId));
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'user.role_changed',
-      payload: { target_user_id: targetId, org_role: parsed.data.org_role },
-    });
+    await audit(c, deps.db, 'user.role_changed', { target_user_id: targetId, org_role: parsed.data.org_role });
     return c.json({ id: targetId, org_role: parsed.data.org_role });
   });
 
   // DELETE /v1/users/:id  — owner/admin removes a user from the org.
   // Cascade rules in schema drop their memberships + refresh tokens.
   r.delete('/:id', async (c) => {
-    const user = c.var.user;
-    if (authorize('user.remove', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const g = guard(c, 'user.remove');
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
     const targetId = c.req.param('id');
     if (targetId === user.id) {
       return jsonError(c, 'rbac.denied', 'Cannot remove yourself.');
@@ -149,12 +134,7 @@ export function userRoutes(deps: UserDeps): Hono {
 
     await deps.db.delete(schema.users).where(eq(schema.users.id, targetId));
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'user.removed',
-      payload: { target_user_id: targetId, email: target.email },
-    });
+    await audit(c, deps.db, 'user.removed', { target_user_id: targetId, email: target.email });
     return c.body(null, 204);
   });
 

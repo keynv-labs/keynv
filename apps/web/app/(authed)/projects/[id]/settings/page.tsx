@@ -2,8 +2,11 @@ import { SectionHeader } from '@/components/layout/page-header';
 import { Badge, envTone } from '@/components/ui/badge';
 import { Card, CardEyebrow, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { formatRelative } from '@/lib/time';
 import { Users } from 'lucide-react';
-import { AddMemberDialog, RemoveMemberAction } from './member-forms';
+import { AddMemberDialog, RemoveMemberAction } from './_components/member-forms';
+import { InfoRow } from './_components/info-row';
+import { roleTone } from './_components/role-tone';
 
 interface Member {
   user_id: string;
@@ -23,26 +26,6 @@ interface ProjectDetail {
     require_approval: boolean;
   }>;
 }
-
-function formatRelative(iso: string): string {
-  const ts = Date.parse(iso);
-  if (Number.isNaN(ts)) return '';
-  const diff = Date.now() - ts;
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(ts).toLocaleDateString();
-}
-
-const roleTone = (role: string): 'success' | 'warn' | 'neutral' | 'accent' => {
-  if (role === 'lead') return 'accent';
-  if (role === 'developer') return 'success';
-  return 'neutral';
-};
 
 export default async function ProjectSettingsPage({
   params,
@@ -173,17 +156,4 @@ export default async function ProjectSettingsPage({
   );
 }
 
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div>
-      <dt className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
-        {label}
-      </dt>
-      <dd
-        className={`mt-1 text-sm text-fg ${mono ? 'font-mono tabular text-[13px]' : ''} break-all`}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
+

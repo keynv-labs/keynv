@@ -2,7 +2,7 @@ import { Logomark } from '@/components/brand/logomark';
 import { SkipLink } from '@/components/ui/skip-link';
 import { getCapabilities } from '@/lib/capabilities';
 import Link from 'next/link';
-import { LoginForm } from './form';
+import { LoginForm } from './_components/form';
 
 export default async function LoginPage({
   searchParams,

@@ -1,13 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import { issueCliToken, revokeCliToken } from '../auth/cli-tokens.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody, audit } from '../lib/route-utils.js';
 
 interface CliTokenDeps {
   db: Db;
@@ -55,23 +54,14 @@ export function cliTokenRoutes(deps: CliTokenDeps): Hono {
 
   r.post('/', async (c) => {
     const me = c.var.user;
-    const parsed = CreateBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Invalid token body.', {
-        issues: parsed.error.issues,
-      });
-    }
+    const parsed = await parseBody(c, CreateBody, 'Invalid token body.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
     const issued = await issueCliToken(deps.db, {
       user_id: me.id,
       name: parsed.data.name,
       expiresInSeconds: parsed.data.expires_in_seconds ?? null,
     });
-    await appendAudit(deps.db, {
-      actor_user_id: me.id,
-      actor_agent: readAgent(c),
-      event_type: 'cli_token.created',
-      payload: { token_id: issued.id, name: parsed.data.name },
-    });
+    await audit(c, deps.db, 'cli_token.created', { token_id: issued.id, name: parsed.data.name });
     return c.json(
       {
         id: issued.id,
@@ -98,12 +88,7 @@ export function cliTokenRoutes(deps: CliTokenDeps): Hono {
     const revoked = await revokeCliToken(deps.db, { id, user_id: me.id });
     if (!revoked) return jsonError(c, 'cli_token.not_found', 'Token already revoked.');
 
-    await appendAudit(deps.db, {
-      actor_user_id: me.id,
-      actor_agent: readAgent(c),
-      event_type: 'cli_token.revoked',
-      payload: { token_id: id, name },
-    });
+    await audit(c, deps.db, 'cli_token.revoked', { token_id: id, name });
     return c.body(null, 204);
   });
 

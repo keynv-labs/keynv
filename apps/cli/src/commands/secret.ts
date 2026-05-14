@@ -1,4 +1,4 @@
-import { parseAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { promptNewSecret } from '../ui/flows/secret.js';
@@ -67,7 +67,7 @@ export class SecretCreateCommand extends Command {
         }
       }
 
-      const parsed = parseAlias(alias);
+      const parsed = reference.parseAlias(alias);
       if (!parsed) {
         this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
         return 1;
@@ -124,7 +124,7 @@ export class SecretGetCommand extends Command {
         if (!alias) return 1;
       }
 
-      const parsed = parseAlias(alias);
+      const parsed = reference.parseAlias(alias);
       if (!parsed) {
         this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
         return 1;
@@ -179,7 +179,7 @@ export class SecretListCommand extends Command {
       // Allow "@project.env" or "@project.env.KEY" as a shorthand — extract project name.
       let resolvedProjectName = projectName;
       if (projectName.startsWith('@')) {
-        const parsed = parseAlias(projectName);
+        const parsed = reference.parseAlias(projectName);
         if (parsed) {
           resolvedProjectName = parsed.project;
         } else {
@@ -236,7 +236,7 @@ export class SecretRotateCommand extends Command {
         if (!alias) return 1;
       }
 
-      const parsed = parseAlias(alias);
+      const parsed = reference.parseAlias(alias);
       if (!parsed) {
         this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
         return 1;
@@ -288,7 +288,7 @@ export class SecretDeleteCommand extends Command {
         if (!alias) return 1;
       }
 
-      const parsed = parseAlias(alias);
+      const parsed = reference.parseAlias(alias);
       if (!parsed) {
         this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
         return 1;

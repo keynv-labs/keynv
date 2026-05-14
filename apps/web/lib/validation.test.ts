@@ -1,33 +1,34 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
+import { email, password, passwordMin12, projectId, envName, secretKey, secretValue, projectRole, cliTokenName, orgName } from '@/lib/schemas';
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email,
+  password,
   next: z.string().optional(),
 });
 
 const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(12).max(256),
-  org_name: z.string().min(1),
+  email,
+  password: passwordMin12,
+  org_name: orgName,
 });
 
 const createSecretSchema = z.object({
-  project_id: z.string().min(1),
-  env: z.string().min(1).max(24).regex(/^[a-z0-9][a-z0-9-]*$/),
-  key: z.string().min(1).max(64).regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/),
-  value: z.string().min(0).max(64 * 1024),
+  project_id: projectId,
+  env: envName,
+  key: secretKey,
+  value: secretValue,
 });
 
 const addMemberSchema = z.object({
-  project_id: z.string().min(1),
-  email: z.string().email(),
-  role: z.enum(['lead', 'developer', 'reader']),
+  project_id: projectId,
+  email,
+  role: projectRole,
 });
 
 const cliTokenSchema = z.object({
-  name: z.string().min(1).regex(/^[\w\s.-]+$/),
+  name: cliTokenName,
   expires_in_days: z.coerce.number().int().min(1).max(365).optional(),
 });
 

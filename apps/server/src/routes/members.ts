@@ -1,13 +1,11 @@
-import { authorize } from '@keynv/rbac';
 import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody, guard, audit } from '../lib/route-utils.js';
 
 interface MemberDeps {
   db: Db;
@@ -15,12 +13,6 @@ interface MemberDeps {
   rateLimitPerMinute?: number | undefined;
 }
 
-/**
- * Returns true if `projectId` exists in `orgId` and is not deleted.
- * Used by every member-* route to guard against cross-org access
- * (audit finding B2). Routes return 404 on false to avoid leaking
- * project existence across orgs.
- */
 async function projectInOrg(db: Db, projectId: string, orgId: string): Promise<boolean> {
   const rows = await db
     .select({ id: schema.projects.id })
@@ -50,12 +42,10 @@ export function memberRoutes(deps: MemberDeps): Hono {
   r.use('*', ...authedChain(deps));
 
   r.get('/:projectId/members', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
-    if (authorize('project.describe', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+    const g = guard(c, 'project.describe', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    if (!(await projectInOrg(deps.db, projectId, g.user.org_id))) {
       return jsonError(c, 'project.not_found', 'Project not found.');
     }
     const rows = await deps.db
@@ -72,25 +62,23 @@ export function memberRoutes(deps: MemberDeps): Hono {
   });
 
   r.post('/:projectId/members', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
-    if (authorize('member.add', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+    const g = guard(c, 'member.add', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    if (!(await projectInOrg(deps.db, projectId, g.user.org_id))) {
       return jsonError(c, 'project.not_found', 'Project not found.');
     }
-    const parsed = AddMemberBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid member body.');
+    const body = await parseBody(c, AddMemberBody, 'Invalid member body.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const targetRows = await deps.db
       .select()
       .from(schema.users)
-      .where(and(eq(schema.users.email, parsed.data.email), eq(schema.users.org_id, user.org_id)))
+      .where(and(eq(schema.users.email, body.data.email), eq(schema.users.org_id, g.user.org_id)))
       .limit(1);
     const target = targetRows[0];
     if (!target) {
-      return jsonError(c, 'user.not_found', `No user with email ${parsed.data.email} in this org.`);
+      return jsonError(c, 'user.not_found', `No user with email ${body.data.email} in this org.`);
     }
 
     const existing = await deps.db
@@ -107,54 +95,40 @@ export function memberRoutes(deps: MemberDeps): Hono {
     if (existing[0]) {
       await deps.db
         .update(schema.memberships)
-        .set({ role: parsed.data.role, granted_by: user.id, granted_at: new Date().toISOString() })
+        .set({ role: body.data.role, granted_by: g.user.id, granted_at: new Date().toISOString() })
         .where(
           and(
             eq(schema.memberships.user_id, target.id),
             eq(schema.memberships.project_id, projectId),
           ),
         );
-      await appendAudit(deps.db, {
-        actor_user_id: user.id,
-        actor_agent: readAgent(c),
-        event_type: 'member.role_changed',
-        payload: { project_id: projectId, target_user_id: target.id, role: parsed.data.role },
-      });
+      await audit(c, deps.db, 'member.role_changed', { project_id: projectId, target_user_id: target.id, role: body.data.role });
     } else {
       await deps.db.insert(schema.memberships).values({
         user_id: target.id,
         project_id: projectId,
-        role: parsed.data.role,
-        granted_by: user.id,
+        role: body.data.role,
+        granted_by: g.user.id,
       });
-      await appendAudit(deps.db, {
-        actor_user_id: user.id,
-        actor_agent: readAgent(c),
-        event_type: 'member.added',
-        payload: { project_id: projectId, target_user_id: target.id, role: parsed.data.role },
-      });
+      await audit(c, deps.db, 'member.added', { project_id: projectId, target_user_id: target.id, role: body.data.role });
     }
-    return c.json({ user_id: target.id, role: parsed.data.role }, 201);
+    return c.json({ user_id: target.id, role: body.data.role }, 201);
   });
 
   r.patch('/:projectId/members/:userId', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
-    if (
-      authorize('member.role_change', { user, resource: { project_id: projectId } }) !== 'allow'
-    ) {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+    const g = guard(c, 'member.role_change', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    if (!(await projectInOrg(deps.db, projectId, g.user.org_id))) {
       return jsonError(c, 'project.not_found', 'Project not found.');
     }
     const targetUserId = c.req.param('userId');
-    const parsed = PatchMemberBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid member body.');
+    const body = await parseBody(c, PatchMemberBody, 'Invalid member body.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const result = await deps.db
       .update(schema.memberships)
-      .set({ role: parsed.data.role, granted_by: user.id, granted_at: new Date().toISOString() })
+      .set({ role: body.data.role, granted_by: g.user.id, granted_at: new Date().toISOString() })
       .where(
         and(
           eq(schema.memberships.user_id, targetUserId),
@@ -165,22 +139,15 @@ export function memberRoutes(deps: MemberDeps): Hono {
     if (result.length === 0) {
       return jsonError(c, 'membership.not_found', 'Membership not found.');
     }
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'member.role_changed',
-      payload: { project_id: projectId, target_user_id: targetUserId, role: parsed.data.role },
-    });
-    return c.json({ user_id: targetUserId, role: parsed.data.role });
+    await audit(c, deps.db, 'member.role_changed', { project_id: projectId, target_user_id: targetUserId, role: body.data.role });
+    return c.json({ user_id: targetUserId, role: body.data.role });
   });
 
   r.delete('/:projectId/members/:userId', async (c) => {
-    const user = c.var.user;
     const projectId = c.req.param('projectId');
-    if (authorize('member.remove', { user, resource: { project_id: projectId } }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    if (!(await projectInOrg(deps.db, projectId, user.org_id))) {
+    const g = guard(c, 'member.remove', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    if (!(await projectInOrg(deps.db, projectId, g.user.org_id))) {
       return jsonError(c, 'project.not_found', 'Project not found.');
     }
     const targetUserId = c.req.param('userId');
@@ -196,12 +163,7 @@ export function memberRoutes(deps: MemberDeps): Hono {
     if (result.length === 0) {
       return jsonError(c, 'membership.not_found', 'Membership not found.');
     }
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'member.removed',
-      payload: { project_id: projectId, target_user_id: targetUserId },
-    });
+    await audit(c, deps.db, 'member.removed', { project_id: projectId, target_user_id: targetUserId });
     return c.body(null, 204);
   });
 

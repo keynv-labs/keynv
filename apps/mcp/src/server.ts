@@ -1,4 +1,4 @@
-import { parseAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import { redact } from '@keynv/redactor';
 import { testers, runTest } from '@keynv/testers';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -143,7 +143,7 @@ export function buildServer(deps: ServerDeps): Server {
 
         case 'keynv.use_secret': {
           const alias = String(args.alias ?? '');
-          const parsed = parseAlias(alias);
+          const parsed = reference.parseAlias(alias);
           if (!parsed) return jsonError(`invalid alias: ${alias}`);
           // Verify the alias resolves (RBAC / existence) without
           // returning the value to the caller.
@@ -168,7 +168,7 @@ export function buildServer(deps: ServerDeps): Server {
 
         case 'keynv.test_connection': {
           const alias = String(args.alias ?? '');
-          const parsed = parseAlias(alias);
+          const parsed = reference.parseAlias(alias);
           if (!parsed) return jsonError(`invalid alias: ${alias}`);
           const testerType = String(args.tester ?? '');
           const tester = testers.find((t) => t.type === testerType);

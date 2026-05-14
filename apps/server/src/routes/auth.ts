@@ -2,17 +2,16 @@ import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import { signAccessToken } from '../auth/jwt.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
 import { issueRefreshToken, revokeRefreshToken, rotateRefreshToken } from '../auth/tokens.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
 import { jsonError } from '../lib/errors.js';
 import { newOrgId, newUserId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
 import { ipRateLimitMiddleware } from '../lib/rate-limit.js';
+import { parseBody, audit } from '../lib/route-utils.js';
 
 interface AuthDeps {
   db: Db;
@@ -119,19 +118,14 @@ export function authRoutes(deps: AuthDeps): Hono {
       if (!deps.publicRegistrationEnabled) {
         return jsonError(c, 'rbac.denied', 'Public registration is not enabled on this instance.');
       }
-      const parsed = RegisterBody.safeParse(await c.req.json().catch(() => ({})));
-      if (!parsed.success) {
-        return jsonError(
-          c,
-          'validation.failed',
-          'Email, 12+ char password, and org name are required.',
-        );
-      }
+      const body = await parseBody(c, RegisterBody, 'Email, 12+ char password, and org name are required.');
+      if ('errorResponse' in body) return body.errorResponse;
+      const { email, password, org_name } = body.data;
 
       const existing = await deps.db
         .select({ id: schema.users.id })
         .from(schema.users)
-        .where(eq(schema.users.email, parsed.data.email))
+        .where(eq(schema.users.email, email))
         .limit(1);
       if (existing[0]) {
         return jsonError(c, 'user.already_exists', 'Email already registered.');
@@ -139,19 +133,15 @@ export function authRoutes(deps: AuthDeps): Hono {
 
       const orgId = newOrgId();
       const userId = newUserId();
-      const password_hash = await hashPassword(parsed.data.password);
+      const password_hash = await hashPassword(password);
 
-      // Atomic: if the user insert fails (rare race on the email
-      // unique check), the org row still rolls back. better-sqlite3's
-      // transaction wrapper is synchronous — see audit/append.ts and
-      // routes/projects.ts for the same pattern.
       deps.db.transaction((tx) => {
-        tx.insert(schema.orgs).values({ id: orgId, name: parsed.data.org_name }).run();
+        tx.insert(schema.orgs).values({ id: orgId, name: org_name }).run();
         tx.insert(schema.users)
           .values({
             id: userId,
             org_id: orgId,
-            email: parsed.data.email,
+            email,
             password_hash,
             org_role: 'owner',
           })
@@ -159,7 +149,7 @@ export function authRoutes(deps: AuthDeps): Hono {
       });
 
       const access = await signAccessToken(
-        { sub: userId, email: parsed.data.email, org_id: orgId, org_role: 'owner' },
+        { sub: userId, email, org_id: orgId, org_role: 'owner' },
         { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
       );
       const refresh = await issueRefreshToken(deps.db, {
@@ -167,12 +157,7 @@ export function authRoutes(deps: AuthDeps): Hono {
         ttlSeconds: deps.refreshTtlS,
       });
 
-      await appendAudit(deps.db, {
-        actor_user_id: userId,
-        actor_agent: readAgent(c),
-        event_type: 'auth.register',
-        payload: { email: parsed.data.email, org_id: orgId, org_name: parsed.data.org_name },
-      });
+      await audit(c, deps.db, 'auth.register', { email, org_id: orgId, org_name });
 
       return c.json(
         {
@@ -181,7 +166,7 @@ export function authRoutes(deps: AuthDeps): Hono {
           expires_in: deps.accessTtlS,
           user: {
             id: userId,
-            email: parsed.data.email,
+            email,
             org_id: orgId,
             org_role: 'owner',
           },
@@ -192,8 +177,8 @@ export function authRoutes(deps: AuthDeps): Hono {
   );
 
   r.post('/cli/browser/start', async (c) => {
-    const parsed = BrowserStartBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid browser auth body.');
+    const body = await parseBody(c, BrowserStartBody, 'Invalid browser auth body.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const deviceCode = newDeviceCode();
     const userCode = newUserCode();
@@ -203,7 +188,7 @@ export function authRoutes(deps: AuthDeps): Hono {
     await deps.db.insert(schema.cli_auth_flows).values({
       device_code_hash: hashCode(deviceCode),
       user_code_hash: hashCode(normalizeUserCode(userCode)),
-      device_name: parsed.data.device_name ?? null,
+      device_name: body.data.device_name ?? null,
       expires_at: expiresAt,
     });
 
@@ -221,14 +206,13 @@ export function authRoutes(deps: AuthDeps): Hono {
   });
 
   r.post('/cli/browser/poll', async (c) => {
-    const parsed = BrowserPollBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success)
-      return jsonError(c, 'validation.failed', 'Invalid browser auth poll body.');
+    const body = await parseBody(c, BrowserPollBody, 'Invalid browser auth poll body.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const rows = await deps.db
       .select()
       .from(schema.cli_auth_flows)
-      .where(eq(schema.cli_auth_flows.device_code_hash, hashCode(parsed.data.device_code)))
+      .where(eq(schema.cli_auth_flows.device_code_hash, hashCode(body.data.device_code)))
       .limit(1);
     const flow = rows[0];
     if (!flow) return jsonError(c, 'validation.failed', 'Browser auth flow not found.');
@@ -267,12 +251,7 @@ export function authRoutes(deps: AuthDeps): Hono {
       device_fingerprint: flow.device_name ?? undefined,
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'auth.login.allowed',
-      payload: { email: user.email },
-    });
+    await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
 
     return c.json({
       access_token: access,
@@ -288,29 +267,22 @@ export function authRoutes(deps: AuthDeps): Hono {
   });
 
   r.post('/login', async (c) => {
-    const parsed = LoginBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid login body.');
+    const body = await parseBody(c, LoginBody, 'Invalid login body.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const rows = await deps.db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.email, parsed.data.email))
+      .where(eq(schema.users.email, body.data.email))
       .limit(1);
     const user = rows[0];
 
-    // Run argon2 verify even on a missing user, with a dummy hash, to keep
-    // timing constant. Argon2 rejects malformed hashes by returning false.
     const dummyHash =
       '$argon2id$v=19$m=19456,t=2,p=1$MAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
-    const ok = await verifyPassword(user?.password_hash ?? dummyHash, parsed.data.password);
+    const ok = await verifyPassword(user?.password_hash ?? dummyHash, body.data.password);
 
     if (!user || !ok) {
-      await appendAudit(deps.db, {
-        actor_user_id: user?.id ?? null,
-        actor_agent: readAgent(c),
-        event_type: 'auth.login.denied',
-        payload: { email: parsed.data.email },
-      });
+      await audit(c, deps.db, 'auth.login.denied', { email: body.data.email });
       return jsonError(c, 'auth.invalid_credentials', 'Invalid email or password.');
     }
 
@@ -328,12 +300,7 @@ export function authRoutes(deps: AuthDeps): Hono {
       ttlSeconds: deps.refreshTtlS,
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'auth.login.allowed',
-      payload: { email: user.email },
-    });
+    await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
 
     return c.json({
       access_token: access,
@@ -349,11 +316,11 @@ export function authRoutes(deps: AuthDeps): Hono {
   });
 
   r.post('/refresh', async (c) => {
-    const parsed = RefreshBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid refresh body.');
+    const body = await parseBody(c, RefreshBody, 'Invalid refresh body.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const result = await rotateRefreshToken(deps.db, {
-      rawToken: parsed.data.refresh_token,
+      rawToken: body.data.refresh_token,
       ttlSeconds: deps.refreshTtlS,
     });
     if (!result) return jsonError(c, 'auth.token_revoked', 'Refresh token invalid or expired.');
@@ -376,12 +343,7 @@ export function authRoutes(deps: AuthDeps): Hono {
       { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
     );
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'auth.refresh',
-      payload: {},
-    });
+    await audit(c, deps.db, 'auth.refresh', {});
 
     return c.json({
       access_token: access,
@@ -391,17 +353,12 @@ export function authRoutes(deps: AuthDeps): Hono {
   });
 
   r.post('/logout', async (c) => {
-    const parsed = LogoutBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid logout body.');
-    if (parsed.data.refresh_token) {
-      await revokeRefreshToken(deps.db, parsed.data.refresh_token);
+    const body = await parseBody(c, LogoutBody, 'Invalid logout body.');
+    if ('errorResponse' in body) return body.errorResponse;
+    if (body.data.refresh_token) {
+      await revokeRefreshToken(deps.db, body.data.refresh_token);
     }
-    await appendAudit(deps.db, {
-      actor_user_id: null,
-      actor_agent: readAgent(c),
-      event_type: 'auth.logout',
-      payload: {},
-    });
+    await audit(c, deps.db, 'auth.logout', {});
     return c.body(null, 204);
   });
 
@@ -415,8 +372,8 @@ export function authRoutes(deps: AuthDeps): Hono {
   authedSubrouter.use('*', ...authedChain(deps));
   authedSubrouter.post('/cli/browser/authorize', async (c) => {
     const me = c.var.user;
-    const parsed = BrowserAuthorizeBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid browser auth code.');
+    const body = await parseBody(c, BrowserAuthorizeBody, 'Invalid browser auth code.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const rows = await deps.db
       .select()
@@ -424,7 +381,7 @@ export function authRoutes(deps: AuthDeps): Hono {
       .where(
         eq(
           schema.cli_auth_flows.user_code_hash,
-          hashCode(normalizeUserCode(parsed.data.user_code)),
+          hashCode(normalizeUserCode(body.data.user_code)),
         ),
       )
       .limit(1);
@@ -447,10 +404,8 @@ export function authRoutes(deps: AuthDeps): Hono {
 
   authedSubrouter.post('/password', async (c) => {
     const me = c.var.user;
-    const parsed = ChangePasswordBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Invalid body. New password must be 12+ chars.');
-    }
+    const body = await parseBody(c, ChangePasswordBody, 'Invalid body. New password must be 12+ chars.');
+    if ('errorResponse' in body) return body.errorResponse;
 
     const rows = await deps.db
       .select({ id: schema.users.id, password_hash: schema.users.password_hash })
@@ -460,30 +415,22 @@ export function authRoutes(deps: AuthDeps): Hono {
     const row = rows[0];
     if (!row) return jsonError(c, 'auth.invalid_credentials', 'User not found.');
 
-    const ok = await verifyPassword(row.password_hash, parsed.data.current_password);
+    const ok = await verifyPassword(row.password_hash, body.data.current_password);
     if (!ok) {
-      await appendAudit(deps.db, {
-        actor_user_id: me.id,
-        actor_agent: readAgent(c),
-        event_type: 'auth.password_change.denied',
-        payload: {},
-      });
+      await audit(c, deps.db, 'auth.password_change.denied', {});
       return jsonError(c, 'auth.invalid_credentials', 'Current password is incorrect.');
     }
 
-    if (parsed.data.current_password === parsed.data.new_password) {
+    if (body.data.current_password === body.data.new_password) {
       return jsonError(c, 'validation.failed', 'New password must differ from current.');
     }
 
-    const new_hash = await hashPassword(parsed.data.new_password);
+    const new_hash = await hashPassword(body.data.new_password);
     await deps.db
       .update(schema.users)
       .set({ password_hash: new_hash })
       .where(eq(schema.users.id, me.id));
 
-    // Revoke every active refresh token for this user. Their current
-    // access token still works until expiry, but any other device that
-    // holds a refresh token is now locked out.
     await deps.db
       .update(schema.auth_refresh_tokens)
       .set({ revoked_at: new Date().toISOString() })
@@ -494,12 +441,7 @@ export function authRoutes(deps: AuthDeps): Hono {
         ),
       );
 
-    await appendAudit(deps.db, {
-      actor_user_id: me.id,
-      actor_agent: readAgent(c),
-      event_type: 'auth.password_change.allowed',
-      payload: {},
-    });
+    await audit(c, deps.db, 'auth.password_change.allowed', {});
 
     return c.body(null, 204);
   });

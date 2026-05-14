@@ -3,7 +3,7 @@ import { SkipLink } from '@/components/ui/skip-link';
 import { getCapabilities } from '@/lib/capabilities';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { RegisterForm } from './form';
+import { RegisterForm } from './_components/form';
 
 export default async function RegisterPage({
   searchParams,

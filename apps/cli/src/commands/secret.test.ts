@@ -1,4 +1,4 @@
-import { parseAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiClient } from '../client/http.js';
 import { resolveProjectId } from './project.js';
@@ -30,7 +30,7 @@ describe('SecretGetCommand', () => {
     });
     const client = { request } as unknown as ApiClient;
 
-    const parsed = parseAlias('@testproject.dev.api_key');
+    const parsed = reference.parseAlias('@testproject.dev.api_key');
     expect(parsed).not.toBeNull();
     expect(parsed!.project).toBe('testproject');
     expect(parsed!.environment).toBe('dev');
@@ -41,13 +41,13 @@ describe('SecretGetCommand', () => {
   });
 
   it('rejects invalid alias format', () => {
-    expect(parseAlias('invalid')).toBeNull();
-    expect(parseAlias('@testproject')).toBeNull();
-    expect(parseAlias('@testproject.dev')).toBeNull();
+    expect(reference.parseAlias('invalid')).toBeNull();
+    expect(reference.parseAlias('@testproject')).toBeNull();
+    expect(reference.parseAlias('@testproject.dev')).toBeNull();
   });
 
   it('parses valid alias formats', () => {
-    const parsed = parseAlias('@billing.prod.db_password');
+    const parsed = reference.parseAlias('@billing.prod.db_password');
     expect(parsed).toMatchObject({
       project: 'billing',
       environment: 'prod',

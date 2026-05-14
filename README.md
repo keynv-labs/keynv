@@ -39,7 +39,7 @@ the database sees:   the actual password (decrypted in a privileged subprocess)
 > **keynv Cloud isn't built yet.** Self-host is the only working path
 > today; the Cloud option is what Phase 6 ships. The table above is the
 > committed plan, not a marketing fiction — see
-> [`docs/ROADMAP.md`](./docs/ROADMAP.md) for the actual delivery state.
+> [`docs/roadmap.md`](./docs/roadmap.md) for the actual delivery state.
 
 ---
 
@@ -214,7 +214,7 @@ may change without backwards-compatibility shims.
 | [Architecture](./docs/01-architecture.md) | Components, data flow, trust boundaries |
 | [Encryption design](./docs/05-encryption-design.md) | KEK / DEK split, libsodium primitives |
 | [API spec](./docs/06-api-spec.md) | HTTP endpoints |
-| [Roadmap](./docs/ROADMAP.md) | Phase status + active slice tracker |
+| [Roadmap](./docs/roadmap.md) | Phase status + active slice tracker |
 | [Coolify deploy](./deploy/COOLIFY.md) | 15-min self-host walkthrough |
 | [`CLAUDE.md`](./CLAUDE.md) | Working rules for humans + AI agents in this repo |
 

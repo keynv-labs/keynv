@@ -1,4 +1,4 @@
-import { UpdateOrgForm } from './form';
+import { UpdateOrgForm } from './_components/form';
 
 export default async function OrgSettingsPage() {
   return (

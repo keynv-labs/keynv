@@ -158,4 +158,4 @@ For a 15-person team:
 - Litestream uploads typically < 10 MB / day to S3
 
 For 50–100 users you'll want 2 vCPU · 2 GB RAM. Beyond that, see the Phase 6
-Postgres adapter plan in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
+Postgres adapter plan in [`docs/roadmap.md`](../docs/roadmap.md).

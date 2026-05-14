@@ -1,4 +1,4 @@
-import { parseAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import { testers, runTest } from '@keynv/testers';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
@@ -47,7 +47,7 @@ the error message.
   });
 
   async execute(): Promise<number> {
-    const parsedAlias = parseAlias(this.alias);
+    const parsedAlias = reference.parseAlias(this.alias);
     if (!parsedAlias) {
       this.context.stderr.write(`keynv: invalid alias '${this.alias}'\n`);
       return 1;

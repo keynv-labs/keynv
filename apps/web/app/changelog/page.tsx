@@ -117,7 +117,7 @@ function Section({ section }: { section: ChangelogSection }) {
       <div className="flex items-baseline gap-3 flex-wrap">
         <h2 className="display text-2xl tracking-tight text-fg">
           <Link
-            href={{ pathname: '/changelog', hash: section.anchor } as never}
+            href={`/changelog#${section.anchor}`}
             className="hover:underline decoration-accent decoration-2 underline-offset-4"
           >
             {section.version}

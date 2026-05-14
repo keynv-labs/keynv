@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 import { getSession } from '@/lib/session';
-import { type ApprovalRow, ApprovalsClient } from './approvals-client';
+import { type ApprovalRow, ApprovalsClient } from './_components/approvals-client';
 
 export default async function ApprovalsPage({
   params,

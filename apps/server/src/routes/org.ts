@@ -1,14 +1,11 @@
-import { authorize } from '@keynv/rbac';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appendAudit } from '../audit/append.js';
 import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
-import { readAgent } from '../lib/agent.js';
-import { jsonError } from '../lib/errors.js';
 import { newOrgId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { parseBody, guard, audit } from '../lib/route-utils.js';
 
 interface OrgDeps {
   db: Db;
@@ -42,10 +39,8 @@ export function orgRoutes(deps: OrgDeps): Hono {
   // POST /v1/org  — create a new org and add the caller as owner.
   r.post('/', async (c) => {
     const u = c.var.user;
-    const parsed = CreateOrgBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Org name is required (1-64 chars).');
-    }
+    const parsed = await parseBody(c, CreateOrgBody, 'Org name is required (1-64 chars).');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const orgId = newOrgId();
     deps.db.transaction((tx) => {
@@ -55,38 +50,25 @@ export function orgRoutes(deps: OrgDeps): Hono {
         .run();
     });
 
-    await appendAudit(deps.db, {
-      actor_user_id: u.id,
-      actor_agent: readAgent(c),
-      event_type: 'org.updated',
-      payload: { org_id: orgId, name: parsed.data.name },
-    });
+    await audit(c, deps.db, 'org.updated', { org_id: orgId, name: parsed.data.name });
 
     return c.json({ id: orgId, name: parsed.data.name }, 201);
   });
 
   // PATCH /v1/org  — rename the caller's organization.
   r.patch('/', async (c) => {
-    const user = c.var.user;
-    if (authorize('org.update', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
-    const parsed = UpdateOrgBody.safeParse(await c.req.json().catch(() => ({})));
-    if (!parsed.success) {
-      return jsonError(c, 'validation.failed', 'Invalid org body.');
-    }
+    const g = guard(c, 'org.update');
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+    const parsed = await parseBody(c, UpdateOrgBody, 'Invalid org body.');
+    if ('errorResponse' in parsed) return parsed.errorResponse;
 
     await deps.db
       .update(schema.orgs)
       .set({ name: parsed.data.name })
       .where(eq(schema.orgs.id, user.org_id));
 
-    await appendAudit(deps.db, {
-      actor_user_id: user.id,
-      actor_agent: readAgent(c),
-      event_type: 'org.updated',
-      payload: { org_id: user.org_id, name: parsed.data.name },
-    });
+    await audit(c, deps.db, 'org.updated', { org_id: user.org_id, name: parsed.data.name });
 
     return c.json({ id: user.org_id, name: parsed.data.name });
   });

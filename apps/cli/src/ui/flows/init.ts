@@ -27,10 +27,10 @@ import {
   spinner,
   text,
 } from '@clack/prompts';
-import { buildAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import type { ApiClient } from '../../client/http.js';
 import { type EnvFileEntry, parseEnvFile } from '../../exec/envFile.js';
-import { writeAiContext } from '../../init/aiContext.js';
+import { writeAiContext } from '../../init/ai-context.js';
 import {
   type EnvFileHit,
   findEnvFiles,
@@ -39,7 +39,7 @@ import {
   suggestedEnvForSuffix,
 } from '../../init/detect.js';
 import { classifyEntry, previewValue } from '../../init/heuristics.js';
-import { applyWraps, planScriptWrap } from '../../init/scriptWrap.js';
+import { applyWraps, planScriptWrap } from '../../init/script-wrap.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
 import { listProjects } from '../helpers/pickProject.js';
 
@@ -311,7 +311,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
             method: 'POST',
             body: { env, key: aliasKey, value: e.value },
           });
-          const alias = buildAlias({
+          const alias = reference.buildAlias({
             project: projectChoice.name,
             environment: env,
             key: aliasKey,

@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { SecretsClient } from './secrets-client';
+import { SecretsClient } from './_components/secrets-client';
 
 interface ProjectDetail {
   id: string;

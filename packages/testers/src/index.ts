@@ -12,7 +12,7 @@ export type {
   TesterType,
   TestResult,
 } from './types.js';
-export { DEFAULT_TIMEOUT_MS } from './types.js';
+export { DEFAULT_TIMEOUT_MS, testerEnum } from './types.js';
 export { runTest, type RunArgs } from './run.js';
 export { sanitizeResult } from './sanitize.js';
 

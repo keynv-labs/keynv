@@ -16,7 +16,7 @@ import { Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
-import { type CreateProjectState, createProjectAction } from './new/actions';
+import { type CreateProjectState, createProjectAction } from './new/_actions/actions';
 
 interface EnvRow {
   id: string;

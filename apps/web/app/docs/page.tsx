@@ -40,7 +40,7 @@ export default function DocsIndex() {
               {section.pages.map((page) => (
                 <li key={page.slug}>
                   <Link
-                    href={{ pathname: `/docs/${page.slug}` } as never}
+                    href={`/docs/${page.slug}`}
                     className="group block rounded-lg border border-border bg-bg-elevated p-5 hover:border-border-strong hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
                   >
                     <div className="flex items-center justify-between gap-2">

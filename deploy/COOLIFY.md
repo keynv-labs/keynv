@@ -348,7 +348,7 @@ Two options, both add later:
 
 - **HA / multi-region** — single container, single SQLite. Comfortably
   handles a 15-person team. Beyond ~50 users, see the Phase 6 Postgres
-  adapter plan in [`docs/ROADMAP.md`](../docs/ROADMAP.md) (Phase 6).
+  adapter plan in [`docs/roadmap.md`](../docs/roadmap.md) (Phase 6).
 - **GitHub Actions / signed releases** — paused in
   `.github/workflows.disabled/` during this personal-use phase. They come
   back before any public OSS launch.

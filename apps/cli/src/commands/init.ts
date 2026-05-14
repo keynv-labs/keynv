@@ -1,12 +1,12 @@
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildAlias } from '@keynv/core';
+import { reference } from '@keynv/core';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { parseEnvFile } from '../exec/envFile.js';
 import { findEnvFiles, findProjectRoot, suggestedEnvForSuffix } from '../init/detect.js';
 import { classifyEntry } from '../init/heuristics.js';
-import { writeAiContext } from '../init/aiContext.js';
+import { writeAiContext } from '../init/ai-context.js';
 import { runInitFlow } from '../ui/flows/init.js';
 import { UserCancelled } from '../ui/helpers/cancel.js';
 import { isInteractive } from '../ui/helpers/tty.js';
@@ -313,7 +313,7 @@ any prompts.
     let uploaded = 0;
     const failed: Array<{ name: string; reason: string }> = [];
     for (const s of secrets) {
-      const alias = buildAlias({ project: projectName, environment: envName, key: s.aliasKey });
+      const alias = reference.buildAlias({ project: projectName, environment: envName, key: s.aliasKey });
       if (!alias) {
         failed.push({ name: s.name, reason: `invalid alias key: ${s.aliasKey}` });
         continue;

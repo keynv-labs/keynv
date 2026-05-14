@@ -1,11 +1,11 @@
 import { audit as auditCore } from '@keynv/core';
-import { authorize } from '@keynv/rbac';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { listAudit } from '../audit/append.js';
 import type { Db } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 import { authedChain } from '../lib/middleware-chain.js';
+import { guard } from '../lib/route-utils.js';
 
 interface AuditDeps {
   db: Db;
@@ -24,10 +24,8 @@ export function auditRoutes(deps: AuditDeps): Hono {
   r.use('*', ...authedChain(deps));
 
   r.get('/', async (c) => {
-    const user = c.var.user;
-    if (authorize('audit.read', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const g = guard(c, 'audit.read');
+    if ('errorResponse' in g) return g.errorResponse;
     const parsed = ListQuery.safeParse(Object.fromEntries(new URL(c.req.url).searchParams));
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid query.');
     const entries = await listAudit(deps.db, {
@@ -43,10 +41,8 @@ export function auditRoutes(deps: AuditDeps): Hono {
   });
 
   r.post('/verify', async (c) => {
-    const user = c.var.user;
-    if (authorize('audit.read', { user }) !== 'allow') {
-      return jsonError(c, 'rbac.denied', 'Permission denied.');
-    }
+    const g = guard(c, 'audit.read');
+    if ('errorResponse' in g) return g.errorResponse;
     // Walk the chain in pages of 1000. Thread the previous page's
     // tail hash into each subsequent verify so the cross-page
     // boundary is checked — without this, verification would falsely
