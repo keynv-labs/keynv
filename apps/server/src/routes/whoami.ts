@@ -25,11 +25,14 @@ export function whoamiRoute(deps: WhoamiDeps): Hono {
       .limit(1);
     const active_org_name = orgRows[0]?.name ?? u.org_id;
 
-    // All orgs the user belongs to.
+    // All orgs the user belongs to — query DB directly so newly created
+    // orgs appear immediately without requiring a re-login (JWT org_ids
+    // is stale until the next token refresh).
     const allOrgRows = await db
       .select({ id: schema.orgs.id, name: schema.orgs.name })
-      .from(schema.orgs)
-      .where(inArray(schema.orgs.id, u.org_ids));
+      .from(schema.org_memberships)
+      .innerJoin(schema.orgs, eq(schema.orgs.id, schema.org_memberships.org_id))
+      .where(eq(schema.org_memberships.user_id, u.id));
     const orgs = allOrgRows.length > 0
       ? allOrgRows.map((o) => ({ id: o.id, name: o.name }))
       : [{ id: u.org_id, name: active_org_name }];

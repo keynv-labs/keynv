@@ -232,10 +232,13 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
               );
             })}
             <div className="border-t border-border">
-              <CreateOrgDialog>
+              <CreateOrgDialog
+                onOpenChange={(open) => {
+                  if (open) setOrgSwitcherOpen(false);
+                }}
+              >
                 <button
                   type="button"
-                  onClick={() => setOrgSwitcherOpen(false)}
                   className="flex w-full items-center gap-2 px-3 py-2 text-xs text-left text-fg-muted hover:bg-bg-elevated-hover hover:text-fg transition-colors duration-fast ease-snap"
                 >
                   <Plus size={13} strokeWidth={2} />

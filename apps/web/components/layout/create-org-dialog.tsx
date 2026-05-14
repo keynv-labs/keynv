@@ -10,16 +10,22 @@ import { useState } from 'react';
 
 interface CreateOrgDialogProps {
   children?: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
+export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    onOpenChange?.(next);
+  };
+
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -33,13 +39,19 @@ export function CreateOrgDialog({ children }: CreateOrgDialogProps) {
       return;
     }
 
+    // Switch to the newly created org.
+    if (result.org_id) {
+      const { switchOrgAction } = await import('@/app/(authed)/actions');
+      await switchOrgAction(result.org_id);
+    }
+
     setOpen(false);
     setName('');
     router.refresh();
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogTitle>Create organization</DialogTitle>
