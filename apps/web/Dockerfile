@@ -43,8 +43,7 @@ COPY docs ./docs
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN --mount=type=cache,target=/repo/apps/web/.next/cache \
-  cd apps/web && pnpm exec next build
+RUN cd apps/web && pnpm exec next build
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
