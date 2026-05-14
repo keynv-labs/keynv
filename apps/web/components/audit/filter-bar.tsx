@@ -67,16 +67,22 @@ export function FilterBar({
   filteredCount,
   activeCategories,
   search,
+  projectId,
+  projects,
   onToggleCategory,
   onSearchChange,
+  onProjectChange,
   onClear,
 }: {
   entries: AuditEntry[];
   filteredCount: number;
   activeCategories: Set<Category>;
   search: string;
+  projectId: string;
+  projects: Array<{ id: string; name: string }>;
   onToggleCategory: (c: Category) => void;
   onSearchChange: (s: string) => void;
+  onProjectChange: (p: string) => void;
   onClear: () => void;
 }) {
   const availableCategories = FILTER_ORDER.filter((c) => {
@@ -86,7 +92,7 @@ export function FilterBar({
     return false;
   });
 
-  const isFiltering = activeCategories.size > 0 || search.length > 0;
+  const isFiltering = activeCategories.size > 0 || search.length > 0 || projectId;
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
@@ -112,6 +118,24 @@ export function FilterBar({
           );
         })}
       </div>
+
+      {projects.length > 1 ? (
+        <select
+          value={projectId}
+          onChange={(e) => onProjectChange(e.target.value)}
+          className={cn(
+            'h-9 rounded-md border border-border bg-bg-inset px-2.5 pr-6 text-xs text-fg',
+            'transition-colors duration-fast ease-snap',
+            'hover:border-border-strong focus:border-border-bright focus:bg-bg focus:outline-none',
+            'font-mono uppercase tracking-[0.12em]',
+          )}
+        >
+          <option value="">all projects</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      ) : null}
 
       <div className="relative flex-1 max-w-sm">
         <Search

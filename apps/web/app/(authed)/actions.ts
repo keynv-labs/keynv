@@ -46,7 +46,7 @@ export async function createOrgAction(orgName: string): Promise<{ org_id?: strin
   }
 }
 
-export async function loadMoreAuditAction(cursor: number): Promise<{
+export async function loadMoreAuditAction(cursor: number, projectId?: string): Promise<{
   entries: Array<{
     id: number;
     ts: string;
@@ -57,7 +57,7 @@ export async function loadMoreAuditAction(cursor: number): Promise<{
   }>;
   next_cursor: number | null;
 }> {
-  return api('/v1/audit', { query: { limit: 200, since_id: cursor } });
+  return api('/v1/audit', { query: { limit: 20, since_id: cursor, project_id: projectId } });
 }
 
 interface ApprovalPage {

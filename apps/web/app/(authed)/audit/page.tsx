@@ -8,15 +8,27 @@ interface AuditResponse {
   next_cursor: number | null;
 }
 
+interface Project {
+  id: string;
+  name: string;
+}
+
 export default async function GlobalAuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ event_type?: string; limit?: string }>;
+  searchParams: Promise<{ event_type?: string; limit?: string; project_id?: string }>;
 }) {
   const sp = await searchParams;
-  const audit = await api<AuditResponse>('/v1/audit', {
-    query: { event_type: sp.event_type, limit: sp.limit ?? 200 },
-  });
+  const [audit, projectsData] = await Promise.all([
+    api<AuditResponse>('/v1/audit', {
+      query: {
+        event_type: sp.event_type,
+        project_id: sp.project_id,
+        limit: sp.limit ?? 20,
+      },
+    }),
+    api<{ projects: Project[] }>('/v1/projects').catch(() => ({ projects: [] })),
+  ]);
 
   return (
     <div className="space-y-7">
@@ -28,7 +40,12 @@ export default async function GlobalAuditPage({
         description="Every operation, hash-chained."
       />
 
-      <AuditTimeline entries={audit.entries} nextCursor={audit.next_cursor} />
+      <AuditTimeline
+        entries={audit.entries}
+        nextCursor={audit.next_cursor}
+        projects={projectsData.projects}
+        initialProject={sp.project_id ?? null}
+      />
     </div>
   );
 }

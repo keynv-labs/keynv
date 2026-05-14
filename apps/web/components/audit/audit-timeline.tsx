@@ -18,6 +18,8 @@ export type { AuditEntry };
 interface Props {
   entries: AuditEntry[];
   nextCursor: number | null;
+  projects?: Array<{ id: string; name: string }>;
+  initialProject?: string | null;
 }
 
 const ALL_CATEGORIES = new Set<Category>(FILTER_ORDER);
@@ -34,7 +36,7 @@ function parseInitialCategories(raw: string | null): Set<Category> {
   return next;
 }
 
-export function AuditTimeline({ entries: initialEntries, nextCursor: initialCursor }: Props) {
+export function AuditTimeline({ entries: initialEntries, nextCursor: initialCursor, projects = [], initialProject }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -46,6 +48,7 @@ export function AuditTimeline({ entries: initialEntries, nextCursor: initialCurs
     parseInitialCategories(searchParams?.get('cat') ?? null),
   );
   const [search, setSearch] = useState(() => searchParams?.get('q') ?? '');
+  const [projectId, setProjectId] = useState(() => initialProject ?? '');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   // Push filter state back into the URL (replace, not push, so the back
@@ -68,9 +71,14 @@ export function AuditTimeline({ entries: initialEntries, nextCursor: initialCurs
     } else {
       params.delete('q');
     }
+    if (projectId) {
+      params.set('project_id', projectId);
+    } else {
+      params.delete('project_id');
+    }
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [activeCategories, search, pathname, router, searchParams]);
+  }, [activeCategories, search, projectId, pathname, router, searchParams]);
 
   const filtered = useMemo(() => {
     return allEntries.filter((e) => {
@@ -103,7 +111,7 @@ export function AuditTimeline({ entries: initialEntries, nextCursor: initialCurs
     setLoading(true);
     try {
       const { loadMoreAuditAction } = await import('@/app/(authed)/actions');
-      const result = await loadMoreAuditAction(cursor);
+      const result = await loadMoreAuditAction(cursor, projectId || undefined);
       setAllEntries((prev) => [...prev, ...result.entries]);
       setCursor(result.next_cursor);
     } catch {
@@ -111,7 +119,7 @@ export function AuditTimeline({ entries: initialEntries, nextCursor: initialCurs
     } finally {
       setLoading(false);
     }
-  }, [cursor, loading]);
+  }, [cursor, loading, projectId]);
 
   function toggleCategory(c: Category) {
     setActiveCategories((prev) => {
@@ -138,11 +146,15 @@ export function AuditTimeline({ entries: initialEntries, nextCursor: initialCurs
         filteredCount={filtered.length}
         activeCategories={activeCategories}
         search={search}
+        projectId={projectId}
+        projects={projects}
         onToggleCategory={toggleCategory}
         onSearchChange={setSearch}
+        onProjectChange={setProjectId}
         onClear={() => {
           setActiveCategories(new Set());
           setSearch('');
+          setProjectId('');
         }}
       />
 
