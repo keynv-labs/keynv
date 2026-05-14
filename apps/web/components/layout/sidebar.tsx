@@ -13,7 +13,6 @@ import {
   LogOut,
   Plus,
   ScrollText,
-  Search,
   Settings,
   Users,
 } from 'lucide-react';
@@ -59,13 +58,6 @@ function buildGroups(role: string): NavGroup[] {
           icon: Inbox,
           shortcut: 'g i',
           match: (p) => p === '/inbox',
-        },
-        {
-          href: '/search',
-          label: 'Search',
-          icon: Search,
-          shortcut: 'g f',
-          match: (p) => p === '/search',
         },
         {
           href: '/audit',
