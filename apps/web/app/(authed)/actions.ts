@@ -59,3 +59,52 @@ export async function loadMoreAuditAction(cursor: number): Promise<{
 }> {
   return api('/v1/audit', { query: { limit: 200, since_id: cursor } });
 }
+
+interface ApprovalPage {
+  approvals: Array<{
+    id: string;
+    alias: string;
+    status: 'pending' | 'granted' | 'denied' | 'expired';
+    reason: string | null;
+    requester_user_id: string;
+    requester_email: string | null;
+    decided_by_user_id: string | null;
+    decided_at: string | null;
+    expires_at: string | null;
+    created_at: string;
+    project_id?: string;
+    project_name?: string;
+  }>;
+  next_cursor: string | null;
+}
+
+/** Server action: next page of project-level approvals after `cursor` (an ISO created_at). */
+export async function loadMoreProjectApprovalsAction(opts: {
+  projectId: string;
+  beforeCreatedAt: string;
+  status?: 'pending' | 'granted' | 'denied' | 'expired';
+  limit?: number;
+}): Promise<ApprovalPage> {
+  return api(`/v1/projects/${opts.projectId}/approvals`, {
+    query: {
+      before_created_at: opts.beforeCreatedAt,
+      limit: opts.limit ?? 100,
+      status: opts.status,
+    },
+  });
+}
+
+/** Server action: next page of org-wide approvals after `cursor` (an ISO created_at). */
+export async function loadMoreOrgApprovalsAction(opts: {
+  beforeCreatedAt: string;
+  status?: 'pending' | 'granted' | 'denied' | 'expired';
+  limit?: number;
+}): Promise<ApprovalPage> {
+  return api('/v1/approvals', {
+    query: {
+      before_created_at: opts.beforeCreatedAt,
+      limit: opts.limit ?? 100,
+      status: opts.status,
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/index.js';
@@ -17,6 +17,8 @@ interface ApprovalDeps {
 const ListQuery = z.object({
   status: z.enum(['pending', 'granted', 'denied', 'expired']).optional(),
   limit: z.coerce.number().int().positive().max(200).default(100),
+  /** ISO timestamp — return rows strictly older than this (created_at DESC). */
+  before_created_at: z.string().min(1).optional(),
 });
 
 const GrantBody = z.object({
@@ -72,6 +74,11 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid query.');
 
     const requester = { id: schema.users.id, email: schema.users.email };
+    const conditions = [eq(schema.approvals.project_id, projectId)];
+    if (parsed.data.status) conditions.push(eq(schema.approvals.status, parsed.data.status));
+    if (parsed.data.before_created_at) {
+      conditions.push(lt(schema.approvals.created_at, parsed.data.before_created_at));
+    }
     const rows = await deps.db
       .select({
         id: schema.approvals.id,
@@ -87,18 +94,16 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
       })
       .from(schema.approvals)
       .leftJoin(schema.users, eq(schema.users.id, schema.approvals.requester_user_id))
-      .where(
-        parsed.data.status
-          ? and(
-              eq(schema.approvals.project_id, projectId),
-              eq(schema.approvals.status, parsed.data.status),
-            )
-          : eq(schema.approvals.project_id, projectId),
-      )
+      .where(and(...conditions))
       .orderBy(desc(schema.approvals.created_at))
       .limit(parsed.data.limit);
 
-    return c.json({ approvals: rows });
+    // next_cursor: page is "full" → caller may want more, so hand back
+    // the last row's created_at so they can ask for older rows next.
+    const tail = rows.at(-1);
+    const next_cursor =
+      tail && rows.length === parsed.data.limit ? tail.created_at : null;
+    return c.json({ approvals: rows, next_cursor });
   });
 
   /**
@@ -236,6 +241,11 @@ export function orgApprovalRoutes(deps: ApprovalDeps): Hono {
           )}`
         : sql`1=0`;
 
+    const orgConditions = [isNull(schema.projects.deleted_at), projectFilter];
+    if (parsed.data.status) orgConditions.push(eq(schema.approvals.status, parsed.data.status));
+    if (parsed.data.before_created_at) {
+      orgConditions.push(lt(schema.approvals.created_at, parsed.data.before_created_at));
+    }
     const rows = await deps.db
       .select({
         id: schema.approvals.id,
@@ -254,19 +264,14 @@ export function orgApprovalRoutes(deps: ApprovalDeps): Hono {
       .from(schema.approvals)
       .innerJoin(schema.projects, eq(schema.projects.id, schema.approvals.project_id))
       .leftJoin(schema.users, eq(schema.users.id, schema.approvals.requester_user_id))
-      .where(
-        and(
-          isNull(schema.projects.deleted_at),
-          projectFilter,
-          parsed.data.status
-            ? eq(schema.approvals.status, parsed.data.status)
-            : sql`1=1`,
-        ),
-      )
+      .where(and(...orgConditions))
       .orderBy(desc(schema.approvals.created_at))
       .limit(parsed.data.limit);
 
-    return c.json({ approvals: rows });
+    const tail = rows.at(-1);
+    const next_cursor =
+      tail && rows.length === parsed.data.limit ? tail.created_at : null;
+    return c.json({ approvals: rows, next_cursor });
   });
 
   return r;

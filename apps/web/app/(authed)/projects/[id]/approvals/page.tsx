@@ -8,9 +8,12 @@ export default async function ApprovalsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, { approvals }] = await Promise.all([
+  const [session, page] = await Promise.all([
     getSession(),
-    api<{ approvals: ApprovalRow[] }>(`/v1/projects/${id}/approvals`),
+    api<{ approvals: ApprovalRow[]; next_cursor: string | null }>(
+      `/v1/projects/${id}/approvals`,
+      { query: { limit: 50 } },
+    ),
   ]);
 
   // 'approval.grant' RBAC = owner / admin / lead. We do a permissive
@@ -21,5 +24,12 @@ export default async function ApprovalsPage({
   const orgRole = session?.org_role;
   const canDecide = orgRole === 'owner' || orgRole === 'admin' || orgRole === 'lead';
 
-  return <ApprovalsClient projectId={id} approvals={approvals} canDecide={canDecide} />;
+  return (
+    <ApprovalsClient
+      projectId={id}
+      approvals={page.approvals}
+      nextCursor={page.next_cursor}
+      canDecide={canDecide}
+    />
+  );
 }

@@ -22,9 +22,10 @@ import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
 import { Select, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
-import { Check, ShieldAlert, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Check, Loader2, ShieldAlert, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useActionState } from 'react';
+import { loadMoreProjectApprovalsAction } from '@/app/(authed)/actions';
 import { type GrantState, denyApprovalAction, grantApprovalAction } from '../_actions/actions';
 
 export interface ApprovalRow {
@@ -80,14 +81,19 @@ function formatExpiresIn(iso: string | null): string {
 
 export function ApprovalsClient({
   projectId,
-  approvals,
+  approvals: initialApprovals,
+  nextCursor: initialNextCursor,
   canDecide,
 }: {
   projectId: string;
   approvals: ApprovalRow[];
+  nextCursor: string | null;
   canDecide: boolean;
 }) {
   const [filter, setFilter] = useState<StatusFilter>('pending');
+  const [approvals, setApprovals] = useState<ApprovalRow[]>(initialApprovals);
+  const [cursor, setCursor] = useState<string | null>(initialNextCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const counts = useMemo(() => {
     const c: Record<StatusFilter, number> = {
@@ -105,6 +111,23 @@ export function ApprovalsClient({
     if (filter === 'all') return approvals;
     return approvals.filter((a) => a.status === filter);
   }, [approvals, filter]);
+
+  const loadMore = useCallback(async () => {
+    if (cursor === null || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await loadMoreProjectApprovalsAction({
+        projectId,
+        beforeCreatedAt: cursor,
+      });
+      setApprovals((prev) => [...prev, ...result.approvals]);
+      setCursor(result.next_cursor);
+    } catch {
+      // silent fail — user can retry
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [cursor, loadingMore, projectId]);
 
   return (
     <div className="space-y-4">
@@ -206,6 +229,32 @@ export function ApprovalsClient({
           ))}
         </ul>
       )}
+
+      {cursor !== null ? (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.14em]',
+              'transition-colors duration-fast ease-snap',
+              loadingMore
+                ? 'text-fg-subtle cursor-not-allowed'
+                : 'text-fg-muted hover:text-fg hover:border-border-strong',
+            )}
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 size={12} className="animate-spin" />
+                loading
+              </>
+            ) : (
+              'load more'
+            )}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
