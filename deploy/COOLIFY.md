@@ -70,14 +70,14 @@ load-bearing for the deploy.
 
 ## Step 1 — Generate two secrets, locally
 
-Run on your laptop:
+Run on your laptop (Node.js is a prerequisite — `node -e` works on all platforms):
 
 ```bash
 # (a) JWT signing secret — server signs every CLI access token with this
-openssl rand -base64 48
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 
 # (b) Owner login password — what YOU will type into `keynv login`
-openssl rand -base64 24
+node -e "console.log(require('crypto').randomBytes(24).toString('base64'))"
 ```
 
 > [!IMPORTANT]
@@ -111,9 +111,9 @@ In the resource's **Environment Variables** tab:
 
 | Key | Value | Mark as secret? | Why it matters |
 |---|---|:-:|---|
-| `KEYNV_JWT_SECRET` | `openssl rand -base64 48` from Step 1 | ✓ | Server signs/verifies CLI access tokens |
+| `KEYNV_JWT_SECRET` | the 48‑byte value from Step 1 | ✓ | Server signs/verifies CLI access tokens |
 | `KEYNV_BOOTSTRAP_OWNER_EMAIL` | your login email | — | First user account auto-bootstrap creates |
-| `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | `openssl rand -base64 24` from Step 1 | ✓ | Your `keynv login` password (Argon2id-hashed). 12+ chars |
+| `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | the 24‑byte value from Step 1 | ✓ | Your `keynv login` password (Argon2id-hashed). 12+ chars |
 | `KEYNV_BOOTSTRAP_ORG_NAME` | e.g. `acme` | — | Org name attached to the owner. Optional, defaults to `default` |
 | `KEYNV_PUBLIC_REGISTRATION` | `true` (Cloud) / `false` (self-host) | — | Opens `POST /v1/auth/register` so anyone can sign up. Leave `false`/blank unless you're running a public Cloud-style instance |
 | `KEYNV_LOG_LEVEL` | `info` | — | Set to `debug` while troubleshooting |
@@ -273,7 +273,7 @@ issues the cert.
    | Key | Value | Mark as secret? | Why it matters |
    |---|---|:-:|---|
    | `KEYNV_SERVER_URL` | `https://api.<your-domain>` (from Step 4) | — | Where the web container fetches the API |
-   | `KEYNV_WEB_SESSION_SECRET` | `openssl rand -base64 48` | ✓ | Encrypts the session cookie that wraps the user's access token |
+    | `KEYNV_WEB_SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"` | ✓ | Encrypts the session cookie that wraps the user's access token |
 
 5. **Domains:** `https://<your-domain>` → container port `3000`.
 6. **Deploy.** First build is 3–5 min (Next.js standalone compile).
@@ -285,7 +285,7 @@ issues the cert.
 curl -I https://<your-domain>/login    # → 200
 
 # Open in a browser
-open https://<your-domain>
+Visit `https://<your-domain>` in your browser — the login page renders.
 ```
 
 If `KEYNV_PUBLIC_REGISTRATION=true` was set on the **server** resource, the
@@ -335,7 +335,7 @@ Two options, both add later:
 |---|---|---|
 | Build fails on `pnpm install` | Lockfile out of sync | `pnpm install` locally, commit `pnpm-lock.yaml`, redeploy |
 | Server crash-loops on first deploy | Bootstrap env vars missing or password under 12 chars | Re-check Step 3, redeploy |
-| `KEYNV_JWT_SECRET: String must contain at least 32 character(s)` | JWT secret too short | Use `openssl rand -base64 48`, redeploy |
+| `KEYNV_JWT_SECRET: String must contain at least 32 character(s)` | JWT secret too short | Use `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`, redeploy |
 | `/v1/health` returns 500 with `"db":"error"` | Volume not persisted between restarts | Confirm the `keynv-data` volume is mounted at `/data` in the Coolify resource UI |
 | TLS cert provisioning fails | DNS not propagated, or Cloudflare proxy is on | Wait 5–30 minutes, then `dig api.<your-domain>` to confirm the `A` record resolves to the Coolify IP. If using Cloudflare, set the record to DNS-only (grey cloud) until the cert issues |
 | Build runs out of memory | better-sqlite3 + argon2 native compile is RAM-hungry | Bump build-time RAM to ≥ 1 GB; runtime needs only ~256 MB |

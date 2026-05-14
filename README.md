@@ -99,13 +99,8 @@ You decide how aggressively to lock each agent. They share the vault.
 
 ### Self-host
 
-```bash
-# 15-minute Coolify walkthrough — recommended path
-open https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md
-
-# Or plain Docker Compose
-open https://github.com/keynv-labs/keynv/blob/main/deploy/README.md
-```
+- [Coolify walkthrough (recommended)](deploy/COOLIFY.md) — 15 minutes
+- [Docker Compose guide](deploy/README.md)
 
 Once deployed, verify your server is up:
 
@@ -118,6 +113,7 @@ Install the CLI and log in to your self-hosted instance:
 
 ```bash
 npm install -g @keynv/cli
+# or: pnpm add -g @keynv/cli
 keynv login --server https://api.keynv.example.com
 ```
 

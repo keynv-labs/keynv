@@ -28,7 +28,7 @@ deploy/coolify.yml
 Set the environment variables Coolify asks for:
 
 ```bash
-KEYNV_JWT_SECRET=<openssl rand -base64 48>
+KEYNV_JWT_SECRET=<node -e "console.log(require('crypto').randomBytes(48).toString('base64'))">
 KEYNV_PUBLIC_REGISTRATION=false   # opt-in only; off for self-host
 KEYNV_WEB_URL=https://keynv.example.com
 COOLIFY_FQDN=api.keynv.example.com
@@ -44,7 +44,7 @@ Same Coolify dance, this time with `deploy/coolify-web.yml`:
 
 ```bash
 KEYNV_SERVER_URL=https://api.keynv.example.com
-KEYNV_WEB_SESSION_SECRET=<openssl rand -base64 48>
+KEYNV_WEB_SESSION_SECRET=<node -e "console.log(require('crypto').randomBytes(48).toString('base64'))">
 COOLIFY_FQDN=keynv.example.com
 ```
 
@@ -77,6 +77,7 @@ On your laptop, hosted keynv is one command:
 
 ```bash
 npm install -g @keynv/cli
+# or: pnpm add -g @keynv/cli
 keynv
 ```
 

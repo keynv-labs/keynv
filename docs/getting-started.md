@@ -28,8 +28,8 @@ git clone https://github.com/keynv-labs/keynv
 cd keynv/deploy
 
 # 1. configure (fill in JWT secret, owner email/password)
-cp .env.example .env
-$EDITOR .env
+node -e "require('fs').copyFileSync('.env.example','.env')"
+# Then open .env in your editor
 
 # 2. start — the server auto-bootstraps on first launch
 docker compose --env-file .env up -d
@@ -60,11 +60,13 @@ pnpm install
 pnpm build:direct
 
 # Required — server refuses to start without this
-export KEYNV_JWT_SECRET=$(openssl rand -base64 48)
+$env:KEYNV_JWT_SECRET = 'your-48-byte-base64-secret'
+# Generate with: node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+# (works on all platforms — node is a prerequisite of keynv)
 
 # Bootstrap credentials for the auto-created owner account
-export KEYNV_BOOTSTRAP_OWNER_EMAIL=dev@localhost
-export KEYNV_BOOTSTRAP_OWNER_PASSWORD=a-local-dev-password
+$env:KEYNV_BOOTSTRAP_OWNER_EMAIL = 'dev@localhost'
+$env:KEYNV_BOOTSTRAP_OWNER_PASSWORD = 'a-local-dev-password'
 
 pnpm --filter @keynv/server dev
 ```
@@ -95,6 +97,7 @@ If someone on your team already deployed the server, you only need the CLI:
 
 ```bash
 npm install -g @keynv/cli
+# or: pnpm add -g @keynv/cli
 keynv login --server https://api.keynv.example.com
 keynv whoami
 ```

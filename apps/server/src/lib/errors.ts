@@ -27,7 +27,7 @@ export type ErrorCode =
   | 'rate_limited'
   | 'internal_error';
 
-const STATUS_BY_CODE: Record<ErrorCode, number> = {
+const STATUS_BY_CODE = {
   'auth.invalid_credentials': 401,
   'auth.token_expired': 401,
   'auth.token_revoked': 401,
@@ -49,7 +49,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   'validation.failed': 400,
   rate_limited: 429,
   internal_error: 500,
-};
+} as const;
 
 export interface ApiError {
   readonly code: ErrorCode;
@@ -66,6 +66,5 @@ export function jsonError(
   const body: { error: ApiError } = {
     error: { code, message, ...(details ? { details } : {}) },
   };
-  // biome-ignore lint/suspicious/noExplicitAny: hono's status type is a complex literal union
-  return c.json(body, STATUS_BY_CODE[code] as any);
+  return c.json(body, STATUS_BY_CODE[code]);
 }

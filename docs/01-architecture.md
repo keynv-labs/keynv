@@ -331,7 +331,7 @@ keynv uses symmetric HS256 JWTs signed with `KEYNV_JWT_SECRET`. The secret is lo
 
 **Rotation steps:**
 
-1. Generate a new secret: `openssl rand -base64 48`
+1. Generate a new secret: `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`
 2. Set `KEYNV_JWT_SECRET=<new-secret>` on the server environment (or update the Coolify / Compose env).
 3. **Restart the server.** The new process picks up the new secret.
 4. Existing access tokens (15-min TTL) and refresh tokens (7-day TTL) issued with the old secret **remain valid until they expire naturally**. The server verifies them against the new secret, so verification will fail. All callers must re-authenticate.

@@ -40,15 +40,15 @@ flowchart LR
 
 ```bash
 # 1. configure
-cp deploy/.env.example deploy/.env
-$EDITOR deploy/.env
+node -e "require('fs').copyFileSync('deploy/.env.example','deploy/.env')"
+# Then open deploy/.env in your editor
 ```
 
 Required values in `deploy/.env`:
 
 | Key | How to fill |
 |---|---|
-| `KEYNV_JWT_SECRET` | `openssl rand -base64 48` |
+| `KEYNV_JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"` |
 | `KEYNV_BOOTSTRAP_OWNER_EMAIL` | your login email |
 | `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | 12+ char password — what you'll type into `keynv login` |
 | `KEYNV_BOOTSTRAP_ORG_NAME` | optional, defaults to `default` |
