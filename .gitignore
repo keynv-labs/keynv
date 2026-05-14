@@ -68,3 +68,6 @@ Thumbs.db
 tmp/
 temp/
 .keynv-data/
+
+# Local agent settings
+.claude/settings.local.json

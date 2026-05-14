@@ -1,0 +1,17 @@
+{
+  "name": "@keynv/tests-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "End-to-end tests for the keynv web dashboard — Playwright.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "codegen": "playwright codegen",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}
