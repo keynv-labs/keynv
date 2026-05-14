@@ -215,7 +215,7 @@ export function DeleteSecretDialog({
 
         <form
           action={async (fd) => {
-            await deleteSecretAction(fd);
+            await deleteSecretAction({}, fd);
             onOpenChange(false);
           }}
           className="mt-4 space-y-3"

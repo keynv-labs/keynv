@@ -63,15 +63,20 @@ export async function rotateSecretAction(
   return { ok: `rotated ${parsed.data.env}.${parsed.data.key}` };
 }
 
-export async function deleteSecretAction(formData: FormData): Promise<void> {
+export async function deleteSecretAction(
+  _prev: SecretActionState,
+  formData: FormData,
+): Promise<SecretActionState> {
   const project_id = String(formData.get('project_id') ?? '');
   const env = String(formData.get('env') ?? '');
   const key = String(formData.get('key') ?? '');
-  if (!project_id || !env || !key) return;
-  try {
-    await api(`/v1/projects/${project_id}/secrets/${env}/${key}`, { method: 'DELETE' });
-  } catch {
-    /* surfaced via revalidatePath refresh; no error UI for delete in v0 */
-  }
+  if (!project_id || !env || !key) return { error: 'Missing project_id, env, or key.' };
+
+  const result = await catchApi(() =>
+    api(`/v1/projects/${project_id}/secrets/${env}/${key}`, { method: 'DELETE' }),
+  );
+  if (!result.success) return { error: result.error };
+
   revalidatePath(`/projects/${project_id}/secrets`);
+  return { ok: `deleted ${env}.${key}` };
 }

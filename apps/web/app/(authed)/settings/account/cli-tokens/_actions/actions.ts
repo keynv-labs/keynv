@@ -39,13 +39,18 @@ export async function createCliTokenAction(
   return { ok: result.data };
 }
 
-export async function revokeCliTokenAction(formData: FormData): Promise<void> {
+export async function revokeCliTokenAction(
+  _prev: Record<string, string>,
+  formData: FormData,
+): Promise<Record<string, string>> {
   const id = String(formData.get('id') ?? '');
-  if (!id) return;
-  try {
-    await api(`/v1/cli-tokens/${id}`, { method: 'DELETE' });
-  } catch {
-    /* surfaced via revalidatePath refresh */
-  }
+  if (!id) return { error: 'Missing token id.' };
+
+  const result = await catchApi(() =>
+    api(`/v1/cli-tokens/${id}`, { method: 'DELETE' }),
+  );
+  if (!result.success) return { error: result.error };
+
   revalidatePath('/settings/account/cli-tokens');
+  return { ok: 'Token revoked.' };
 }

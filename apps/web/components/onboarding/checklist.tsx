@@ -177,7 +177,7 @@ function buildSteps(): StepDef[] {
             </code>{' '}
             aliases. Add one from the project page, or run:
           </p>
-          <CommandSnippet command="keynv secret set @yourproject.dev.api_key" />
+          <CommandSnippet command="keynv secret create @yourproject.dev.api_key" />
         </div>
       ),
     },

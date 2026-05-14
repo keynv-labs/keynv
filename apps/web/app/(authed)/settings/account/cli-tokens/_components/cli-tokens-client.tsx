@@ -301,7 +301,7 @@ function RevokeAction({ id, name }: { id: string; name: string }) {
 
           <form
             action={async (fd) => {
-              await revokeCliTokenAction(fd);
+              await revokeCliTokenAction({}, fd);
               setOpen(false);
             }}
             className="mt-5"

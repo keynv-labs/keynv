@@ -134,7 +134,7 @@ export function RemoveMemberAction({
 
           <form
             action={async (fd) => {
-              await removeMemberAction(fd);
+              await removeMemberAction({}, fd);
               setOpen(false);
             }}
             className="mt-5"

@@ -33,14 +33,19 @@ export async function addMemberAction(
   return { ok: `added ${parsed.data.email}` };
 }
 
-export async function removeMemberAction(formData: FormData): Promise<void> {
+export async function removeMemberAction(
+  _prev: MemberActionState,
+  formData: FormData,
+): Promise<MemberActionState> {
   const project_id = String(formData.get('project_id') ?? '');
   const user_id = String(formData.get('user_id') ?? '');
-  if (!project_id || !user_id) return;
-  try {
-    await api(`/v1/projects/${project_id}/members/${user_id}`, { method: 'DELETE' });
-  } catch {
-    /* ignore — refresh will surface */
-  }
+  if (!project_id || !user_id) return { error: 'Missing project_id or user_id.' };
+
+  const result = await catchApi(() =>
+    api(`/v1/projects/${project_id}/members/${user_id}`, { method: 'DELETE' }),
+  );
+  if (!result.success) return { error: result.error };
+
   revalidatePath(`/projects/${project_id}/settings`);
+  return { ok: 'Member removed.' };
 }

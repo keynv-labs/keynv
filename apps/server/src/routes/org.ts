@@ -50,7 +50,7 @@ export function orgRoutes(deps: OrgDeps): Hono {
         .run();
     });
 
-    await audit(c, deps.db, 'org.updated', { org_id: orgId, name: parsed.data.name });
+    await audit(c, deps.db, 'org.created', { org_id: orgId, name: parsed.data.name });
 
     return c.json({ id: orgId, name: parsed.data.name }, 201);
   });

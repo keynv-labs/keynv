@@ -17,6 +17,7 @@ const ListQuery = z.object({
   limit: z.coerce.number().int().positive().max(1000).optional(),
   since_id: z.coerce.number().int().nonnegative().optional(),
   event_type: z.string().min(1).max(64).optional(),
+  project_id: z.string().min(1).optional(),
 });
 
 export function auditRoutes(deps: AuditDeps): Hono {
@@ -32,6 +33,7 @@ export function auditRoutes(deps: AuditDeps): Hono {
       limit: parsed.data.limit,
       sinceId: parsed.data.since_id,
       eventType: parsed.data.event_type,
+      projectId: parsed.data.project_id,
     });
     const lastId = entries.at(-1)?.id;
     return c.json({
