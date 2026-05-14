@@ -65,7 +65,6 @@ COPY --from=builder --chown=keynv:keynv /repo/apps/web/.next/static ./apps/web/.
 USER keynv
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 
 EXPOSE 3000
