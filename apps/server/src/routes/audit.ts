@@ -29,8 +29,9 @@ export function auditRoutes(deps: AuditDeps): Hono {
     if ('errorResponse' in g) return g.errorResponse;
     const parsed = ListQuery.safeParse(Object.fromEntries(new URL(c.req.url).searchParams));
     if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid query.');
+    const limit = parsed.data.limit ?? 200;
     const entries = await listAudit(deps.db, {
-      limit: parsed.data.limit,
+      limit,
       sinceId: parsed.data.since_id,
       eventType: parsed.data.event_type,
       projectId: parsed.data.project_id,
@@ -38,7 +39,7 @@ export function auditRoutes(deps: AuditDeps): Hono {
     const lastId = entries.at(-1)?.id;
     return c.json({
       entries,
-      next_cursor: entries.length > 0 && lastId ? lastId : null,
+      next_cursor: entries.length === limit && lastId ? lastId : null,
     });
   });
 
