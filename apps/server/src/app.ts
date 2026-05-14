@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import type { Db } from './db/index.js';
 import { jsonError } from './lib/errors.js';
 import { type Logger, makeLogger } from './lib/logger.js';
-import { approvalRoutes } from './routes/approvals.js';
+import { approvalRoutes, orgApprovalRoutes } from './routes/approvals.js';
 import { auditRoutes } from './routes/audit.js';
 import { authRoutes } from './routes/auth.js';
 import { cliTokenRoutes } from './routes/cli-tokens.js';
@@ -97,6 +97,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route('/v1/users/preferences', preferenceRoutes(deps));
   // approvalRoutes mounts /:projectId/approvals/* on the same prefix.
   app.route('/v1/projects', approvalRoutes(deps));
+  app.route('/v1/approvals', orgApprovalRoutes(deps));
   app.route('/v1', searchRoutes(deps));
 
   app.notFound((c) => jsonError(c, 'validation.failed', 'Not found.'));

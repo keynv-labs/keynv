@@ -7,11 +7,6 @@ import { getSession } from '@/lib/session';
 import { ArrowUpRight, Inbox as InboxIcon } from 'lucide-react';
 import Link from 'next/link';
 
-interface ProjectListItem {
-  id: string;
-  name: string;
-}
-
 interface ApprovalRow {
   id: string;
   alias: string;
@@ -23,9 +18,6 @@ interface ApprovalRow {
   decided_at: string | null;
   expires_at: string | null;
   created_at: string;
-}
-
-interface AggregatedApproval extends ApprovalRow {
   project_id: string;
   project_name: string;
 }
@@ -59,23 +51,12 @@ function formatExpiresIn(iso: string | null): string {
 }
 
 async function loadAll(): Promise<{
-  projects: ProjectListItem[];
-  approvals: AggregatedApproval[];
+  approvals: ApprovalRow[];
 }> {
-  const { projects } = await api<{ projects: ProjectListItem[] }>('/v1/projects');
-  const buckets = await Promise.all(
-    projects.map(async (p) => {
-      const { approvals } = await api<{ approvals: ApprovalRow[] }>(
-        `/v1/projects/${p.id}/approvals`,
-      ).catch(() => ({ approvals: [] as ApprovalRow[] }));
-      return approvals.map<AggregatedApproval>((a) => ({
-        ...a,
-        project_id: p.id,
-        project_name: p.name,
-      }));
-    }),
-  );
-  return { projects, approvals: buckets.flat() };
+  const { approvals } = await api<{ approvals: ApprovalRow[] }>('/v1/approvals', {
+    query: { limit: 200 },
+  }).catch(() => ({ approvals: [] }));
+  return { approvals };
 }
 
 export const dynamic = 'force-dynamic';
@@ -165,7 +146,7 @@ export default async function InboxPage() {
   );
 }
 
-function ApprovalList({ rows, cta }: { rows: AggregatedApproval[]; cta: string }) {
+function ApprovalList({ rows, cta }: { rows: ApprovalRow[]; cta: string }) {
   return (
     <ul className="rounded-lg border border-border bg-bg-elevated divide-y divide-border overflow-hidden">
       {rows.map((a) => (
@@ -182,7 +163,7 @@ function ApprovalList({ rows, cta }: { rows: AggregatedApproval[]; cta: string }
             </div>
             <div className="text-[11px] text-fg-subtle mt-1 font-mono tabular">
               <Link
-                href={{ pathname: `/projects/${a.project_id}/secrets` }}
+                href={`/projects/${a.project_id}/secrets`}
                 className="text-fg-muted hover:text-accent normal-case transition-colors duration-fast ease-snap"
               >
                 {a.project_name}
@@ -206,7 +187,7 @@ function ApprovalList({ rows, cta }: { rows: AggregatedApproval[]; cta: string }
             </div>
           </div>
 
-          <Link href={{ pathname: `/projects/${a.project_id}/approvals` }} className="shrink-0">
+          <Link href={`/projects/${a.project_id}/approvals`} className="shrink-0">
             <Button size="sm" variant="outline" className="gap-1">
               {cta}
               <ArrowUpRight size={11} strokeWidth={2.25} />

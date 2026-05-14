@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/index.js';
@@ -199,6 +199,74 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
     await audit(c, deps.db, 'approval.denied', { alias: row.alias, denied_by: user.id });
 
     return c.json({ id: row.id, alias: row.alias, status: 'denied' });
+  });
+
+  return r;
+}
+
+/**
+ * GET /v1/approvals?status=pending&limit=200
+ *
+ * Org-wide approval list — returns approvals across all projects the
+ * caller has access to, with project name included. Avoids the N+1
+ * waterfall the inbox used to do (one call per project).
+ *
+ * Mounted separately at /v1/approvals in app.ts.
+ */
+export function orgApprovalRoutes(deps: ApprovalDeps): Hono {
+  const r = new Hono();
+  r.use('*', ...authedChain(deps));
+
+  r.get('/', async (c) => {
+    const user = c.var.user;
+
+    const parsed = ListQuery.safeParse(Object.fromEntries(new URL(c.req.url).searchParams));
+    if (!parsed.success) return jsonError(c, 'validation.failed', 'Invalid query.');
+
+    const requester = { id: schema.users.id, email: schema.users.email };
+    const isAdmin = user.org_role === 'owner' || user.org_role === 'admin';
+
+    // Owner/admin sees all; others see only their member projects
+    const projectFilter = isAdmin
+      ? eq(schema.projects.org_id, user.org_id)
+      : user.memberships.length > 0
+        ? sql`${schema.approvals.project_id} IN ${sql.join(
+            user.memberships.map((m) => m.project_id),
+            sql`, `,
+          )}`
+        : sql`1=0`;
+
+    const rows = await deps.db
+      .select({
+        id: schema.approvals.id,
+        alias: schema.approvals.alias,
+        status: schema.approvals.status,
+        reason: schema.approvals.reason,
+        requester_user_id: schema.approvals.requester_user_id,
+        requester_email: requester.email,
+        decided_by_user_id: schema.approvals.decided_by_user_id,
+        decided_at: schema.approvals.decided_at,
+        expires_at: schema.approvals.expires_at,
+        created_at: schema.approvals.created_at,
+        project_id: schema.projects.id,
+        project_name: schema.projects.name,
+      })
+      .from(schema.approvals)
+      .innerJoin(schema.projects, eq(schema.projects.id, schema.approvals.project_id))
+      .leftJoin(schema.users, eq(schema.users.id, schema.approvals.requester_user_id))
+      .where(
+        and(
+          isNull(schema.projects.deleted_at),
+          projectFilter,
+          parsed.data.status
+            ? eq(schema.approvals.status, parsed.data.status)
+            : sql`1=1`,
+        ),
+      )
+      .orderBy(desc(schema.approvals.created_at))
+      .limit(parsed.data.limit);
+
+    return c.json({ approvals: rows });
   });
 
   return r;

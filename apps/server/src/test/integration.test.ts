@@ -1512,7 +1512,7 @@ describe('Project — list, describe, delete', () => {
     const desc = (await describeRes.json()) as { id: string; name: string; environments: Array<{ name: string }> };
     expect(desc.name).toBe('alpha');
     expect(desc.environments).toHaveLength(1);
-    expect(desc.environments[0].name).toBe('dev');
+    expect(desc.environments[0]!.name).toBe('dev');
   });
 
   it('owner can soft-delete a project', async () => {
@@ -1615,7 +1615,7 @@ describe('Secret — delete and list', () => {
     });
     const after = (await afterRes.json()) as { secrets: Array<{ alias: string }> };
     expect(after.secrets).toHaveLength(1);
-    expect(after.secrets[0].alias).toContain('keep');
+    expect(after.secrets[0]!.alias).toContain('keep');
   });
 });
 

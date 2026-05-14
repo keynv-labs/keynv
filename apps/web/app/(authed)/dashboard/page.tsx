@@ -1,5 +1,4 @@
 import type { AuditEntry } from '@/components/audit/audit-timeline';
-import { relativeTime } from '@/components/audit/event';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
@@ -17,40 +16,19 @@ import { QuickActions } from './_components/quick-actions';
 import { FirstRunEmpty } from './_components/empty-state';
 import { ActivitySkeleton } from './_components/skeleton';
 
-interface ProjectListItem {
+interface ProjectSummary {
   id: string;
   name: string;
   created_at: string;
+  env_count: number;
+  secret_count: number;
+  pending_count: number;
 }
 
-interface ProjectDetail {
-  id: string;
-  name: string;
-  environments: Array<{ name: string; tier: string; require_approval: boolean }>;
-}
-
-interface SecretRow {
-  alias: string;
-  version: number;
-  created_at: string;
-}
-
-interface ApprovalRow {
-  id: string;
-  alias: string;
-  status: 'pending' | 'granted' | 'denied' | 'expired';
-  reason: string | null;
-  requester_user_id: string;
-  requester_email: string | null;
-  decided_by_user_id: string | null;
-  decided_at: string | null;
-  expires_at: string | null;
-  created_at: string;
-}
-
-export interface PendingItem extends ApprovalRow {
+interface PendingItem {
   project_id: string;
   project_name: string;
+  pending_count: number;
 }
 
 export default function ActivityPage() {
@@ -72,8 +50,8 @@ export default function ActivityPage() {
 }
 
 async function ActivityContent() {
-  const [projects, audit, onboarding] = await Promise.all([
-    api<{ projects: ProjectListItem[] }>('/v1/projects').then((r) => r.projects),
+  const [data, audit, onboarding] = await Promise.all([
+    api<{ projects: ProjectSummary[] }>('/v1/projects/summary').then((r) => r.projects),
     api<{ entries: AuditEntry[] }>('/v1/audit', { query: { limit: 100 } }).then((r) => r.entries),
     safeFetchOnboarding(),
   ]);
@@ -81,38 +59,19 @@ async function ActivityContent() {
   const showChecklist =
     onboarding !== null && !isOnboardingComplete(onboarding) && !onboarding.dismissed;
 
-  if (projects.length === 0) {
+  if (data.length === 0) {
     return showChecklist ? <OnboardingChecklist initialStatus={onboarding} /> : <FirstRunEmpty />;
   }
 
-  // Pull per-project context in parallel: secrets count + pending approvals.
-  // No org-wide approvals endpoint today, so we fan out — fine for the
-  // dashboard scale (Phase 6 would back this with a real index).
-  const perProject = await Promise.all(
-    projects.map(async (p) => {
-      const [detail, secrets, approvals] = await Promise.all([
-        api<ProjectDetail>(`/v1/projects/${p.id}`).catch(() => null),
-        api<{ secrets: SecretRow[] }>(`/v1/projects/${p.id}/secrets`).catch(() => ({
-          secrets: [],
-        })),
-        api<{ approvals: ApprovalRow[] }>(`/v1/projects/${p.id}/approvals`).catch(() => ({
-          approvals: [],
-        })),
-      ]);
-      return {
-        project: p,
-        envCount: detail?.environments.length ?? 0,
-        secretCount: secrets.secrets.length,
-        pending: approvals.approvals
-          .filter((a) => a.status === 'pending')
-          .map<PendingItem>((a) => ({ ...a, project_id: p.id, project_name: p.name })),
-      };
-    }),
-  );
-
-  const totalSecrets = perProject.reduce((sum, x) => sum + x.secretCount, 0);
-  const totalEnvs = perProject.reduce((sum, x) => sum + x.envCount, 0);
-  const pendingItems = perProject.flatMap((x) => x.pending);
+  const totalSecrets = data.reduce((sum, p) => sum + p.secret_count, 0);
+  const totalEnvs = data.reduce((sum, p) => sum + p.env_count, 0);
+  const pendingItems: PendingItem[] = data
+    .filter((p) => p.pending_count > 0)
+    .map((p) => ({
+      project_id: p.id,
+      project_name: p.name,
+      pending_count: p.pending_count,
+    }));
   const last24hEvents = audit.filter(
     (e) => Date.now() - Date.parse(e.ts) < 24 * 60 * 60 * 1000,
   ).length;
@@ -124,7 +83,7 @@ async function ActivityContent() {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           label="Projects"
-          value={projects.length.toLocaleString()}
+          value={data.length.toLocaleString()}
           hint={`${totalEnvs} env · ${totalSecrets} keys`}
         />
         <StatCard
@@ -158,22 +117,21 @@ async function ActivityContent() {
           <ul className="rounded-lg border border-warn-soft-border bg-warn-soft/30 divide-y divide-border overflow-hidden">
             {pendingItems.slice(0, 6).map((p) => (
               <li
-                key={p.id}
+                key={p.project_id}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap animate-list-enter"
               >
                 <Badge tone="warn">pending</Badge>
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-[13px] text-fg break-all tabular">
-                    <span className="text-accent">@</span>
-                    {p.alias.replace(/^@/, '')}
+                  <div className="text-[13px] text-fg break-all">
+                    {p.project_name}
                   </div>
                   <div className="text-[11px] text-fg-subtle mt-1 font-mono tabular">
-                    {p.requester_email ?? p.requester_user_id} · {relativeTime(p.created_at)} ·{' '}
+                    {p.pending_count} pending ·{' '}
                     <Link
                       href={`/projects/${p.project_id}/approvals`}
                       className="text-fg-muted hover:text-accent normal-case"
                     >
-                      {p.project_name}
+                      review
                     </Link>
                   </div>
                 </div>
@@ -225,7 +183,12 @@ async function ActivityContent() {
         </div>
 
         <aside className="space-y-6">
-          <ProjectsSidebar items={perProject.slice(0, 6)} totalCount={perProject.length} />
+          <ProjectsSidebar items={data.slice(0, 6).map((p) => ({
+            project: { id: p.id, name: p.name, created_at: p.created_at },
+            envCount: p.env_count,
+            secretCount: p.secret_count,
+            pending: [],
+          }))} totalCount={data.length} />
           <QuickActions />
         </aside>
       </section>

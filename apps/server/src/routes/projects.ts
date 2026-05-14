@@ -1,6 +1,6 @@
 import { crypto } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, count, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/index.js';
@@ -42,6 +42,46 @@ const AddEnvironmentBody = EnvironmentBody;
 export function projectRoutes(deps: ProjectDeps): Hono {
   const r = new Hono();
   r.use('*', ...authedChain(deps));
+
+  /**
+   * GET /v1/projects/summary
+   *
+   * Aggregate view of all projects with env count, active secret count,
+   * and pending approval count — in one query. Avoids the N+1 waterfall
+   * the dashboard used to do when it called /:id + /:id/secrets +
+   * /:id/approvals per project.
+   */
+  r.get('/summary', async (c) => {
+    const user = c.var.user;
+    const isAdmin = user.org_role === 'owner' || user.org_role === 'admin';
+
+    // Admin sees all org projects; others see only their memberships
+    const projectFilter = isAdmin
+      ? eq(schema.projects.org_id, user.org_id)
+      : user.memberships.length > 0
+        ? sql`${schema.projects.id} IN ${sql.join(
+            user.memberships.map((m) => m.project_id),
+            sql`, `,
+          )}`
+        : sql`1=0`;
+
+    const rows = await deps.db
+      .select({
+        id: schema.projects.id,
+        name: schema.projects.name,
+        created_at: schema.projects.created_at,
+        env_count: count(schema.environments.id),
+        secret_count: count(schema.secrets.id),
+        pending_count: sql<number>`(SELECT COUNT(*) FROM approvals WHERE project_id = projects.id AND status = 'pending')`,
+      })
+      .from(schema.projects)
+      .leftJoin(schema.environments, eq(schema.environments.project_id, schema.projects.id))
+      .leftJoin(schema.secrets, eq(schema.secrets.project_id, schema.projects.id))
+      .where(and(isNull(schema.projects.deleted_at), projectFilter))
+      .groupBy(schema.projects.id);
+
+    return c.json({ projects: rows });
+  });
 
   r.get('/', async (c) => {
     const user = c.var.user;
