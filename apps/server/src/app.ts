@@ -10,6 +10,7 @@ import { healthRoute } from './routes/health.js';
 import { memberRoutes } from './routes/members.js';
 import { onboardingRoutes } from './routes/onboarding.js';
 import { orgRoutes } from './routes/org.js';
+import { preferenceRoutes } from './routes/preferences.js';
 import { projectRoutes } from './routes/projects.js';
 import { searchRoutes } from './routes/search.js';
 import { secretRoutes } from './routes/secrets.js';
@@ -74,6 +75,7 @@ export function createApp(deps: AppDeps): Hono {
   app.route('/v1/cli-tokens', cliTokenRoutes(deps));
   app.route('/v1/onboarding', onboardingRoutes(deps));
   app.route('/v1/org', orgRoutes(deps));
+  app.route('/v1/users/preferences', preferenceRoutes(deps));
   // approvalRoutes mounts /:projectId/approvals/* on the same prefix.
   app.route('/v1/projects', approvalRoutes(deps));
   app.route('/v1', searchRoutes(deps));
