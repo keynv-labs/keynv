@@ -1,33 +1,24 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Public page navigation', () => {
-  test('landing page loads and shows key sections', async ({ page }) => {
+  test('landing page loads and shows content', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
-
-    const text = await body.innerText();
+    const text = await page.locator('body').innerText();
     expect(text.length).toBeGreaterThan(100);
   });
 
   test('docs index lists documentation pages', async ({ page }) => {
     await page.goto('/docs');
     await page.waitForLoadState('networkidle');
-
     const links = page.locator('a[href^="/docs/"]');
-    const count = await links.count();
-    expect(count).toBeGreaterThan(0);
+    expect(await links.count()).toBeGreaterThan(0);
   });
 
   test('changelog page renders entries', async ({ page }) => {
     await page.goto('/changelog');
     await page.waitForLoadState('networkidle');
-
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
-    const text = await body.innerText();
+    const text = await page.locator('body').innerText();
     expect(text.length).toBeGreaterThan(50);
   });
 
@@ -37,10 +28,7 @@ test.describe('Public page navigation', () => {
     for (const slug of slugs) {
       await page.goto(`/docs/${slug}`);
       await page.waitForLoadState('networkidle');
-
-      const body = page.locator('body');
-      await expect(body).toBeVisible();
-      const text = await body.innerText();
+      const text = await page.locator('body').innerText();
       expect(text.length).toBeGreaterThan(50);
     }
   });

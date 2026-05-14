@@ -1,15 +1,6 @@
 import { cn } from '@/lib/cn';
 import type { HTMLAttributes, ReactNode } from 'react';
-
-type Tone =
-  | 'neutral'
-  | 'accent'
-  | 'success'
-  | 'warn'
-  | 'danger'
-  | 'env-dev'
-  | 'env-stg'
-  | 'env-prod';
+import type { Tone } from './badge-utils';
 
 interface Props extends HTMLAttributes<HTMLSpanElement> {
   tone?: Tone;
@@ -43,10 +34,4 @@ export function Badge({ tone = 'neutral', className, children, ...rest }: Props)
   );
 }
 
-/** Maps a tier string ("dev", "staging", "prod", etc.) to a Badge tone. */
-export function envTone(tier: string): Tone {
-  const t = tier.toLowerCase();
-  if (t === 'prod' || t === 'production') return 'env-prod';
-  if (t === 'stg' || t === 'staging') return 'env-stg';
-  return 'env-dev';
-}
+export { envTone } from './badge-utils';

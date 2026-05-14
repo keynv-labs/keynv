@@ -55,15 +55,9 @@ test.describe('Authentication', () => {
   });
 
   test('public pages are accessible without authentication', async ({ page }) => {
-    const publicPages = [
-      { path: '/', title: 'keynv' },
-      { path: '/changelog', title: 'changelog' },
-      { path: '/docs', title: 'docs' },
-      { path: '/login', title: 'login' },
-      { path: '/register', title: 'register' },
-    ];
+    const publicPages = ['/', '/changelog', '/docs', '/login', '/register'];
 
-    for (const { path } of publicPages) {
+    for (const path of publicPages) {
       await page.goto(path);
       await page.waitForLoadState('networkidle');
       expect(page.url()).toContain(path);

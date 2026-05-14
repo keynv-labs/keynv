@@ -304,12 +304,6 @@ importers:
         specifier: ^1.52.0
         version: 1.60.0
 
-  tests/security:
-    dependencies:
-      '@keynv/redactor':
-        specifier: workspace:*
-        version: link:../../packages/redactor
-
 packages:
 
   '@alloc/quick-lru@5.2.0':
