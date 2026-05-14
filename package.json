@@ -12,7 +12,8 @@
   "scripts": {
     "build": "keynv exec -- pnpm -r build",
     "build:direct": "pnpm -r build",
-    "dev": "pnpm -r --parallel dev",
+    "dev": "keynv exec -- pnpm -r --parallel dev",
+    "dev:direct": "pnpm -r --parallel dev",
     "test": "pnpm -r test",
     "test:security": "pnpm -r test:security",
     "lint": "cross-env NODE_OPTIONS=--max-old-space-size=6144 biome check .",

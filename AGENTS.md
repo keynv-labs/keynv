@@ -48,3 +48,12 @@ keynv --help                # full command list
 
 If `.keynv.env` is missing or empty, the user probably hasn't run `keynv init` yet — suggest they do so before they paste a secret into a `.env`.
 <!-- keynv:end -->
+
+## Dogfooding note
+
+This project manages its own dev secrets with keynv. `.keynv.env` at the root
+contains alias references (`@keynv.dev.*`) that resolve to vault entries.
+
+- `pnpm dev` — loads `.keynv.env` via `keynv exec --`. Requires logged-in CLI.
+- `pnpm dev:direct` — skips keynv; set `KEYNV_JWT_SECRET` manually first.
+- `build` / `build:direct` — same split for builds.
