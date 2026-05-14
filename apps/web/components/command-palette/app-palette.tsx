@@ -17,10 +17,11 @@ import {
   Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GPrefixHint } from './g-prefix-hint';
 import { Kbd, KbdGroup } from './kbd';
 import { PaletteItem } from './palette-item';
+import { ShortcutsPanel } from './shortcuts-panel';
 import { useCommandPalette } from './use-command-palette';
 
 export function AppPalette() {
@@ -33,7 +34,24 @@ export function AppPalette() {
     [router],
   );
 
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
   const { open, setOpen, pendingPrefix } = useCommandPalette(navigate);
+
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        const el = e.target as HTMLElement | null;
+        const inField = el && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+        if (!inField && !open) {
+          e.preventDefault();
+          setShowShortcuts(true);
+        }
+      }
+    }
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open]);
 
   const closeAndSignOut = useCallback(async () => {
     setOpen(false);
@@ -146,6 +164,12 @@ export function AppPalette() {
                     onSelect={() => { setOpen(false); router.push('/audit'); }}
                   />
                   <PaletteItem
+                    icon={<Search size={14} strokeWidth={2} />}
+                    label="Keyboard shortcuts"
+                    keywords={['shortcuts', 'keys', 'keyboard', 'help', 'hotkeys']}
+                    onSelect={() => { setOpen(false); setShowShortcuts(true); }}
+                  />
+                  <PaletteItem
                     icon={<LogOut size={14} strokeWidth={2} />}
                     label="Sign out"
                     onSelect={closeAndSignOut}
@@ -174,6 +198,8 @@ export function AppPalette() {
       </RadixDialog.Root>
 
       {pendingPrefix === 'g' ? <GPrefixHint /> : null}
+
+      <ShortcutsPanel open={showShortcuts} onOpenChange={setShowShortcuts} />
     </>
   );
 }
