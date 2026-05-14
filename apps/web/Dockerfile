@@ -45,9 +45,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
 COPY apps/web/build.sh /tmp/build.sh
-RUN chmod +x /tmp/build.sh && sh /tmp/build.sh || echo "FAILED" > /tmp/build.failed
-RUN cat /tmp/build.log
-RUN test ! -f /tmp/build.failed
+RUN chmod +x /tmp/build.sh && (sh /tmp/build.sh && echo "BUILD_OK" || { cat /tmp/build.log; exit 1; })
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
