@@ -3,12 +3,15 @@
 import { logoutAction, switchOrgAction } from '@/app/(authed)/actions';
 import { Logomark } from '@/components/brand/logomark';
 import { cn } from '@/lib/cn';
+import { CreateOrgDialog } from '@/components/layout/create-org-dialog';
 import {
   Activity,
+  Building2,
   ChevronDown,
   FolderKanban,
   Inbox,
   LogOut,
+  Plus,
   ScrollText,
   Search,
   Settings,
@@ -77,11 +80,17 @@ function buildGroups(role: string): NavGroup[] {
       title: 'Account',
       items: [
         {
+          href: '/settings/org',
+          label: 'Organization',
+          icon: Building2,
+          match: (p) => p.startsWith('/settings/org'),
+        },
+        {
           href: '/settings/account',
           label: 'Settings',
           icon: Settings,
           shortcut: 'g s',
-          match: (p) => p.startsWith('/settings'),
+          match: (p) => p.startsWith('/settings/account'),
         },
       ],
     },
@@ -123,14 +132,13 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
   const initials = email.slice(0, 2).toUpperCase();
   const handleNavigate = onNavigate ?? NOOP;
   const navGroups = buildGroups(role);
-  const isMultiOrg = orgs.length > 1;
   const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
       <div className="h-14 px-4 flex items-center border-b border-border shrink-0">
         <Link
-          href={{ pathname: '/dashboard' }}
+          href="/dashboard"
           onClick={handleNavigate}
           className="flex items-center"
         >
@@ -150,8 +158,8 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
                 const active = item.match(pathname);
                 return (
                   <li key={item.href}>
-                    <Link
-                      href={{ pathname: item.href }}
+                      <Link
+                      href={item.href}
                       onClick={handleNavigate}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
@@ -188,31 +196,27 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
       <div className="mx-3 mb-3">
         <button
           type="button"
-          onClick={() => isMultiOrg && setOrgSwitcherOpen(!orgSwitcherOpen)}
+          onClick={() => setOrgSwitcherOpen(!orgSwitcherOpen)}
           className={cn(
             'flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-xs transition-colors duration-fast ease-snap',
-            isMultiOrg
-              ? 'border-border hover:border-border-strong cursor-pointer'
-              : 'border-border cursor-default',
+            'border-border hover:border-border-strong cursor-pointer',
           )}
         >
           <div className="flex-1 min-w-0 text-left">
             <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-fg-subtle">Org</div>
             <div className="text-fg leading-tight truncate mt-0.5">{activeOrgName}</div>
           </div>
-          {isMultiOrg ? (
-            <ChevronDown
-              size={12}
-              strokeWidth={2}
-              className={cn(
-                'shrink-0 text-fg-subtle transition-transform duration-fast ease-snap',
-                orgSwitcherOpen ? 'rotate-180' : '',
-              )}
-            />
-          ) : null}
+          <ChevronDown
+            size={12}
+            strokeWidth={2}
+            className={cn(
+              'shrink-0 text-fg-subtle transition-transform duration-fast ease-snap',
+              orgSwitcherOpen ? 'rotate-180' : '',
+            )}
+          />
         </button>
 
-        {orgSwitcherOpen && isMultiOrg ? (
+        {orgSwitcherOpen ? (
           <div className="mt-1 rounded-md border border-border bg-bg-elevated shadow-lg overflow-hidden">
             {orgs.map((o) => {
               const isActive = o.id === activeOrgId;
@@ -235,6 +239,18 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
                 </form>
               );
             })}
+            <div className="border-t border-border">
+              <CreateOrgDialog>
+                <button
+                  type="button"
+                  onClick={() => setOrgSwitcherOpen(false)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-left text-fg-muted hover:bg-bg-elevated-hover hover:text-fg transition-colors duration-fast ease-snap"
+                >
+                  <Plus size={13} strokeWidth={2} />
+                  <span>Create new org</span>
+                </button>
+              </CreateOrgDialog>
+            </div>
           </div>
         ) : null}
       </div>
