@@ -46,7 +46,20 @@ ENV NODE_OPTIONS=--max-old-space-size=4096
 
 WORKDIR /repo/apps/web
 RUN node --version && pnpm --version && ls -la node_modules/.bin/next
-RUN ./node_modules/.bin/next build
+
+# DEBUG: build her zaman exit 0 ile biter; çıktı /repo/build-output.log'a yazılır
+# ve runtime CMD bunu container logs'a dump eder. Coolify build raw output
+# göstermediği için tek görünürlük kanalı bu. Build başarılıysa server normal
+# başlar; başarısızsa dummy standalone oluşturulur ve container idle kalır.
+RUN set +e; \
+    ./node_modules/.bin/next build > /repo/build-output.log 2>&1; \
+    BUILD_EXIT=$?; \
+    echo $BUILD_EXIT > /repo/build-exit-code; \
+    if [ "$BUILD_EXIT" -ne 0 ]; then \
+      mkdir -p /repo/apps/web/.next/standalone/apps/web /repo/apps/web/.next/static; \
+      echo "console.log('build failed — see /app/build-output.log');" > /repo/apps/web/.next/standalone/apps/web/server.js; \
+    fi; \
+    exit 0
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
@@ -63,6 +76,10 @@ WORKDIR /app
 COPY --from=builder --chown=keynv:keynv /repo/apps/web/.next/standalone ./
 COPY --from=builder --chown=keynv:keynv /repo/apps/web/.next/static ./apps/web/.next/static
 
+# DEBUG: build log + exit code, debug katmanı için.
+COPY --from=builder --chown=keynv:keynv /repo/build-output.log /app/build-output.log
+COPY --from=builder --chown=keynv:keynv /repo/build-exit-code /app/build-exit-code
+
 USER keynv
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -72,4 +89,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "apps/web/server.js"]
+# DEBUG CMD: önce build çıktısını dump et; build başarılıysa server'ı başlat,
+# başarısızsa container idle kalsın ki Coolify container logs gerçek next
+# build hatasını gösterebilsin.
+CMD ["/bin/sh", "-c", "echo '===== BUILD OUTPUT (next build stdout+stderr) ====='; cat /app/build-output.log; echo '===== BUILD EXIT CODE ====='; cat /app/build-exit-code; echo '===== END DEBUG ====='; if [ \"$(cat /app/build-exit-code)\" = \"0\" ]; then echo '>>> next build succeeded — starting server'; exec node apps/web/server.js; else echo '>>> next build FAILED — container idling so logs stay readable (sleep 24h)'; sleep 86400; fi"]
