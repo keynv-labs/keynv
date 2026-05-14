@@ -15,11 +15,14 @@ export default async function OrgSettingsPage() {
 
   const [orgsRes, usersRes] = await Promise.all([
     api<{ orgs: Array<{ id: string; name: string; created_at: string }> }>('/v1/org').catch(() => null),
-    api<{ users: OrgUser[] }>('/v1/users').catch(() => null),
+    api<{ users: OrgUser[]; next_cursor: string | null }>('/v1/users', {
+      query: { limit: 50 },
+    }).catch(() => null),
   ]);
 
   const currentOrg = orgsRes?.orgs.find((o) => o.id === orgId);
   const users = usersRes?.users ?? [];
+  const hasMoreUsers = usersRes?.next_cursor != null;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -65,7 +68,7 @@ export default async function OrgSettingsPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
-            Members <span className="tabular">({users.length})</span>
+            Members <span className="tabular">({users.length}{hasMoreUsers ? '+' : ''})</span>
           </h3>
           {session?.org_role === 'owner' || session?.org_role === 'admin' ? (
             <a

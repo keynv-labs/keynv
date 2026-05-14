@@ -54,3 +54,19 @@ export async function revokeCliTokenAction(
   revalidatePath('/settings/account/cli-tokens');
   return { ok: 'Token revoked.' };
 }
+
+interface CliTokenRow {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+}
+
+/** Server action: fetches next page of cli tokens older than the given created_at cursor. */
+export async function loadMoreCliTokensAction(
+  beforeCreatedAt: string,
+): Promise<{ tokens: CliTokenRow[]; next_cursor: string | null }> {
+  return api('/v1/cli-tokens', { query: { limit: 50, before_created_at: beforeCreatedAt } });
+}

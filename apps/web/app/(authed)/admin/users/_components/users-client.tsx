@@ -2,9 +2,11 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { LoadMoreButton } from '@/components/ui/load-more-button';
 import { formatRelative } from '@/lib/time';
 import { Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { loadMoreUsersAction } from '../_actions/actions';
 import { InviteUserDialog } from './invite-dialog';
 import { UserRowMenu } from './user-row-menu';
 
@@ -23,17 +25,36 @@ const roleTone = (role: string) => {
 };
 
 export function UsersClient({
-  users,
+  users: initialUsers,
+  nextCursor: initialCursor,
   currentUserId,
   orgs,
   activeOrgId,
 }: {
   users: OrgUser[];
+  nextCursor: string | null;
   currentUserId: string;
   orgs: Array<{ id: string; name: string }>;
   activeOrgId: string;
 }) {
   const [search, setSearch] = useState('');
+  const [users, setUsers] = useState<OrgUser[]>(initialUsers);
+  const [cursor, setCursor] = useState<string | null>(initialCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadMore = useCallback(async () => {
+    if (cursor === null || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await loadMoreUsersAction(cursor);
+      setUsers((prev) => [...prev, ...result.users]);
+      setCursor(result.next_cursor);
+    } catch {
+      // silent fail
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [cursor, loadingMore]);
 
   const filtered = useMemo(() => {
     if (!search) return users;
@@ -107,6 +128,10 @@ export function UsersClient({
           ))}
         </ul>
       )}
+
+      {cursor !== null && !search ? (
+        <LoadMoreButton loading={loadingMore} onClick={loadMore} />
+      ) : null}
     </div>
   );
 }

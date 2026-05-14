@@ -1,56 +1,28 @@
 import { Breadcrumb } from '@/components/layout/breadcrumb';
-import { PageHeader, SectionHeader, StatCard } from '@/components/layout/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { OnboardingChecklist } from '@/components/onboarding/checklist';
-import { Badge, envTone } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { type OnboardingStatus, isOnboardingComplete } from '@/lib/onboarding';
 import { fetchOnboardingStatus } from '@/lib/onboarding-server';
-import { formatRelative } from '@/lib/time';
 import { getSession } from '@/lib/session';
-import { ArrowUpRight, Terminal } from 'lucide-react';
-import Link from 'next/link';
+import { Terminal } from 'lucide-react';
 import { Suspense } from 'react';
 import { NewProjectButton } from './new-project-button';
+import type { ProjectSummary } from './_actions/actions';
+import { ProjectsListing } from './_components/projects-listing';
 
-interface ProjectListItem {
-  id: string;
-  name: string;
-  created_at: string;
+interface SummaryResponse {
+  projects: ProjectSummary[];
+  next_cursor: string | null;
 }
 
-interface ProjectDetail {
-  id: string;
-  name: string;
-  environments: Array<{ name: string; tier: string; require_approval: boolean }>;
-}
-
-interface SecretRow {
-  alias: string;
-  version: number;
-  created_at: string;
-}
-
-interface EnrichedProject extends ProjectListItem {
-  environments: Array<{ name: string; tier: string }>;
-  secret_count: number;
-}
-
-async function loadProjects(): Promise<EnrichedProject[]> {
-  const list = await api<{ projects: ProjectListItem[] }>('/v1/projects');
-  return Promise.all(
-    list.projects.map(async (p) => {
-      const [detail, secrets] = await Promise.all([
-        api<ProjectDetail>(`/v1/projects/${p.id}`),
-        api<{ secrets: SecretRow[] }>(`/v1/projects/${p.id}/secrets`),
-      ]);
-      return {
-        ...p,
-        environments: detail.environments.map((e) => ({ name: e.name, tier: e.tier })),
-        secret_count: secrets.secrets.length,
-      };
-    }),
-  );
+async function loadProjects(): Promise<SummaryResponse> {
+  // Single aggregated query. The old client called /v1/projects then
+  // GET /:id and GET /:id/secrets per project (1 + 2N), which fell over
+  // once an org hit ~25 projects. /v1/projects/summary now does the
+  // counts and env-name concat in one round trip.
+  return api<SummaryResponse>('/v1/projects/summary', { query: { limit: 50 } });
 }
 
 export default async function ProjectsPage() {
@@ -76,7 +48,8 @@ export default async function ProjectsPage() {
 }
 
 async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
-  const [projects, onboarding] = await Promise.all([loadProjects(), safeFetchOnboarding()]);
+  const [summary, onboarding] = await Promise.all([loadProjects(), safeFetchOnboarding()]);
+  const projects = summary.projects;
   const showChecklist =
     onboarding !== null && !isOnboardingComplete(onboarding) && !onboarding.dismissed;
 
@@ -88,72 +61,11 @@ async function ProjectsContent({ canCreate }: { canCreate: boolean }) {
     );
   }
 
-  const totalSecrets = projects.reduce((sum, p) => sum + p.secret_count, 0);
-  const totalEnvs = projects.reduce((sum, p) => sum + p.environments.length, 0);
-
   return (
     <>
       {showChecklist ? <OnboardingChecklist initialStatus={onboarding} compact /> : null}
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard label="Projects" value={projects.length.toLocaleString()} hint="namespaces" />
-        <StatCard label="Environments" value={totalEnvs.toLocaleString()} hint="dev · stg · prod" />
-        <StatCard label="Secrets" value={totalSecrets.toLocaleString()} hint="encrypted at rest" />
-      </section>
-
-      <section>
-        <SectionHeader
-          title="all projects"
-          count={projects.length}
-          actions={
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-              sorted by recency
-            </span>
-          }
-        />
-
-        <ul className="rounded-lg border border-border bg-bg-elevated divide-y divide-border overflow-hidden">
-          {projects.map((p) => (
-            <li key={p.id} className="animate-list-enter">
-              <Link
-                href={{ pathname: `/projects/${p.id}` }}
-                className="group block px-4 py-4 hover:bg-bg-elevated-hover transition-colors duration-fast ease-snap"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5">
-                      <span className="font-semibold text-fg truncate tracking-tight">
-                        {p.name}
-                      </span>
-                      <span className="font-mono text-[11px] text-fg-subtle tabular">{p.id}</span>
-                    </div>
-                    <div className="mt-1.5 flex items-center gap-3 text-xs text-fg-muted">
-                      <span className="font-mono tabular">
-                        {p.secret_count} {p.secret_count === 1 ? 'secret' : 'secrets'}
-                      </span>
-                      <span className="text-fg-subtle">·</span>
-                      <span>created {formatRelative(p.created_at)}</span>
-                    </div>
-                  </div>
-
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    {p.environments.map((env) => (
-                      <Badge key={env.name} tone={envTone(env.tier)}>
-                        {env.name}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <ArrowUpRight
-                    size={15}
-                    className="shrink-0 text-fg-subtle group-hover:text-accent group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-fast ease-snap"
-                  />
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <ProjectsListing initialProjects={projects} initialCursor={summary.next_cursor} />
     </>
   );
 }

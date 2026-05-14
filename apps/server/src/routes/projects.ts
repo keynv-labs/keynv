@@ -1,6 +1,6 @@
 import { crypto } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
-import { and, eq, isNull, count, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/index.js';
@@ -54,6 +54,14 @@ export function projectRoutes(deps: ProjectDeps): Hono {
   r.get('/summary', async (c) => {
     const user = c.var.user;
     const isAdmin = user.org_role === 'owner' || user.org_role === 'admin';
+    const params = Object.fromEntries(new URL(c.req.url).searchParams);
+    const limitRaw = Number(params.limit ?? 100);
+    const limit =
+      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200
+        ? Math.floor(limitRaw)
+        : 100;
+    const beforeCreatedAt =
+      typeof params.before_created_at === 'string' ? params.before_created_at : null;
 
     // Admin sees all org projects; others see only their memberships
     const projectFilter = isAdmin
@@ -65,22 +73,32 @@ export function projectRoutes(deps: ProjectDeps): Hono {
           )}`
         : sql`1=0`;
 
+    const conditions = [isNull(schema.projects.deleted_at), projectFilter];
+    if (beforeCreatedAt) conditions.push(lt(schema.projects.created_at, beforeCreatedAt));
+
     const rows = await deps.db
       .select({
         id: schema.projects.id,
         name: schema.projects.name,
         created_at: schema.projects.created_at,
-        env_count: count(schema.environments.id),
-        secret_count: count(schema.secrets.id),
+        // COUNT DISTINCT — the env↔secret cross-join would otherwise
+        // inflate both counters by their product.
+        env_count: sql<number>`COUNT(DISTINCT ${schema.environments.id})`,
+        secret_count: sql<number>`COUNT(DISTINCT ${schema.secrets.id})`,
         pending_count: sql<number>`(SELECT COUNT(*) FROM approvals WHERE project_id = projects.id AND status = 'pending')`,
+        env_names: sql<string | null>`GROUP_CONCAT(DISTINCT ${schema.environments.name})`,
       })
       .from(schema.projects)
       .leftJoin(schema.environments, eq(schema.environments.project_id, schema.projects.id))
       .leftJoin(schema.secrets, eq(schema.secrets.project_id, schema.projects.id))
-      .where(and(isNull(schema.projects.deleted_at), projectFilter))
-      .groupBy(schema.projects.id);
+      .where(and(...conditions))
+      .groupBy(schema.projects.id)
+      .orderBy(desc(schema.projects.created_at))
+      .limit(limit);
 
-    return c.json({ projects: rows });
+    const tail = rows.at(-1);
+    const next_cursor = tail && rows.length === limit ? tail.created_at : null;
+    return c.json({ projects: rows, next_cursor });
   });
 
   r.get('/', async (c) => {

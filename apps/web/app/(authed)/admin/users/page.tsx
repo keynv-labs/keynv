@@ -17,9 +17,11 @@ interface Whoami {
 }
 
 export default async function AdminUsersPage() {
-  const [session, { users }, whoami] = await Promise.all([
+  const [session, usersPage, whoami] = await Promise.all([
     getSession(),
-    api<{ users: OrgUser[] }>('/v1/users'),
+    api<{ users: OrgUser[]; next_cursor: string | null }>('/v1/users', {
+      query: { limit: 50 },
+    }),
     api<Whoami>('/v1/whoami').catch(() => ({}) as Whoami),
   ]);
 
@@ -40,7 +42,8 @@ export default async function AdminUsersPage() {
       />
 
       <UsersClient
-        users={users}
+        users={usersPage.users}
+        nextCursor={usersPage.next_cursor}
         currentUserId={session?.user_id ?? ''}
         orgs={orgs}
         activeOrgId={activeOrgId}

@@ -8,6 +8,20 @@ import { type ActionState, parseOr, parseRaw, catchApi } from '@/lib/action-resu
 
 export type UserActionState = ActionState;
 
+interface UserRow {
+  id: string;
+  email: string;
+  org_role: string;
+  created_at: string;
+}
+
+/** Server action: fetches next page of users older than the given created_at cursor. */
+export async function loadMoreUsersAction(
+  beforeCreatedAt: string,
+): Promise<{ users: UserRow[]; next_cursor: string | null }> {
+  return api('/v1/users', { query: { limit: 50, before_created_at: beforeCreatedAt } });
+}
+
 const InviteBody = z.object({
   email,
   password: passwordMin12,

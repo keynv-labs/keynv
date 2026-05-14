@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, lt } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { issueCliToken, revokeCliToken } from '../auth/cli-tokens.js';
@@ -38,6 +38,18 @@ export function cliTokenRoutes(deps: CliTokenDeps): Hono {
 
   r.get('/', async (c) => {
     const me = c.var.user;
+    const params = Object.fromEntries(new URL(c.req.url).searchParams);
+    const limitRaw = Number(params.limit ?? 100);
+    const limit =
+      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200
+        ? Math.floor(limitRaw)
+        : 100;
+    const beforeCreatedAt =
+      typeof params.before_created_at === 'string' ? params.before_created_at : null;
+
+    const conditions = [eq(schema.cli_tokens.user_id, me.id)];
+    if (beforeCreatedAt) conditions.push(lt(schema.cli_tokens.created_at, beforeCreatedAt));
+
     const rows = await deps.db
       .select({
         id: schema.cli_tokens.id,
@@ -48,8 +60,13 @@ export function cliTokenRoutes(deps: CliTokenDeps): Hono {
         revoked_at: schema.cli_tokens.revoked_at,
       })
       .from(schema.cli_tokens)
-      .where(eq(schema.cli_tokens.user_id, me.id));
-    return c.json({ tokens: rows });
+      .where(and(...conditions))
+      .orderBy(desc(schema.cli_tokens.created_at))
+      .limit(limit);
+
+    const tail = rows.at(-1);
+    const next_cursor = tail && rows.length === limit ? tail.created_at : null;
+    return c.json({ tokens: rows, next_cursor });
   });
 
   r.post('/', async (c) => {

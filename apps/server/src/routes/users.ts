@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, lt } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { hashPassword } from '../auth/password.js';
@@ -40,6 +40,18 @@ export function userRoutes(deps: UserDeps): Hono {
     if (user.org_role !== 'owner' && user.org_role !== 'admin') {
       return jsonError(c, 'rbac.denied', 'Permission denied.');
     }
+    const params = Object.fromEntries(new URL(c.req.url).searchParams);
+    const limitRaw = Number(params.limit ?? 100);
+    const limit =
+      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200
+        ? Math.floor(limitRaw)
+        : 100;
+    const beforeCreatedAt =
+      typeof params.before_created_at === 'string' ? params.before_created_at : null;
+
+    const conditions = [eq(schema.users.org_id, user.org_id)];
+    if (beforeCreatedAt) conditions.push(lt(schema.users.created_at, beforeCreatedAt));
+
     const rows = await deps.db
       .select({
         id: schema.users.id,
@@ -48,8 +60,13 @@ export function userRoutes(deps: UserDeps): Hono {
         created_at: schema.users.created_at,
       })
       .from(schema.users)
-      .where(eq(schema.users.org_id, user.org_id));
-    return c.json({ users: rows });
+      .where(and(...conditions))
+      .orderBy(desc(schema.users.created_at))
+      .limit(limit);
+
+    const tail = rows.at(-1);
+    const next_cursor = tail && rows.length === limit ? tail.created_at : null;
+    return c.json({ users: rows, next_cursor });
   });
 
   // Phase 1: admin-creates-user (no invite-token flow yet — that's Phase 4).

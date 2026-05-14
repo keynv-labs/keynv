@@ -24,10 +24,16 @@ import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/cn';
 import { formatRelative } from '@/lib/time';
+import { LoadMoreButton } from '@/components/ui/load-more-button';
 import { Check, Copy, KeyRound, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useActionState } from 'react';
-import { type CreateTokenState, createCliTokenAction, revokeCliTokenAction } from '../_actions/actions';
+import {
+  type CreateTokenState,
+  createCliTokenAction,
+  loadMoreCliTokensAction,
+  revokeCliTokenAction,
+} from '../_actions/actions';
 
 export interface CliTokenRow {
   id: string;
@@ -38,7 +44,31 @@ export interface CliTokenRow {
   revoked_at: string | null;
 }
 
-export function CliTokensClient({ tokens }: { tokens: CliTokenRow[] }) {
+export function CliTokensClient({
+  tokens: initialTokens,
+  nextCursor: initialCursor,
+}: {
+  tokens: CliTokenRow[];
+  nextCursor: string | null;
+}) {
+  const [tokens, setTokens] = useState<CliTokenRow[]>(initialTokens);
+  const [cursor, setCursor] = useState<string | null>(initialCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadMore = useCallback(async () => {
+    if (cursor === null || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await loadMoreCliTokensAction(cursor);
+      setTokens((prev) => [...prev, ...result.tokens]);
+      setCursor(result.next_cursor);
+    } catch {
+      // silent fail
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [cursor, loadingMore]);
+
   const active = tokens.filter((t) => !t.revoked_at);
   const revoked = tokens.filter((t) => t.revoked_at);
 
@@ -99,6 +129,8 @@ export function CliTokensClient({ tokens }: { tokens: CliTokenRow[] }) {
           ))}
         </ul>
       )}
+
+      {cursor !== null ? <LoadMoreButton loading={loadingMore} onClick={loadMore} /> : null}
 
       {revoked.length > 0 ? (
         <Collapsible>
