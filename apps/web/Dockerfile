@@ -43,7 +43,7 @@ COPY docs ./docs
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN cd apps/web && pnpm exec next build
+RUN pnpm --filter @keynv/web build 2>&1
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
