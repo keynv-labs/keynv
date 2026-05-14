@@ -1483,3 +1483,59 @@ describe('POST /v1/projects/:id/environments', () => {
     expect(entry?.payload.project_id).toBe(projectId);
   });
 });
+
+describe('CORS — Access-Control-Allow-Origin header', () => {
+  it('sets CORS headers when webUrl is configured', async () => {
+    const webUrl = 'https://keynv.example.com';
+    const { db, raw } = await import('../db/index.js').then((m) => m.openDb({ path: ':memory:', migrate: true }));
+    const kek = await import('@keynv/core').then((m) => m.crypto.generateKey());
+    const app = createApp({
+      db,
+      jwtSecret: JWT_SECRET,
+      accessTtlS: 900,
+      refreshTtlS: 7 * 24 * 3600,
+      webUrl,
+      getKek: () => kek,
+      version: 'test',
+      logger: SILENT_LOGGER,
+      rateLimitPerMinute: 0,
+      publicRegistrationEnabled: false,
+      registerRateLimitPerMinute: 0,
+    });
+
+    const req = new Request('http://localhost/v1/health', {
+      method: 'OPTIONS',
+      headers: { Origin: webUrl },
+    });
+    const res = await app.fetch(req);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(webUrl);
+    expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('X-Keynv-Org');
+    raw.close();
+  });
+
+  it('omits CORS headers when webUrl is not configured', async () => {
+    const { db, raw } = await import('../db/index.js').then((m) => m.openDb({ path: ':memory:', migrate: true }));
+    const kek = await import('@keynv/core').then((m) => m.crypto.generateKey());
+    const app = createApp({
+      db,
+      jwtSecret: JWT_SECRET,
+      accessTtlS: 900,
+      refreshTtlS: 7 * 24 * 3600,
+      getKek: () => kek,
+      version: 'test',
+      logger: SILENT_LOGGER,
+      rateLimitPerMinute: 0,
+      publicRegistrationEnabled: false,
+      registerRateLimitPerMinute: 0,
+    });
+
+    const req = new Request('http://localhost/v1/health', {
+      method: 'OPTIONS',
+      headers: { Origin: 'https://other.example.com' },
+    });
+    const res = await app.fetch(req);
+    expect(res.headers.has('Access-Control-Allow-Origin')).toBe(false);
+    raw.close();
+  });
+});

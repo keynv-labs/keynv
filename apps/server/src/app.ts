@@ -1,3 +1,4 @@
+import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import type { Db } from './db/index.js';
 import { jsonError } from './lib/errors.js';
@@ -55,6 +56,24 @@ export interface AppDeps {
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
   const logger = deps.logger ?? makeLogger(process.env['KEYNV_LOG_LEVEL'] ?? 'info');
+
+  /**
+   * CORS — only allows the configured KEYNV_WEB_URL (if set) so that
+   * browsers can make cross-origin fetch calls from the web dashboard.
+   * When KEYNV_WEB_URL is not configured (API-only deployment behind
+   * a same-origin reverse proxy) no CORS headers are emitted.
+   */
+  if (deps.webUrl) {
+    app.use(
+      '*',
+      cors({
+        origin: deps.webUrl,
+        credentials: true,
+        allowHeaders: ['Authorization', 'Content-Type', 'X-Keynv-Org'],
+        allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+      }),
+    );
+  }
 
   app.route(
     '/v1/health',
