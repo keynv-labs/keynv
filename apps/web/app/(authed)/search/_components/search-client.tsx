@@ -1,39 +1,50 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
+import { LoadMoreButton } from '@/components/ui/load-more-button';
 import Link from 'next/link';
 import { useState } from 'react';
-import { searchSecrets } from './search-action';
-
-interface SearchResult {
-  secret_id: string;
-  key: string;
-  version: number;
-  project_id: string;
-  project_name: string;
-  env_name: string;
-  env_tier: string;
-  created_at: string;
-}
+import { type SearchResult, searchSecrets } from './search-action';
 
 export function SearchClient() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [activeQuery, setActiveQuery] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searched, setSearched] = useState(false);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (!query.trim()) return;
+    const trimmed = query.trim();
+    if (!trimmed) return;
     setLoading(true);
     setSearched(true);
+    setActiveQuery(trimmed);
     try {
-      const data = await searchSecrets(query.trim());
+      const data = await searchSecrets(trimmed);
       setResults(data.results);
+      setCursor(data.next_cursor);
     } catch {
       setResults([]);
+      setCursor(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleLoadMore() {
+    if (!activeQuery || cursor === null || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await searchSecrets(activeQuery, cursor);
+      setResults((prev) => [...prev, ...data.results]);
+      setCursor(data.next_cursor);
+    } catch {
+      // silent fail — user can retry
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -80,6 +91,12 @@ export function SearchClient() {
           ))}
         </ul>
       )}
+
+      {cursor !== null ? (
+        <div className="mt-4">
+          <LoadMoreButton loading={loadingMore} onClick={handleLoadMore} />
+        </div>
+      ) : null}
     </div>
   );
 }
