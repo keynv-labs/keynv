@@ -11,11 +11,23 @@ interface OrgUser {
   created_at: string;
 }
 
+interface Whoami {
+  orgs?: Array<{ id: string; name: string }>;
+  org_name?: string;
+}
+
 export default async function AdminUsersPage() {
-  const [session, { users }] = await Promise.all([
+  const [session, { users }, whoami] = await Promise.all([
     getSession(),
     api<{ users: OrgUser[] }>('/v1/users'),
+    api<Whoami>('/v1/whoami').catch(() => ({}) as Whoami),
   ]);
+
+  const activeOrgId = session?.active_org_id || session?.org_id || '';
+  const orgs =
+    whoami.orgs && whoami.orgs.length > 0
+      ? whoami.orgs
+      : [{ id: activeOrgId, name: whoami.org_name ?? activeOrgId }];
 
   return (
     <div className="space-y-7">
@@ -27,7 +39,12 @@ export default async function AdminUsersPage() {
         description="Org members and their org-level role. Project-level membership is managed inside each project."
       />
 
-      <UsersClient users={users} currentUserId={session?.user_id ?? ''} />
+      <UsersClient
+        users={users}
+        currentUserId={session?.user_id ?? ''}
+        orgs={orgs}
+        activeOrgId={activeOrgId}
+      />
     </div>
   );
 }

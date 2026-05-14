@@ -35,11 +35,24 @@ function generateTempPassword(length = 16): string {
   return out;
 }
 
-export function InviteUserDialog() {
+interface OrgOption {
+  id: string;
+  name: string;
+}
+
+export function InviteUserDialog({
+  orgs,
+  activeOrgId,
+}: {
+  orgs: OrgOption[];
+  activeOrgId: string;
+}) {
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [copied, setCopied] = useState(false);
   const [state, action, pending] = useActionState<UserActionState, FormData>(inviteUserAction, {});
+  const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? orgs[0];
+  const showOrgPicker = orgs.length > 1;
 
   useEffect(() => {
     if (state.ok) setOpen(false);
@@ -127,6 +140,25 @@ export function InviteUserDialog() {
               </button>
             </div>
           </Field>
+
+          {showOrgPicker ? (
+            <Field
+              label="Organization"
+              hint="You belong to multiple orgs — pick which one this user joins."
+            >
+              <Select name="org_id" defaultValue={activeOrgId}>
+                {orgs.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
+                ))}
+              </Select>
+            </Field>
+          ) : activeOrg ? (
+            <div className="text-xs text-fg-subtle">
+              Inviting to <span className="text-fg">{activeOrg.name}</span>.
+            </div>
+          ) : null}
 
           <Field label="Org role">
             <Select name="org_role" defaultValue="developer">

@@ -10,6 +10,8 @@ export const passwordMin12 = z.string().min(12).max(256);
 
 export const orgName = z.string().min(1).max(64);
 
+export const orgId = z.string().min(1);
+
 export const projectName = z
   .string()
   .min(1)

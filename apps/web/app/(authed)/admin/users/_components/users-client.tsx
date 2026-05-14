@@ -25,9 +25,13 @@ const roleTone = (role: string) => {
 export function UsersClient({
   users,
   currentUserId,
+  orgs,
+  activeOrgId,
 }: {
   users: OrgUser[];
   currentUserId: string;
+  orgs: Array<{ id: string; name: string }>;
+  activeOrgId: string;
 }) {
   const [search, setSearch] = useState('');
 
@@ -60,7 +64,7 @@ export function UsersClient({
             <span className="text-fg tabular">{filtered.length}</span> of{' '}
             <span className="tabular">{users.length}</span>
           </span>
-          <InviteUserDialog />
+          <InviteUserDialog orgs={orgs} activeOrgId={activeOrgId} />
         </div>
       </div>
 

@@ -19,6 +19,12 @@ const CreateUserBody = z.object({
   email: z.string().email(),
   password: z.string().min(12).max(256),
   org_role: z.enum(['admin', 'developer', 'reader']).default('developer'),
+  /**
+   * Target org. Optional — when omitted, the request's active org
+   * (resolved from X-Keynv-Org header) is used. When set, must be one
+   * of the inviter's orgs AND the inviter must be owner/admin there.
+   */
+  org_id: z.string().min(1).optional(),
 });
 
 const PatchOrgRoleBody = z.object({
@@ -54,10 +60,36 @@ export function userRoutes(deps: UserDeps): Hono {
     const parsed = await parseBody(c, CreateUserBody, 'Invalid user body.');
     if ('errorResponse' in parsed) return parsed.errorResponse;
 
+    // Resolve target org. When the body specifies org_id, the inviter
+    // must (a) be a member of that org and (b) be owner/admin there —
+    // the active-org RBAC check via guard() only proves rights in the
+    // *current* active org, not the requested one.
+    let targetOrgId = user.org_id;
+    if (parsed.data.org_id && parsed.data.org_id !== user.org_id) {
+      if (!user.org_ids.includes(parsed.data.org_id)) {
+        return jsonError(c, 'rbac.denied', 'You are not a member of that org.');
+      }
+      const memberRows = await deps.db
+        .select({ role: schema.org_memberships.role })
+        .from(schema.org_memberships)
+        .where(
+          and(
+            eq(schema.org_memberships.user_id, user.id),
+            eq(schema.org_memberships.org_id, parsed.data.org_id),
+          ),
+        )
+        .limit(1);
+      const roleThere = memberRows[0]?.role;
+      if (roleThere !== 'owner' && roleThere !== 'admin') {
+        return jsonError(c, 'rbac.denied', 'Only org admins can invite users.');
+      }
+      targetOrgId = parsed.data.org_id;
+    }
+
     const existing = await deps.db
       .select({ id: schema.users.id })
       .from(schema.users)
-      .where(and(eq(schema.users.email, parsed.data.email), eq(schema.users.org_id, user.org_id)))
+      .where(and(eq(schema.users.email, parsed.data.email), eq(schema.users.org_id, targetOrgId)))
       .limit(1);
     if (existing[0]) {
       return jsonError(c, 'user.already_exists', 'User with this email already exists.');
@@ -67,13 +99,13 @@ export function userRoutes(deps: UserDeps): Hono {
     const password_hash = await hashPassword(parsed.data.password);
     await deps.db.insert(schema.users).values({
       id,
-      org_id: user.org_id,
+      org_id: targetOrgId,
       email: parsed.data.email,
       password_hash,
       org_role: parsed.data.org_role,
     });
-    await audit(c, deps.db, 'user.invited', { target_user_id: id, email: parsed.data.email, org_role: parsed.data.org_role });
-    return c.json({ id, email: parsed.data.email, org_role: parsed.data.org_role }, 201);
+    await audit(c, deps.db, 'user.invited', { target_user_id: id, email: parsed.data.email, org_role: parsed.data.org_role, org_id: targetOrgId });
+    return c.json({ id, email: parsed.data.email, org_role: parsed.data.org_role, org_id: targetOrgId }, 201);
   });
 
   // PATCH /v1/users/:id/org-role  (audit finding M5; docs/06-api-spec.md §69-72)

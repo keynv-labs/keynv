@@ -3,8 +3,8 @@
 import { api } from '@/lib/api';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { email, passwordMin12, orgRole } from '@/lib/schemas';
-import { type ActionState, parseOr, catchApi } from '@/lib/action-result';
+import { email, passwordMin12, orgRole, orgId } from '@/lib/schemas';
+import { type ActionState, parseOr, parseRaw, catchApi } from '@/lib/action-result';
 
 export type UserActionState = ActionState;
 
@@ -12,13 +12,20 @@ const InviteBody = z.object({
   email,
   password: passwordMin12,
   org_role: orgRole,
+  org_id: orgId.optional(),
 });
 
 export async function inviteUserAction(
   _prev: UserActionState,
   formData: FormData,
 ): Promise<UserActionState> {
-  const parsed = parseOr(InviteBody, formData, ['email', 'password', 'org_role']);
+  const orgIdRaw = formData.get('org_id');
+  const parsed = parseRaw(InviteBody, {
+    email: formData.get('email'),
+    password: formData.get('password'),
+    org_role: formData.get('org_role'),
+    ...(typeof orgIdRaw === 'string' && orgIdRaw ? { org_id: orgIdRaw } : {}),
+  });
   if (!parsed.success) return parsed;
 
   const result = await catchApi(() =>
