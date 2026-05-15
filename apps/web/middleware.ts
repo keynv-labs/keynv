@@ -1,5 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
+function getOrigin(req: NextRequest): string {
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
+  if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
+  return req.nextUrl.origin;
+}
+
 /**
  * Auth middleware. Public:
  *   - The landing pages: '/', '/login', '/register'
@@ -45,8 +52,8 @@ export function middleware(req: NextRequest) {
 
   const session = req.cookies.get('keynv_session')?.value;
   if (!session) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/login';
+    const origin = getOrigin(req);
+    const url = new URL('/login', origin);
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }

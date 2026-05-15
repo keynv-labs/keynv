@@ -25,8 +25,21 @@ function isSafeServerUrl(urlStr: string): boolean {
   }
 }
 
+function getOrigin(req: NextRequest): string {
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
+  if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
+  return req.nextUrl.origin;
+}
+
+function redirectTo(origin: string, path: string, withNext?: string): NextResponse {
+  const url = new URL(path, origin);
+  if (withNext) url.searchParams.set('next', withNext);
+  return NextResponse.redirect(url);
+}
+
 export async function GET(req: NextRequest) {
-  const origin = req.nextUrl.origin;
+  const origin = getOrigin(req);
   const referrer = req.headers.get('referer') || '';
   let next = req.nextUrl.searchParams.get('next') || '';
   if (!next) {
@@ -39,14 +52,8 @@ export async function GET(req: NextRequest) {
   }
   if (!next.startsWith('/')) next = '/dashboard';
 
-  function redirectTo(path: string, withNext?: string) {
-    const url = new URL(path, origin);
-    if (withNext) url.searchParams.set('next', withNext);
-    return NextResponse.redirect(url);
-  }
-
   const raw = req.cookies.get(COOKIE_NAME)?.value;
-  if (!raw) return redirectTo('/login', next);
+  if (!raw) return redirectTo(origin, '/login', next);
 
   let session: {
     server_url?: string;
@@ -57,13 +64,13 @@ export async function GET(req: NextRequest) {
   try {
     session = JSON.parse(raw);
   } catch {
-    return redirectTo('/login');
+    return redirectTo(origin, '/login');
   }
 
-  if (!session.refresh_token) return redirectTo('/login', next);
+  if (!session.refresh_token) return redirectTo(origin, '/login', next);
 
   const serverUrl = session.server_url || process.env.KEYNV_SERVER_URL;
-  if (!serverUrl || !isSafeServerUrl(serverUrl)) return redirectTo('/login');
+  if (!serverUrl || !isSafeServerUrl(serverUrl)) return redirectTo(origin, '/login');
 
   try {
     const res = await fetch(new URL('/v1/auth/refresh', serverUrl).toString(), {
@@ -72,7 +79,7 @@ export async function GET(req: NextRequest) {
       body: JSON.stringify({ refresh_token: session.refresh_token }),
     });
 
-    if (!res.ok) return redirectTo('/login', next);
+    if (!res.ok) return redirectTo(origin, '/login', next);
 
     const data = (await res.json()) as {
       access_token: string;
@@ -87,7 +94,7 @@ export async function GET(req: NextRequest) {
       access_expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
     };
 
-    const response = redirectTo(next);
+    const response = redirectTo(origin, next);
     response.cookies.set(COOKIE_NAME, JSON.stringify(updated), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -98,6 +105,6 @@ export async function GET(req: NextRequest) {
 
     return response;
   } catch {
-    return redirectTo('/login', next);
+    return redirectTo(origin, '/login', next);
   }
 }
