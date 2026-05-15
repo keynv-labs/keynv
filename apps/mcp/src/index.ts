@@ -1,5 +1,6 @@
 import { loadCredentials } from './credentials.js';
 import { runStdio } from './server.js';
+export { VERSION } from './version.js';
 
 async function main(): Promise<void> {
   const creds = await loadCredentials();
@@ -16,5 +17,3 @@ main().catch((err) => {
   process.stderr.write(`keynv-mcp: ${err instanceof Error ? err.message : String(err)}\n`);
   process.exit(1);
 });
-
-export const VERSION = '0.0.0-phase2';

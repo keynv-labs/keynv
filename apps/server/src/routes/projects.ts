@@ -1,4 +1,4 @@
-import { crypto } from '@keynv/core';
+import { crypto, validation } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
 import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
@@ -19,21 +19,13 @@ interface ProjectDeps {
 }
 
 const EnvironmentBody = z.object({
-  name: z
-    .string()
-    .min(1)
-    .max(24)
-    .regex(/^[a-z0-9][a-z0-9-]*$/),
-  tier: z.enum(['production', 'non-production']).default('non-production'),
-  require_approval: z.boolean().default(false),
+  name: validation.envName,
+  tier: validation.envTier,
+  require_approval: validation.requireApproval,
 });
 
 const CreateProjectBody = z.object({
-  name: z
-    .string()
-    .min(1)
-    .max(48)
-    .regex(/^[a-z0-9][a-z0-9-]*$/, 'project name must be lowercase kebab-case'),
+  name: validation.projectName,
   environments: z.array(EnvironmentBody).min(1).max(16),
 });
 
@@ -158,8 +150,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
     }));
 
     deps.db.transaction((tx) => {
-      tx
-        .insert(schema.projects)
+      tx.insert(schema.projects)
         .values({
           id: projectId,
           org_id: user.org_id,

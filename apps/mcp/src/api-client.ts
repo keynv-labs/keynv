@@ -1,6 +1,5 @@
 import type { Credentials } from './credentials.js';
-
-const AGENT = 'keynv-mcp/0.0.0';
+import { AGENT } from './version.js';
 
 interface RequestOpts {
   method?: 'GET' | 'POST';

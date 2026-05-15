@@ -93,7 +93,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Run E2E tests
-        run: pnpm --filter @keynv/tests-e2e test
+        run: pnpm test:e2e
 
   gitleaks:
     name: gitleaks (secret scan)

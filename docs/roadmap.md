@@ -69,8 +69,7 @@ The AI-isolation product:
 ## Phase 3 — Connection testers · DONE
 
 `packages/testers` adapter pattern with built-ins for postgres, mysql,
-redis, mongodb, ssh, http (basic / bearer / oauth2), AWS IAM
-(`sts:GetCallerIdentity`), GCP service-account, Azure SP. `keynv test
+redis, ssh, and http (basic / bearer / custom header). `keynv test
 @alias` returns OK / FAIL + latency, never the value.
 
 ## Phase 4 — Web UI for team leads · IN PROGRESS

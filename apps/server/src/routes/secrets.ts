@@ -1,4 +1,4 @@
-import { crypto } from '@keynv/core';
+import { crypto, validation } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
 import { findTester, runTest, testerEnum } from '@keynv/testers';
 import { and, desc, eq, isNull } from 'drizzle-orm';
@@ -19,25 +19,14 @@ interface SecretDeps {
   getKek: () => Uint8Array;
 }
 
-const envSchema = z
-  .string()
-  .min(1)
-  .max(24)
-  .regex(/^[a-z0-9][a-z0-9-]*$/);
-const valueSchema = z
-  .string()
-  .min(0)
-  .max(1024 * 64);
-const KEY_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
-
 const CreateSecretBody = z.object({
-  env: envSchema,
-  key: z.string().min(1).max(64).regex(KEY_RE),
-  value: valueSchema,
+  env: validation.envName,
+  key: validation.secretKey,
+  value: validation.secretValue,
 });
 
 const RotateSecretBody = z.object({
-  new_value: valueSchema,
+  new_value: validation.secretValue,
 });
 
 const TestBody = z.object({
@@ -351,8 +340,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const newVersion = prev.version + 1;
     const now = new Date().toISOString();
     deps.db.transaction((tx) => {
-      tx
-        .insert(schema.secrets)
+      tx.insert(schema.secrets)
         .values({
           id: newId,
           project_id: projectId,
@@ -365,8 +353,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
           created_by: user.id,
         })
         .run();
-      tx
-        .update(schema.secrets)
+      tx.update(schema.secrets)
         .set({ deleted_at: now })
         .where(eq(schema.secrets.id, prev.id))
         .run();

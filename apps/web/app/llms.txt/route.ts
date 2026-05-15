@@ -39,7 +39,7 @@ Full copy-paste prompts for each agent: ${SITE}/docs/ai-setup
 - [Quickstart guide](${SITE}/docs/quickstart): 15-minute self-host on Coolify
 - [GitHub repository](${REPO}): source, issues, releases
 - [README](${REPO}/blob/main/README.md): positioning, install, first-run
-- [Sign up on keynv.dev](${SITE}/register): hosted cloud instance (public beta, no credit card)
+- keynv Cloud is not available today; self-host is the working path. Track Phase 6 on the roadmap.
 
 ## Architecture & docs
 
@@ -64,13 +64,12 @@ Full copy-paste prompts for each agent: ${SITE}/docs/ai-setup
 - CLI: \`@keynv/cli\` on npm (Node 20+), compiled binary via \`curl | sh\` or Homebrew
 - MCP server: \`keynv-mcp\` — stdio + HTTP transports; \`use_secret(alias)\` returns a single-use ref token, never the value
 - Web dashboard: \`/projects/{id}/secrets\`, approval workflows, audit log, connection testers
-- Connection testers built-in: Postgres, MySQL, Redis, MongoDB, SSH, HTTP, AWS IAM, GCP SA, Azure SP
+- Connection testers built-in today: Postgres, MySQL, Redis, SSH, HTTP
 
-## Current version
+## Current status
 
-v0.1.0 — all five phases shipped and publicly available under MIT license.
-- Vault, CLI, AI-safety layer, connection testers, web dashboard, and deployment tooling all production-ready.
-- Phase 6 (commercial tier: Postgres adapter, SSO/SAML, HSM, keynv Cloud multi-tenant) on roadmap.
+v0.1.0 release candidate — self-hosted vault, CLI, AI-safety layer, connection testers, web dashboard, and deployment tooling are available under MIT license.
+- keynv Cloud and the commercial tier are Phase 6 roadmap items, not shipped features.
 
 ## Contact
 

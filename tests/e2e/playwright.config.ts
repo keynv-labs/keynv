@@ -1,6 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -8,7 +10,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'html',
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -18,13 +20,13 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  ...(process.env.CI
+  ...(process.env.E2E_BASE_URL
     ? {}
     : {
         webServer: {
           command: 'pnpm --filter @keynv/web dev --port 3000',
-          url: 'http://localhost:3000',
-          reuseExistingServer: true,
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
           cwd: fileURLToPath(new URL('../../', import.meta.url)),
         },
       }),

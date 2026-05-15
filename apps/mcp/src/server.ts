@@ -7,6 +7,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { McpApiClient } from './api-client.js';
 import type { Credentials } from './credentials.js';
 import { issueReferenceToken } from './tokens.js';
+import { VERSION } from './version.js';
 
 interface ServerDeps {
   creds: Credentials;
@@ -101,7 +102,7 @@ function jsonError(message: string) {
 
 export function buildServer(deps: ServerDeps): Server {
   const server = new Server(
-    { name: 'keynv-mcp', version: '0.0.0-phase2' },
+    { name: 'keynv-mcp', version: VERSION },
     { capabilities: { tools: {} } },
   );
   const api = new McpApiClient(deps.creds);

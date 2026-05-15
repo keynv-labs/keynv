@@ -1,7 +1,8 @@
-import { z } from 'zod';
+import { validation } from '@keynv/core';
+import type { z } from 'zod';
 import type { ZodType, ZodTypeDef } from 'zod';
 
-export const testerEnum = z.enum(['postgres', 'mysql', 'redis', 'ssh', 'http']);
+export const testerEnum = validation.testerName;
 export type TesterType = z.infer<typeof testerEnum>;
 
 /**

@@ -54,26 +54,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `keynv init --yes` flag — auto-scans .env files, classifies entries, creates project, uploads secrets, and writes `.keynv.env` without any prompts. Enables fully automated CI/CD migration.
 - `resolveProjectId` now performs case-insensitive project name matching.
 - `keynv exec` subprocess PATH now includes nearest `node_modules/.bin` so project-local tools (`next`, `vite`, etc.) work without `npx`.
-
-### Fixed
-- CLI no longer stays stuck in the interactive menu loop after completing login + init — auto-exits with a clean "All set." message.
-- `keynv init --dry-run` no longer requires an interactive terminal; works in CI with `--env-file` and `--secret` flags.
-- `keynv secret list` now correctly extracts project names from `@project.env.key` aliases via `parseAlias()` instead of naive string splitting.
-- Secret key format preserved — env var names like `DATABASE_URL` or `OPENAI_API_KEY` keep their original case and underscores instead of being lowercased to kebab-case.
-- Server VERSION now reads from `package.json` instead of a hardcoded string that went out of sync.
-- Onboarding checklist in web dashboard uses a placeholder server URL instead of hardcoded `https://api.keynv.dev`.
-
-## [0.1.0-rc.14] — 2026-05-13
-
-### Added
 - Public registration endpoint `POST /v1/auth/register` — opt-in via
   `KEYNV_PUBLIC_REGISTRATION=true`. Creates a fresh org + owner user
   atomically and returns a JWT pair. Tighter per-IP rate limit
   (`KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE`, default 5/min) lives on
   this route alone; authed routes keep the per-user budget. Self-host
   deployments default to off, so the open-source binary never grows
-  multi-tenant signup unless the operator chooses it. Powers the
-  hosted **keynv Cloud** (keynv.dev) preview.
+  multi-tenant signup unless the operator chooses it. This prepares a
+  future hosted keynv Cloud preview without making it a shipped Cloud
+  feature.
 - Web `/register` page mirrors the login flow. Falls back to the
   login page with a `registration_disabled` reason banner when the
   current instance has the flag off.
@@ -84,6 +73,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   schema in `@keynv/core`).
 
 ### Fixed
+- CLI no longer stays stuck in the interactive menu loop after completing login + init — auto-exits with a clean "All set." message.
+- `keynv init --dry-run` no longer requires an interactive terminal; works in CI with `--env-file` and `--secret` flags.
+- `keynv secret list` now correctly extracts project names from `@project.env.key` aliases via `parseAlias()` instead of naive string splitting.
+- Secret key format preserved — env var names like `DATABASE_URL` or `OPENAI_API_KEY` keep their original case and underscores instead of being lowercased to kebab-case.
+- Server VERSION now reads from `package.json` instead of a hardcoded string that went out of sync.
+- Onboarding checklist in web dashboard uses a placeholder server URL instead of hardcoded `https://api.keynv.dev`.
 - `keynv project describe <name>` now accepts project name (in addition to ID). Previously only accepted ID.
 - `keynv init` gains `--env-file`, `--project`, `--env`, `--secret` flags for non-interactive/CI usage.
 - CLI authorize page and project-switcher filter now use the shared `<Input />` component for visual consistency.
@@ -94,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Onboarding checklist dismissal is now persisted server-side (`users.onboarding_dismissed_at`) so it persists across devices and browsers. DB migration: `0005_onboarding_dismissed.sql`.
 
 ### Notes
-- During public beta no usage limits are enforced. Free-tier quotas
+- For the future hosted public beta, no usage limits are enforced yet. Free-tier quotas
   (3 projects · 3 envs · 5 members) and paid plans live in the
   closed-source `packages/ee/billing/` path that ships in Phase 6.
   Early users will be grandfathered onto a generous plan when paid
@@ -132,9 +127,9 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
   secrets to vault, writes `.keynv.env` with alias references only. Safe to commit.
 
 #### Connection testers (Phase 3)
-- `packages/testers` adapter pattern. Built-in: Postgres, MySQL, Redis, MongoDB,
-  SSH, HTTP (basic/bearer/oauth2), AWS IAM (`sts:GetCallerIdentity`), GCP service
-  account, Azure SP. `keynv test @alias` reports OK/FAIL + latency, never values.
+- `packages/testers` adapter pattern. Built-in: Postgres, MySQL, Redis, SSH, HTTP
+  (basic/bearer/custom header). `keynv test @alias` reports OK/FAIL + latency,
+  never values.
 
 #### Web UI for team leads (Phase 4)
 - Next.js 15 App Router dashboard (`apps/web`), React 19, Tailwind 4, Radix primitives.

@@ -153,6 +153,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@keynv/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.4
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -258,6 +261,9 @@ importers:
 
   packages/testers:
     dependencies:
+      '@keynv/core':
+        specifier: workspace:*
+        version: link:../core
       '@keynv/redactor':
         specifier: workspace:*
         version: link:../redactor

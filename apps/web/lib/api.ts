@@ -4,10 +4,11 @@
  * the access token directly.
  */
 import { redirect } from 'next/navigation';
+import pkg from '../package.json';
 import { env } from './env';
 import { type Session, getSession } from './session';
 
-const AGENT = 'keynv-web/0.0.0';
+const AGENT = `keynv-web/${pkg.version}`;
 
 export interface ApiError extends Error {
   status: number;

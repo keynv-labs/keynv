@@ -13,6 +13,7 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
+    "@keynv/core": "workspace:*",
     "@keynv/redactor": "workspace:*",
     "ioredis": "^5.4.1",
     "mysql2": "^3.11.5",

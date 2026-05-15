@@ -6,7 +6,7 @@
     "composite": true,
     "types": ["node"]
   },
-  "references": [{ "path": "../redactor" }],
+  "references": [{ "path": "../core" }, { "path": "../redactor" }],
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]
 }

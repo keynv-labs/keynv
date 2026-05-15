@@ -3,12 +3,12 @@
  * initial Owner account. Idempotent guards prevent accidental re-init.
  *
  * Password input ranking (audit finding H4 — argv leaks via /proc):
- *   1. KEYNV_BOOTSTRAP_PASSWORD env var (recommended for automation)
+ *   1. KEYNV_BOOTSTRAP_OWNER_PASSWORD env var (recommended for automation)
  *   2. stdin (interactive, hidden — recommended for humans)
  *   3. --owner-password argv (refused unless --unsafe-allow-argv is set)
  *
  * Usage:
- *   KEYNV_BOOTSTRAP_PASSWORD='...' pnpm --filter @keynv/server bootstrap \
+ *   KEYNV_BOOTSTRAP_OWNER_PASSWORD='...' pnpm --filter @keynv/server bootstrap \
  *     --owner-email lead@team.com --org-name acme
  */
 
@@ -76,16 +76,22 @@ async function main(): Promise<void> {
   }
 
   const argvPassword = values['owner-password'];
-  const envPassword = process.env['KEYNV_BOOTSTRAP_PASSWORD'];
+  const envPassword = process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD'];
+  const legacyEnvPassword = process.env['KEYNV_BOOTSTRAP_PASSWORD'];
 
   let ownerPassword: string;
   if (envPassword) {
     ownerPassword = envPassword;
+  } else if (legacyEnvPassword) {
+    console.warn(
+      'bootstrap: KEYNV_BOOTSTRAP_PASSWORD is deprecated; use KEYNV_BOOTSTRAP_OWNER_PASSWORD.',
+    );
+    ownerPassword = legacyEnvPassword;
   } else if (argvPassword) {
     if (!values['unsafe-allow-argv']) {
       console.error(
         'bootstrap: refusing --owner-password on argv (visible via /proc/<pid>/cmdline). ' +
-          'Use KEYNV_BOOTSTRAP_PASSWORD env var or pipe the password on stdin. ' +
+          'Use KEYNV_BOOTSTRAP_OWNER_PASSWORD env var or pipe the password on stdin. ' +
           'Pass --unsafe-allow-argv to override.',
       );
       process.exit(2);
@@ -129,6 +135,9 @@ async function main(): Promise<void> {
   // Reduce password lifetime in process memory; not a guarantee but
   // helps if the process is then re-used (it isn't, but defensive).
   ownerPassword = '';
+  if (process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD']) {
+    delete process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD'];
+  }
   if (process.env['KEYNV_BOOTSTRAP_PASSWORD']) delete process.env['KEYNV_BOOTSTRAP_PASSWORD'];
 }
 
