@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,6 +72,7 @@ export function DeleteProjectDialog({
             }}
             className="mt-5 space-y-4"
           >
+            <CsrfField />
             <input type="hidden" name="project_id" value={projectId} />
 
             <label className="block">

@@ -76,7 +76,7 @@ Run on your laptop (Node.js is a prerequisite — `node -e` works on all platfor
 # (a) JWT signing secret — server signs every CLI access token with this
 node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 
-# (b) Owner login password — what YOU will type into `keynv login`
+# (b) Owner login password — what YOU will use when connecting from `keynv`
 node -e "console.log(require('crypto').randomBytes(24).toString('base64'))"
 ```
 
@@ -113,7 +113,7 @@ In the resource's **Environment Variables** tab:
 |---|---|:-:|---|
 | `KEYNV_JWT_SECRET` | the 48‑byte value from Step 1 | ✓ | Server signs/verifies CLI access tokens |
 | `KEYNV_BOOTSTRAP_OWNER_EMAIL` | your login email | — | First user account auto-bootstrap creates |
-| `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | the 24‑byte value from Step 1 | ✓ | Your `keynv login` password (Argon2id-hashed). 12+ chars |
+| `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | the 24‑byte value from Step 1 | ✓ | Your owner login password for the `keynv` TUI (Argon2id-hashed). 12+ chars |
 | `KEYNV_BOOTSTRAP_ORG_NAME` | e.g. `acme` | — | Org name attached to the owner. Optional, defaults to `default` |
 | `KEYNV_PUBLIC_REGISTRATION` | `true` (Cloud) / `false` (self-host) | — | Opens `POST /v1/auth/register` so anyone can sign up. Leave `false`/blank unless you're running a public Cloud-style instance |
 | `KEYNV_LOG_LEVEL` | `info` | — | Set to `debug` while troubleshooting |
@@ -234,9 +234,8 @@ Coolify confirms it.
 On your laptop:
 
 ```bash
-keynv config set server-url https://api.<your-domain>
-keynv login --email you@example.com
-# paste the owner password from Step 1
+keynv
+# choose Self-hosted server, enter https://api.<your-domain>, then complete browser auth
 
 # smoke test
 keynv project create demo

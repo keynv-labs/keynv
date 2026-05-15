@@ -80,10 +80,10 @@ The server auto-bootstraps the owner account on first start. You will see:
 keynv-server listening on http://localhost:8080
 ```
 
-Then log in:
+Then connect from the TUI and choose **Self-hosted server**:
 
 ```bash
-keynv login --server http://localhost:8080
+keynv
 ```
 
 The local server stores its SQLite database at `./keynv.db` and the master key
@@ -98,11 +98,12 @@ If someone on your team already deployed the server, you only need the CLI:
 ```bash
 npm install -g @keynv/cli
 # or: pnpm add -g @keynv/cli
-keynv login --server https://api.keynv.example.com
+keynv
 keynv whoami
 ```
 
-If you use the hosted version: `keynv login` (no `--server` needed).
+The TUI lets you choose keynv.dev or a self-hosted API URL, then opens your
+browser to connect.
 
 ---
 
@@ -126,20 +127,20 @@ project access.
 
 ## Wiring your AI agent
 
-Once the CLI is installed and logged in, run `keynv init` in any project root.
-It scans `.env` files, uploads detected secrets, writes a `.keynv.env` that is
-safe to commit, and (optionally) wraps `package.json` scripts with
-`keynv exec`.
+Once the CLI is connected, run `keynv` in any project root and choose **Set up
+this project**. It scans `.env` files, uploads detected secrets, writes a
+`.keynv.env` that is safe to commit, and (optionally) wraps `package.json`
+scripts with `keynv exec`.
 
 ### Claude Code
 
-`keynv init` creates an `AGENTS.md` (or appends to an existing one) that tells
+The setup flow creates an `AGENTS.md` (or appends to an existing one) that tells
 Claude Code to prefer `keynv exec --`. No further configuration needed.
 Restart Claude Code for the changes to take effect.
 
 ### OpenCode
 
-Same as Claude Code — `keynv init` handles it. Restart your session.
+Same as Claude Code — the setup flow handles it. Restart your session.
 
 ### Cursor / Windsurf / Copilot
 
@@ -152,7 +153,7 @@ sees names but never values. Commands that need secrets must go through
 
 If your agent doesn't have built-in keynv support:
 
-1. Run `keynv init` to create `.keynv.env` and upload secrets.
+1. Run `keynv` and choose **Set up this project** to create `.keynv.env` and upload secrets.
 2. Configure your agent's "allowed commands" list to include `keynv exec`.
 3. When the agent needs a secret, prompt: "Run `keynv exec -- pg_dump -p @myproject.dev.db_pass`".
 

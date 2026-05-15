@@ -89,7 +89,7 @@ Same vault, two surfaces:
 - **Team secrets manager** — encrypted SQLite vault, RBAC, append-only
   hash-chained audit, CLI for daily ops, web UI for team leads.
 - **AI-safety layer** — `keynv exec` shell wrapper, `keynv-mcp` MCP server,
-  output redactor, `keynv init` for agent onboarding.
+  output redactor, TUI-guided agent onboarding.
 
 You decide how aggressively to lock each agent. They share the vault.
 
@@ -109,21 +109,22 @@ curl https://api.keynv.example.com/v1/health
 # → {"ok":true,"version":"0.1.0",...}
 ```
 
-Install the CLI and log in to your self-hosted instance:
+Install the CLI and open the TUI:
 
 ```bash
 npm install -g @keynv/cli
 # or: pnpm add -g @keynv/cli
-keynv login --server https://api.keynv.example.com
+keynv
 ```
 
-The first run opens your browser, stores the session in the OS keychain, then
-asks whether to initialize the current project.
+The first run lets you choose keynv.dev or your self-hosted API URL, opens your
+browser, stores the session in the OS keychain, then asks whether to set up the
+current project.
 
 From the menu you create projects, add environments, and load secrets without
 memorizing subcommands.
 
-If you prefer scripts, the same things work as one-shots:
+If you prefer scripts or CI, the same things still work as one-shots:
 
 ```bash
 keynv project create demo
@@ -137,8 +138,9 @@ keynv secret create @demo.dev.api_key --value 'whatever'
 
 ### Daily use — `.keynv.env`
 
-Create a `.keynv.env` file at your project root. **It is safe to commit** — it
-carries alias references, never values.
+Run `keynv` in your project root and choose **Set up this project**. It creates a
+`.keynv.env` file for you. **It is safe to commit** — it carries alias
+references, never values.
 
 ```bash
 # .keynv.env  (commit this!)

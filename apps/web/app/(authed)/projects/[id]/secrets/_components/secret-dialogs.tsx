@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +62,7 @@ export function CreateSecretDialog({
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
+          <CsrfField />
           <input type="hidden" name="project_id" value={projectId} />
 
           <Field label="Environment">
@@ -141,6 +143,7 @@ export function RotateSecretDialog({
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
+          <CsrfField />
           <input type="hidden" name="project_id" value={projectId} />
           <input type="hidden" name="env" value={env} />
           <input type="hidden" name="key" value={keyName} />
@@ -179,19 +182,27 @@ export function DeleteSecretDialog({
   env,
   keyName,
   alias,
+  onOptimisticDelete,
+  onDeleteError,
 }: DialogShellProps & {
   projectId: string;
   env: string;
   keyName: string;
   alias: string;
+  onOptimisticDelete: (alias: string) => void;
+  onDeleteError: (alias: string) => void;
 }) {
   const [confirmText, setConfirmText] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const expected = `${env}.${keyName}`;
   const matches = confirmText === expected;
 
   // reset typed text whenever the dialog re-opens
   useEffect(() => {
-    if (!open) setConfirmText('');
+    if (!open) {
+      setConfirmText('');
+      setError(null);
+    }
   }, [open]);
 
   return (
@@ -215,11 +226,19 @@ export function DeleteSecretDialog({
 
         <form
           action={async (fd) => {
-            await deleteSecretAction({}, fd);
+            setError(null);
+            onOptimisticDelete(alias);
+            const result = await deleteSecretAction({}, fd);
+            if (result.error) {
+              onDeleteError(alias);
+              setError(result.error);
+              return;
+            }
             onOpenChange(false);
           }}
           className="mt-4 space-y-3"
         >
+          <CsrfField />
           <input type="hidden" name="project_id" value={projectId} />
           <input type="hidden" name="env" value={env} />
           <input type="hidden" name="key" value={keyName} />
@@ -240,6 +259,8 @@ export function DeleteSecretDialog({
               className={cn(matches && 'border-danger')}
             />
           </Field>
+
+          {error ? <ErrorBlock message={error} /> : null}
 
           <AlertDialogFooter>
             <AlertDialogCancel asChild>

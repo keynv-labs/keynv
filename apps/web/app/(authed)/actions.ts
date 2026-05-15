@@ -1,6 +1,7 @@
 'use server';
 
 import { api } from '@/lib/api';
+import { requireCsrf, requireCsrfToken } from '@/lib/csrf';
 import { clearSession, getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
@@ -12,7 +13,11 @@ export async function dismissOnboardingAction(): Promise<void> {
   }
 }
 
-export async function logoutAction(): Promise<void> {
+export async function logoutAction(formData: FormData): Promise<void> {
+  const csrf = requireCsrf(formData);
+  if (csrf)
+    redirect('/dashboard?toast=custom&toastMsg=Security+check+failed.+Refresh+and+try+again.');
+
   const session = await getSession();
   if (session) {
     try {
@@ -28,7 +33,11 @@ export async function logoutAction(): Promise<void> {
   redirect('/login?toast=signed_out');
 }
 
-export async function switchOrgAction(orgId: string): Promise<void> {
+export async function switchOrgAction(orgId: string, formData: FormData): Promise<void> {
+  const csrf = requireCsrf(formData);
+  if (csrf)
+    redirect('/dashboard?toast=custom&toastMsg=Security+check+failed.+Refresh+and+try+again.');
+
   const { getSession, setSession } = await import('@/lib/session');
   const session = await getSession();
   if (!session) redirect('/login');
@@ -42,7 +51,11 @@ export async function switchOrgAction(orgId: string): Promise<void> {
 
 export async function createOrgAction(
   orgName: string,
+  csrfToken?: string | null,
 ): Promise<{ org_id?: string; error?: string }> {
+  const csrf = requireCsrfToken(csrfToken);
+  if (csrf) return csrf;
+
   try {
     const result = await api<{ id: string }>('/v1/org', {
       method: 'POST',

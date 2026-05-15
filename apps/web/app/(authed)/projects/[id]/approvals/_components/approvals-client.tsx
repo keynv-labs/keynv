@@ -1,6 +1,7 @@
 'use client';
 
 import { loadMoreProjectApprovalsAction } from '@/app/(authed)/actions';
+import { CsrfField } from '@/components/security/csrf-field';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -290,6 +291,7 @@ function GrantDialog({
           </DialogDescription>
 
           <form action={action} className="mt-4 space-y-3">
+            <CsrfField />
             <input type="hidden" name="project_id" value={projectId} />
             <input type="hidden" name="approval_id" value={approvalId} />
 
@@ -376,6 +378,7 @@ function DenyDialog({
           </div>
 
           <form action={action} className="mt-4 space-y-3">
+            <CsrfField />
             <input type="hidden" name="project_id" value={projectId} />
             <input type="hidden" name="approval_id" value={approvalId} />
 

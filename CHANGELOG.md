@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc.17] — 2026-05-15
+
+### Added
+- **TUI-first onboarding**: running `keynv` now guides first-time users through keynv.dev or self-hosted connection, then offers to set up the current project from the same menu. Users no longer need to discover `keynv login` or `keynv init` for the happy path.
+- **Release smoke checks**: the release workflow now verifies the built CLI reports the tag version before publishing, then verifies the freshly published npm package with `npm exec` before completing.
+- **Web CSRF protection**: mutating web forms now include signed CSRF tokens, and server actions reject missing, expired, or tampered tokens with a safe error.
+- **Web session sealing**: web session cookies now use AES-256-GCM sealing with legacy signed-cookie fallback, so refresh tokens are no longer stored as readable JSON in the browser cookie.
+- **Root error boundary**: added a global public error boundary for root/layout-level failures.
+
+### Changed
+- Documentation now presents `keynv` as the primary command for connecting accounts and setting up projects; direct `login`/`init` commands remain available for automation and advanced use.
+- Secret deletion in the web UI now hides the deleted alias optimistically and restores it if the server action fails.
+
+### Fixed
+- The token refresh route now decodes the session through the shared session helper instead of parsing raw cookie text, and no longer trusts a client-controlled `server_url` fallback.
+- CLI and docs no longer point users toward command-only setup when the guided TUI is available.
+- Release publishing no longer masks npm publish failures with `|| true`, preventing stale npm artifacts from looking successful.
+
 ## [0.1.0-rc.16] — 2026-05-15
 
 ### Fixed
@@ -173,5 +191,7 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
 - **Postgres adapter, KEK rotation flow, MFA, SSO/SAML, multi-region** —
   Phase 6 (commercial tier + keynv Cloud).
 
-[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.1...HEAD
+[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.17...HEAD
+[0.1.0-rc.17]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.16...v0.1.0-rc.17
+[0.1.0-rc.16]: https://github.com/keynv-labs/keynv/releases/tag/v0.1.0-rc.16
 [0.1.0-rc.1]: https://github.com/keynv-labs/keynv/releases/tag/v0.1.0-rc.1

@@ -81,7 +81,7 @@ the error message.
     const client = new ApiClient();
     await client.ensureHydrated();
     if (!client.isLoggedIn) {
-      this.context.stderr.write('keynv: not logged in. Run `keynv login` first.\n');
+      this.context.stderr.write('keynv: not connected. Run `keynv` first.\n');
       return 1;
     }
 

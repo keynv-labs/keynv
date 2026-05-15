@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { ErrorBlock, SuccessBlock } from '@/components/ui/error-block';
@@ -12,6 +13,7 @@ export function UpdateOrgForm() {
 
   return (
     <form action={action} className="space-y-5">
+      <CsrfField />
       <Card>
         <CardTitle>
           <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />

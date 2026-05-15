@@ -68,7 +68,7 @@ We do **not** use:
 
 The `keynv` CLI keeps an SQLite cache at `~/.keynv/cache.db`. The cache holds wrapped DEKs and ciphertexts so that `keynv exec` works offline for short windows.
 
-- **Cache KEK**: a 32-byte random key, generated at first `keynv login`. Stored in the OS keychain (`keytar` abstraction over macOS Keychain / Windows Credential Manager / libsecret).
+- **Cache KEK**: a 32-byte random key, generated at first CLI connection. Stored in the OS keychain (`keytar` abstraction over macOS Keychain / Windows Credential Manager / libsecret).
 - **Sealing**: each cache row is sealed with the cache KEK using libsodium `secretbox`. Tampering with the file breaks the seal; the CLI re-fetches.
 - **TTL**: default 5 minutes. Configurable per project (`cache_ttl_s` in `.keynv.toml`).
 - **Eviction**: on logout, the cache file is overwritten with zeros and unlinked.

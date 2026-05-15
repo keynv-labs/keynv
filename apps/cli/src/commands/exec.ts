@@ -91,7 +91,7 @@ spelled \`--from\` to avoid the collision.)
     const client = new ApiClient();
     await client.ensureHydrated();
     if (!client.isLoggedIn) {
-      this.context.stderr.write('keynv: not logged in. Run `keynv login` first.\n');
+      this.context.stderr.write('keynv: not connected. Run `keynv` first.\n');
       return 1;
     }
 
@@ -128,7 +128,7 @@ spelled \`--from\` to avoid the collision.)
 
     if (!envFileLoaded && !this.noEnvFile && !this.envFile && !process.env.KEYNV_ENV_FILE) {
       this.context.stderr.write(
-        `keynv: no ${ENV_FILE_BASENAME} found in this directory or any parent.\n       Run \`keynv init\` in your project root to migrate secrets and create one.\n`,
+        `keynv: no ${ENV_FILE_BASENAME} found in this directory or any parent.\n       Run \`keynv\` in your project root and choose "Set up this project" to create one.\n`,
       );
     }
 

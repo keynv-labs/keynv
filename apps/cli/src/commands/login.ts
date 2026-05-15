@@ -236,7 +236,7 @@ export class WhoamiCommand extends Command {
       const client = new ApiClient();
       await client.ensureHydrated();
       if (!client.isLoggedIn) {
-        this.context.stderr.write('keynv: not logged in. Run `keynv login`.\n');
+        this.context.stderr.write('keynv: not connected. Run `keynv`.\n');
         return 1;
       }
       const data = await client.request<{

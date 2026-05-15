@@ -93,13 +93,13 @@ interface ProjectChoice {
 }
 
 export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Promise<InitOutcome> {
-  intro('keynv init');
+  intro('Set up this project');
 
   // 1. Discover project root + env files ------------------------------------
   const root = findProjectRoot(opts.cwd);
   if (root === null) {
     cancel(
-      "Couldn't find a project root (no package.json, pyproject.toml, Cargo.toml, go.mod, or .git anywhere up the tree). Run `keynv init` inside a project directory.",
+      'Couldn\'t find a project root (no package.json, pyproject.toml, Cargo.toml, go.mod, or .git anywhere up the tree). Run `keynv` inside a project directory and choose "Set up this project".',
     );
     return { exitCode: 1 };
   }
@@ -718,7 +718,7 @@ function composeKeynvEnv(opts: ComposeOpts): string[] {
       lines.push(...trimmed.split('\n'));
       lines.push('');
     }
-    lines.push(`# >>> keynv init  ${new Date().toISOString().slice(0, 10)} >>>`);
+    lines.push(`# >>> keynv setup  ${new Date().toISOString().slice(0, 10)} >>>`);
   } else {
     lines.push('# .keynv.env — alias references to vault secrets.');
     lines.push('# Safe to commit: this file contains references, not values.');
@@ -740,7 +740,7 @@ function composeKeynvEnv(opts: ComposeOpts): string[] {
     }
   }
   if (mergeWithExisting !== null) {
-    lines.push('# <<< keynv init <<<');
+    lines.push('# <<< keynv setup <<<');
   }
   return lines;
 }

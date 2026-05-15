@@ -1,6 +1,6 @@
 {
   "name": "@keynv/testers",
-  "version": "0.1.0-rc.16",
+  "version": "0.1.0-rc.17",
   "private": true,
   "description": "keynv pluggable connection testers (postgres, mysql, redis, ssh, http, cloud IAM).",
   "type": "module",

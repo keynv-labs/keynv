@@ -117,7 +117,7 @@ export class ApiClient {
   async request<T = unknown>(path: string, opts: FetchOptions = {}): Promise<T> {
     if (this.hydrated) await this.hydrated;
     if (!this.creds && opts.authed !== false) {
-      throw clientError(401, 'auth.missing_token', 'Not logged in. Run `keynv login` first.');
+      throw clientError(401, 'auth.missing_token', 'Not connected. Run `keynv` first.');
     }
     const headers: Record<string, string> = {
       'content-type': 'application/json',

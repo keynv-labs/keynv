@@ -2,6 +2,7 @@
 
 import { type ActionState, parseOr } from '@/lib/action-result';
 import { type ApiError, api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { email, orgName, passwordMin12 } from '@/lib/schemas';
 import { setSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
@@ -27,6 +28,9 @@ export async function registerAction(
   _prev: RegisterState,
   formData: FormData,
 ): Promise<RegisterState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(Body, formData, ['email', 'password', 'org_name', 'next']);
   if (!parsed.success) {
     return { error: 'Email, organization name, and a 12+ character password are required.' };

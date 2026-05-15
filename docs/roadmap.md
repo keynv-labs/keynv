@@ -51,7 +51,7 @@ The AI-isolation product:
   inside a privileged subprocess the agent's process tree can't read
 - `keynv exec` auto-loads a project-local `.keynv.env` mapping file so
   daily commands don't need flags
-- `keynv init` walks an existing project's `.env` files, uploads
+- the `keynv` setup flow walks an existing project's `.env` files, uploads
   detected secrets to the vault, and writes `.keynv.env` references
 - `keynv-mcp` MCP server (stdio + http) that returns single-use reference
   tokens, never values
@@ -60,7 +60,7 @@ The AI-isolation product:
 
 > Per-agent integration installers (`keynv install claude-code`,
 > `cursor`, `aider`, `codex`, `opencode`) shipped in early rcs but were
-> removed in 0.1.0-rc.8 once `keynv init` made them redundant — with
+> removed in 0.1.0-rc.8 once project setup made them redundant — with
 > the source `.env` migrated and removed, there is no file for the
 > agent to read, and the deny-list patterns were defending a
 > non-existent target. The `keynv exec` wrapper plus the redactor

@@ -1,8 +1,10 @@
 import { Logomark } from '@/components/brand/logomark';
+import { CsrfField, CsrfProvider } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
 import { SkipLink } from '@/components/ui/skip-link';
+import { createCsrfToken } from '@/lib/csrf';
 import { getSession } from '@/lib/session';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -21,9 +23,10 @@ export default async function CliAuthorizePage({
     const next = code ? `/cli/authorize?code=${encodeURIComponent(code)}` : '/cli/authorize';
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
+  const csrfToken = createCsrfToken();
 
   return (
-    <>
+    <CsrfProvider token={csrfToken}>
       <SkipLink />
       <main
         id="main"
@@ -68,6 +71,7 @@ export default async function CliAuthorizePage({
               ) : null}
 
               <form action={authorizeCliAction} className="mt-6 space-y-4">
+                <CsrfField />
                 <label className="block">
                   <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
                     CLI code
@@ -88,6 +92,6 @@ export default async function CliAuthorizePage({
           )}
         </section>
       </main>
-    </>
+    </CsrfProvider>
   );
 }

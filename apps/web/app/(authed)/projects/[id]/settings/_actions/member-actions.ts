@@ -2,6 +2,7 @@
 
 import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { email, projectId, projectRole } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -18,6 +19,9 @@ export async function addMemberAction(
   _prev: MemberActionState,
   formData: FormData,
 ): Promise<MemberActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(AddBody, formData, ['project_id', 'email', 'role']);
   if (!parsed.success) return parsed;
 
@@ -37,6 +41,9 @@ export async function removeMemberAction(
   _prev: MemberActionState,
   formData: FormData,
 ): Promise<MemberActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const project_id = String(formData.get('project_id') ?? '');
   const user_id = String(formData.get('user_id') ?? '');
   if (!project_id || !user_id) return { error: 'Missing project_id or user_id.' };

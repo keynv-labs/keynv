@@ -14,7 +14,7 @@ export async function runLoginFlow(
 ): Promise<boolean> {
   const server = options.server ?? DEFAULT_SERVER_URL;
   const s = spinner();
-  s.start('Waiting for authorization');
+  s.start(`Opening browser for ${server}`);
   let creds: Credentials;
   try {
     creds = await runBrowserAuth(server);

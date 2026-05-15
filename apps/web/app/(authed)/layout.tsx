@@ -1,8 +1,10 @@
 import { AppPalette } from '@/components/command-palette/app-palette';
 import { MobileTopBar } from '@/components/layout/mobile-top-bar';
 import { Sidebar } from '@/components/layout/sidebar';
+import { CsrfProvider } from '@/components/security/csrf-field';
 import { SkipLink } from '@/components/ui/skip-link';
 import { api } from '@/lib/api';
+import { createCsrfToken } from '@/lib/csrf';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -28,20 +30,13 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   }
 
   const activeOrgId = session.active_org_id || session.org_id;
+  const csrfToken = createCsrfToken();
 
   return (
-    <div className="flex min-h-screen">
-      <SkipLink />
-      <Sidebar
-        email={session.email}
-        role={session.org_role}
-        orgId={session.org_id}
-        activeOrgId={activeOrgId}
-        activeOrgName={activeOrgName}
-        orgs={orgs}
-      />
-      <div className="flex-1 min-w-0 flex flex-col">
-        <MobileTopBar
+    <CsrfProvider token={csrfToken}>
+      <div className="flex min-h-screen">
+        <SkipLink />
+        <Sidebar
           email={session.email}
           role={session.org_role}
           orgId={session.org_id}
@@ -49,11 +44,21 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
           activeOrgName={activeOrgName}
           orgs={orgs}
         />
-        <main id="main" className="flex-1 min-w-0">
-          <div className="mx-auto max-w-6xl px-4 py-7 md:px-8 md:py-10">{children}</div>
-        </main>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <MobileTopBar
+            email={session.email}
+            role={session.org_role}
+            orgId={session.org_id}
+            activeOrgId={activeOrgId}
+            activeOrgName={activeOrgName}
+            orgs={orgs}
+          />
+          <main id="main" className="flex-1 min-w-0">
+            <div className="mx-auto max-w-6xl px-4 py-7 md:px-8 md:py-10">{children}</div>
+          </main>
+        </div>
+        <AppPalette />
       </div>
-      <AppPalette />
-    </div>
+    </CsrfProvider>
   );
 }

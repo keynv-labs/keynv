@@ -33,7 +33,7 @@ Out of scope:
 | Threat | Mitigation |
 |---|---|
 | Fake `keynv` binary on PATH spoofs the real one and exfiltrates. | Binaries are signed (Phase 5); installer verifies signature. Documentation tells users to verify signatures and pin paths. |
-| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls. | `keynv init` writes the MCP config with an absolute path; the CLI asserts the configured `command` matches the keynv-mcp binary on first run. | `tests/security/mcp-reference-token.test.ts` | 🟡 Mitigated by inspection |
+| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls. | The setup flow writes the MCP config with an absolute path; the CLI asserts the configured `command` matches the keynv-mcp binary on first run. | `tests/security/mcp-reference-token.test.ts` | 🟡 Mitigated by inspection |
 | Replay of an old auth token. | JWTs are short-lived (15 min). Refresh tokens are bound to a device fingerprint. |
 | Forged audit entries. | Audit chain is hash-chained: each row includes SHA-256 of previous row. `keynv audit verify` detects tampering. |
 
@@ -62,7 +62,7 @@ This is where keynv earns its keep. Every layer addresses one or more disclosure
 **Without keynv**: agent uses its file-read tool, gets back plaintext, forwards to LLM provider.
 
 **With keynv**:
-- `keynv init` migrates the project's existing `.env` into the vault and writes a
+- The setup flow migrates the project's existing `.env` into the vault and writes a
   `.keynv.env` containing alias references (no values). The original `.env` is
   removed by default; the leak source no longer exists on disk regardless of the
   agent's read permissions.
@@ -150,7 +150,7 @@ For Phase 0 we walk through the [OWASP LLM Top 10 (2025 update)](https://genai.o
 |---|---|
 | LLM01: Prompt Injection | Privileged subprocess + RBAC + approval workflow limit blast radius. Cannot prevent injection itself. |
 | LLM02: Sensitive Information Disclosure | Core focus. Covered by safety layer in full. |
-| LLM03: Supply Chain | `keynv init` walks `.env` files and uploads secrets to the vault. MCP transport returns reference tokens not values. |
+| LLM03: Supply Chain | The setup flow walks `.env` files and uploads secrets to the vault. MCP transport returns reference tokens not values. |
 | LLM04: Data and Model Poisoning | Out of scope (we're not training). |
 | LLM05: Improper Output Handling | Redactor sanitizes both inputs and outputs around the agent. |
 | LLM06: Excessive Agency | RBAC + approvals constrain what aliases the agent can resolve. |

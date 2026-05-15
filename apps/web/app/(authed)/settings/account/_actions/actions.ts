@@ -2,6 +2,7 @@
 
 import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { z } from 'zod';
 
 export type PasswordState = ActionState;
@@ -16,6 +17,9 @@ export async function changePasswordAction(
   _prev: PasswordState,
   formData: FormData,
 ): Promise<PasswordState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(Body, formData, ['current_password', 'new_password', 'confirm_password']);
   if (!parsed.success) return parsed;
 

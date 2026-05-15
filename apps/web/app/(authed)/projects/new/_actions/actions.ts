@@ -2,6 +2,7 @@
 
 import { catchApi, parseRaw } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { EnvSpec, projectName } from '@/lib/schemas';
 import { z } from 'zod';
 
@@ -19,6 +20,9 @@ export async function createProjectAction(
   _prev: CreateProjectState,
   formData: FormData,
 ): Promise<CreateProjectState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const name = String(formData.get('name') ?? '');
   const envSpecs = String(formData.get('environments') ?? 'dev')
     .split(',')

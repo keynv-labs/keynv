@@ -43,12 +43,16 @@ export function SecretsTable({
   projectId,
   expandedAlias,
   onToggleExpand,
+  onOptimisticDelete,
+  onDeleteError,
 }: {
   rows: ParsedSecret[];
   environments: Environment[];
   projectId: string;
   expandedAlias: string | null;
   onToggleExpand: (alias: string) => void;
+  onOptimisticDelete: (alias: string) => void;
+  onDeleteError: (alias: string) => void;
 }) {
   const envTier = (name: string) =>
     environments.find((e) => e.name === name)?.tier ?? 'non-production';
@@ -77,6 +81,8 @@ export function SecretsTable({
                 expanded={expanded}
                 onToggle={() => onToggleExpand(s.alias)}
                 projectId={projectId}
+                onOptimisticDelete={onOptimisticDelete}
+                onDeleteError={onDeleteError}
               />
             );
           })}
@@ -92,12 +98,16 @@ function SecretRowItem({
   expanded,
   onToggle,
   projectId,
+  onOptimisticDelete,
+  onDeleteError,
 }: {
   secret: ParsedSecret;
   tier: string;
   expanded: boolean;
   onToggle: () => void;
   projectId: string;
+  onOptimisticDelete: (alias: string) => void;
+  onDeleteError: (alias: string) => void;
 }) {
   return (
     <>
@@ -141,7 +151,14 @@ function SecretRowItem({
         <td className="px-4 py-3 text-fg-muted font-mono tabular text-[12px]">v{s.version}</td>
         <td className="px-4 py-3 text-fg-muted text-[12px]">{formatRelative(s.created_at)}</td>
         <td className="px-2 py-3 text-right">
-          <RowActions projectId={projectId} env={s.env} keyName={s.keyName} alias={s.alias} />
+          <RowActions
+            projectId={projectId}
+            env={s.env}
+            keyName={s.keyName}
+            alias={s.alias}
+            onOptimisticDelete={onOptimisticDelete}
+            onDeleteError={onDeleteError}
+          />
         </td>
       </tr>
       {expanded ? (

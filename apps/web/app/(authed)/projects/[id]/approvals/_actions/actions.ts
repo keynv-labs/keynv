@@ -2,6 +2,7 @@
 
 import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { approvalReason, expiresInSeconds, projectId } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -19,6 +20,9 @@ export async function grantApprovalAction(
   _prev: GrantState,
   formData: FormData,
 ): Promise<GrantState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(GrantBody, formData, [
     'project_id',
     'approval_id',
@@ -52,6 +56,9 @@ export async function denyApprovalAction(
   _prev: GrantState,
   formData: FormData,
 ): Promise<GrantState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(DenyBody, formData, ['project_id', 'approval_id', 'reason']);
   if (!parsed.success) return { error: 'Reason is required.' };
 

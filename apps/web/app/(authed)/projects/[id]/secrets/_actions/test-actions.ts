@@ -2,6 +2,7 @@
 
 import { catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { envName, projectId, secretKey, testerName } from '@/lib/schemas';
 import { z } from 'zod';
 
@@ -29,6 +30,9 @@ export async function runTestAction(
   _prev: TestActionState,
   formData: FormData,
 ): Promise<TestActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(Body, formData, ['project_id', 'env', 'key', 'tester', 'target_json']);
   if (!parsed.success) return parsed;
 

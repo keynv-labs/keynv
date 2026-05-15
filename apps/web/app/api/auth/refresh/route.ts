@@ -1,6 +1,5 @@
+import { COOKIE_NAME, decodeSession, encodeSession, sessionCookieOptions } from '@/lib/session';
 import { type NextRequest, NextResponse } from 'next/server';
-
-const COOKIE_NAME = 'keynv_session';
 
 const BLOCKED_HOSTS = [
   '127.0.0.1',
@@ -55,21 +54,12 @@ export async function GET(req: NextRequest) {
   const raw = req.cookies.get(COOKIE_NAME)?.value;
   if (!raw) return redirectTo(origin, '/login', next);
 
-  let session: {
-    server_url?: string;
-    refresh_token?: string;
-    access_token?: string;
-    access_expires_at?: string;
-  };
-  try {
-    session = JSON.parse(raw);
-  } catch {
-    return redirectTo(origin, '/login');
-  }
+  const session = decodeSession(raw);
+  if (!session) return redirectTo(origin, '/login', next);
 
   if (!session.refresh_token) return redirectTo(origin, '/login', next);
 
-  const serverUrl = session.server_url || process.env.KEYNV_SERVER_URL;
+  const serverUrl = process.env.KEYNV_SERVER_URL;
   if (!serverUrl || !isSafeServerUrl(serverUrl)) return redirectTo(origin, '/login');
 
   try {
@@ -95,13 +85,7 @@ export async function GET(req: NextRequest) {
     };
 
     const response = redirectTo(origin, next);
-    response.cookies.set(COOKIE_NAME, JSON.stringify(updated), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 3600,
-    });
+    response.cookies.set(COOKIE_NAME, encodeSession(updated), sessionCookieOptions());
 
     return response;
   } catch {

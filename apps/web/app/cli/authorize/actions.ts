@@ -1,6 +1,7 @@
 'use server';
 
 import { type ApiError, api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
@@ -14,6 +15,9 @@ function withCode(path: string, code: string): string {
 }
 
 export async function authorizeCliAction(formData: FormData): Promise<void> {
+  const csrf = requireCsrf(formData);
+  if (csrf) redirect('/cli/authorize?error=invalid');
+
   const parsed = Body.safeParse({ user_code: formData.get('user_code') });
   if (!parsed.success) redirect('/cli/authorize?error=invalid');
 

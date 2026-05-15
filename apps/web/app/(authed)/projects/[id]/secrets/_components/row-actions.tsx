@@ -18,9 +18,18 @@ interface Props {
   env: string;
   keyName: string;
   alias: string;
+  onOptimisticDelete: (alias: string) => void;
+  onDeleteError: (alias: string) => void;
 }
 
-export function RowActions({ projectId, env, keyName, alias }: Props) {
+export function RowActions({
+  projectId,
+  env,
+  keyName,
+  alias,
+  onOptimisticDelete,
+  onDeleteError,
+}: Props) {
   const [rotateOpen, setRotateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
@@ -91,6 +100,8 @@ export function RowActions({ projectId, env, keyName, alias }: Props) {
         env={env}
         keyName={keyName}
         alias={alias}
+        onOptimisticDelete={onOptimisticDelete}
+        onDeleteError={onDeleteError}
       />
     </>
   );

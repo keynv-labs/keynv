@@ -73,7 +73,7 @@ Then sign in at `https://keynv.example.com/login`.
 
 ## 4 · Install the CLI
 
-On your laptop, hosted keynv is one command:
+On your laptop, install the CLI and open the TUI:
 
 ```bash
 npm install -g @keynv/cli
@@ -81,14 +81,9 @@ npm install -g @keynv/cli
 keynv
 ```
 
-For your self-hosted server, pass the API URL once:
-
-```bash
-keynv login --server https://api.keynv.example.com
-```
-
-The CLI opens a browser tab to authenticate, stores the session in your OS
-keychain, then offers to set up the current project. Verify:
+The TUI lets you choose keynv.dev or a self-hosted API URL, opens a browser tab
+to authenticate, stores the session in your OS keychain, then offers to set up
+the current project. Verify from the same TUI, or with:
 
 ```bash
 keynv whoami
@@ -107,13 +102,13 @@ shell history). Run `keynv secret list @billing.dev` to verify.
 
 ## 6 · Wire your AI coding agent
 
-Run `keynv init` in your project root. It scans existing `.env` files,
-uploads detected secrets to the vault, and writes a project-local
-`.keynv.env` that maps alias names to vault references. The file is safe
-to commit — it contains only alias literals, never raw values.
+Run `keynv` in your project root and choose **Set up this project**. It scans
+existing `.env` files, uploads detected secrets to the vault, and writes a
+project-local `.keynv.env` that maps alias names to vault references. The file is
+safe to commit — it contains only alias literals, never raw values.
 
 ```bash
-keynv init
+keynv
 ```
 
 Restart your agent.

@@ -90,11 +90,11 @@ Non-interactive with --yes to skip prompts.
     this.context.stdout.write('       --owner-email alice@example.com \\\n');
     this.context.stdout.write('       --owner-password "<a long random password>" \\\n');
     this.context.stdout.write('       --org-name "Acme Inc"\n');
-    this.context.stdout.write('  3. Install the CLI and log in:\n');
+    this.context.stdout.write('  3. Install the CLI and connect from the TUI:\n');
     this.context.stdout.write('     npm install -g @keynv/cli\n');
-    this.context.stdout.write('     keynv login --server https://keynv.example.com\n');
-    this.context.stdout.write('  4. Onboard your first project:\n');
-    this.context.stdout.write('     cd your-project && keynv init\n');
+    this.context.stdout.write('     keynv\n');
+    this.context.stdout.write('  4. Onboard your first project from the same TUI:\n');
+    this.context.stdout.write('     cd your-project && keynv\n');
 
     if (this.compose) {
       const composeContent = `# keynv server + Litestream sidecar

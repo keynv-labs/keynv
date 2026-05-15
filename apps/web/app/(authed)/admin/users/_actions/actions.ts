@@ -2,6 +2,7 @@
 
 import { type ActionState, catchApi, parseOr, parseRaw } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { email, orgId, orgRole, passwordMin12 } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -33,6 +34,9 @@ export async function inviteUserAction(
   _prev: UserActionState,
   formData: FormData,
 ): Promise<UserActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const orgIdRaw = formData.get('org_id');
   const parsed = parseRaw(InviteBody, {
     email: formData.get('email'),
@@ -58,6 +62,9 @@ export async function changeUserRoleAction(
   _prev: UserActionState,
   formData: FormData,
 ): Promise<UserActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(RoleBody, formData, ['user_id', 'org_role']);
   if (!parsed.success) return parsed;
 
@@ -77,6 +84,9 @@ export async function removeUserAction(
   _prev: UserActionState,
   formData: FormData,
 ): Promise<UserActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const user_id = String(formData.get('user_id') ?? '');
   if (!user_id) return { error: 'User ID is required.' };
 

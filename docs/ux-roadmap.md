@@ -244,7 +244,7 @@ highlighting on long examples.
 6. **Important content additions** (creates the docs that today are missing):
    - `docs/quickstart.md` — "5-minute getting started" (NEW)
    - `docs/cli-reference.md` — generated from clipanion definitions (can hand-write v1)
-   - `docs/integrations/claude-code.md` — `keynv init` walkthrough for AI agents
+   - `docs/integrations/claude-code.md` — guided setup walkthrough for AI agents
    - `docs/integrations/cursor.md` — same for Cursor
    - `docs/faq.md` — Vault vs keynv, self-host vs SaaS, GDPR, etc.
    - `docs/migration/doppler.md`, `docs/migration/1password.md` — conversion levers
@@ -616,7 +616,7 @@ check), and weak fraud signal. Verification is industry baseline.
    - 4 steps as rows:
      1. **Create your first project** — primary CTA "New project" → `/projects/new`
      2. **Add a secret to it** — inline `keynv secret add @yourproject.dev.api_key` snippet with copy button
-     3. **Sign in your CLI** — `keynv login --server https://api.keynv.dev` + copy button
+     3. **Connect your CLI** — `keynv` + copy button
      4. **Install in your AI agent** — three buttons: Claude Code, Cursor, Codex — each opens `/docs/integrations/{slug}` in a new tab
    - Each row: muted state with checkbox, "current" state highlighted, "done" state with checkmark + struck-through
    - Show until all 4 done OR explicitly dismissed

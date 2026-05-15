@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { ErrorBlock, SuccessBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ export function ChangePasswordForm() {
 
   return (
     <form ref={formRef} action={action} className="mt-4 grid gap-3 max-w-sm">
+      <CsrfField />
       <Field label="Current password">
         <Input
           type="password"

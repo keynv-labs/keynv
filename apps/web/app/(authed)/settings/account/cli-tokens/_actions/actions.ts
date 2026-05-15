@@ -2,6 +2,7 @@
 
 import { catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { cliTokenName } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -19,6 +20,9 @@ export async function createCliTokenAction(
   _prev: CreateTokenState,
   formData: FormData,
 ): Promise<CreateTokenState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(Body, formData, ['name']);
   if (!parsed.success) return parsed;
 
@@ -43,6 +47,9 @@ export async function revokeCliTokenAction(
   _prev: Record<string, string>,
   formData: FormData,
 ): Promise<Record<string, string>> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const id = String(formData.get('id') ?? '');
   if (!id) return { error: 'Missing token id.' };
 

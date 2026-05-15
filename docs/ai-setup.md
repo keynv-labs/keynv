@@ -1,16 +1,16 @@
 # Set up with your AI agent
 
-keynv is built specifically for AI coding agents. After you install the CLI and log in, a single command wires everything up.
+keynv is built specifically for AI coding agents. After you install the CLI, the `keynv` TUI connects your account and wires the current project.
 
 ## The one command
 
 Run this in your project root:
 
 ```bash
-keynv init
+keynv
 ```
 
-`keynv init` does three things:
+Choose **Set up this project**. The setup flow does three things:
 1. Scans your `.env` files, uploads each secret to the vault, and generates `@project.env.key` aliases.
 2. Writes a `.keynv.env` file containing alias references only — safe to commit.
 3. Writes (or updates) an `AGENTS.md` file that tells your AI agent the mental model, the hard rules, and a quick-reference cheat sheet.
@@ -30,8 +30,8 @@ Set up keynv secrets management in this project.
 
 Steps:
 1. Run: npm install -g @keynv/cli
-2. Run: keynv login   (opens browser auth, stores session in OS keychain)
-3. Run: keynv init    (scans .env files → vault, writes .keynv.env + AGENTS.md)
+2. Run: keynv         (choose keynv.dev or self-hosted, opens browser auth)
+3. Choose: Set up this project
 
 After setup, always use `keynv exec -- <command>` when running anything that needs
 environment variables. Never create .env files with real secret values.
@@ -77,7 +77,7 @@ Quick rules:
 
 ## What AGENTS.md looks like
 
-When `keynv init` runs, it writes (or refreshes) a section like this in `AGENTS.md`:
+When the setup flow runs, it writes (or refreshes) a section like this in `AGENTS.md`:
 
 ```markdown
 ## keynv (secrets)
@@ -111,7 +111,7 @@ contains alias references — NOT real values.
 4. Treat the alias (`@project.env.key`) as the canonical reference.
 ```
 
-The block is wrapped in HTML comment markers so re-running `keynv init` refreshes it without touching the rest of your `AGENTS.md`.
+The block is wrapped in HTML comment markers so re-running setup from `keynv` refreshes it without touching the rest of your `AGENTS.md`.
 
 ---
 
@@ -119,8 +119,8 @@ The block is wrapped in HTML comment markers so re-running `keynv init` refreshe
 
 ### Claude Code
 
-`keynv init` creates or updates `AGENTS.md`. Claude Code indexes this file
-automatically. No additional config needed — restart Claude Code after running init.
+The setup flow creates or updates `AGENTS.md`. Claude Code indexes this file
+automatically. No additional config needed — restart Claude Code after setup.
 
 For project-level rules you can also add the short "Secrets (keynv)" block above to
 your `CLAUDE.md` so it's always in context even before `AGENTS.md` is indexed.
@@ -143,12 +143,12 @@ the start of each session.
 
 ## Keeping AGENTS.md up to date
 
-`keynv init` is idempotent. Run it again whenever you add environments, add new
-secrets, or upgrade the CLI — it refreshes only the keynv-managed block in
+Project setup is idempotent. Run `keynv` again whenever you add environments, add
+new secrets, or upgrade the CLI — it refreshes only the keynv-managed block in
 `AGENTS.md` and leaves your other content untouched.
 
 ```bash
-keynv init   # safe to re-run at any time
+keynv   # safe to re-run at any time
 ```
 
 ---

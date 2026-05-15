@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -64,6 +65,7 @@ export function TestSecretDialog({ projectId, env, keyName, alias, open, onOpenC
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-4">
+          <CsrfField />
           <input type="hidden" name="project_id" value={projectId} />
           <input type="hidden" name="env" value={env} />
           <input type="hidden" name="key" value={keyName} />

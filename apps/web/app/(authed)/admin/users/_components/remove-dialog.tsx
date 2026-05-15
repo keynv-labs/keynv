@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,7 @@ export function RemoveUserDialog({
           }}
           className="mt-5"
         >
+          <CsrfField />
           <input type="hidden" name="user_id" value={userId} />
 
           <AlertDialogFooter>

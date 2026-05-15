@@ -3,6 +3,7 @@
 import { logoutAction, switchOrgAction } from '@/app/(authed)/actions';
 import { Logomark } from '@/components/brand/logomark';
 import { CreateOrgDialog } from '@/components/layout/create-org-dialog';
+import { CsrfField } from '@/components/security/csrf-field';
 import { cn } from '@/lib/cn';
 import {
   Activity,
@@ -219,6 +220,7 @@ export function SidebarContent({
               const isActive = o.id === activeOrgId;
               return (
                 <form key={o.id} action={switchOrgAction.bind(null, o.id)}>
+                  <CsrfField />
                   <button
                     type="submit"
                     className={cn(
@@ -269,6 +271,7 @@ export function SidebarContent({
           </div>
         </div>
         <form action={logoutAction}>
+          <CsrfField />
           <button
             type="submit"
             aria-label="Sign out"

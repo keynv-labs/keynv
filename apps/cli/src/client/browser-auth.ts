@@ -114,5 +114,5 @@ export async function runBrowserAuth(serverUrl: string): Promise<Credentials> {
     };
   }
 
-  throw new BrowserAuthError('Browser auth timed out. Run `keynv login` to try again.');
+  throw new BrowserAuthError('Browser auth timed out. Run `keynv` to try again.');
 }

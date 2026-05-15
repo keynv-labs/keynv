@@ -1,6 +1,6 @@
 {
   "name": "@keynv/rbac",
-  "version": "0.1.0-rc.16",
+  "version": "0.1.0-rc.17",
   "private": true,
   "description": "keynv role + permission engine.",
   "type": "module",

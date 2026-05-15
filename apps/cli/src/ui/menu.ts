@@ -1,4 +1,5 @@
-import { cancel, confirm, intro, isCancel, log, outro, select } from '@clack/prompts';
+import { cancel, confirm, intro, isCancel, log, outro, select, text } from '@clack/prompts';
+import { DEFAULT_SERVER_URL } from '../client/defaults.js';
 import { ApiClient } from '../client/http.js';
 import { clearCredentials } from '../client/store.js';
 import { findProjectRoot, hasExistingKeynvEnv } from '../init/detect.js';
@@ -22,17 +23,21 @@ export async function runMenu(): Promise<number> {
   let didLogin = false;
 
   if (!client.isLoggedIn) {
-    log.info('Not logged in.');
+    const server = await pickConnectionTarget();
+    if (server === null) {
+      outro('Bye.');
+      return 0;
+    }
     try {
-      const ok = await runLoginFlow(client);
+      const ok = await runLoginFlow(client, { server });
       if (!ok) {
-        outro('Login cancelled.');
+        outro('Connection cancelled.');
         return 1;
       }
       didLogin = true;
     } catch (err) {
       if (err instanceof UserCancelled) {
-        cancel('Login cancelled.');
+        cancel('Connection cancelled.');
         return 130;
       }
       throw err;
@@ -71,7 +76,7 @@ export async function runMenu(): Promise<number> {
       const value = await select({
         message: 'What now?',
         options: [
-          { value: 'init', label: 'Initialize this project (migrate .env)', hint: 'keynv init' },
+          { value: 'init', label: 'Set up this project', hint: 'migrate .env into keynv' },
           { value: 'projects', label: 'Projects' },
           { value: 'secrets', label: 'Secrets' },
           { value: 'members', label: 'Members' },
@@ -128,4 +133,38 @@ export async function runMenu(): Promise<number> {
       log.error(fmtError(e));
     }
   }
+}
+
+async function pickConnectionTarget(): Promise<string | null> {
+  log.info('Connect once, then manage projects and secrets from this menu.');
+
+  const target = await select({
+    message: 'Connect to keynv',
+    options: [
+      { value: 'cloud', label: 'keynv.dev', hint: 'recommended' },
+      { value: 'self-hosted', label: 'Self-hosted server', hint: 'enter your API URL' },
+      { value: 'exit', label: 'Exit' },
+    ],
+  });
+  if (isCancel(target) || target === 'exit') return null;
+  if (target === 'cloud') return DEFAULT_SERVER_URL;
+
+  const server = await text({
+    message: 'Server API URL',
+    placeholder: 'https://api.keynv.example.com',
+    validate: (value) => {
+      if (!value) return 'Enter a server URL.';
+      try {
+        const parsed = new URL(value);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          return 'Use an http:// or https:// URL.';
+        }
+        return undefined;
+      } catch {
+        return 'Enter a valid URL.';
+      }
+    },
+  });
+  if (isCancel(server)) return null;
+  return String(server);
 }

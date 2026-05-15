@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,7 @@ export function AddMemberDialog({ projectId }: { projectId: string }) {
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
+          <CsrfField />
           <input type="hidden" name="project_id" value={projectId} />
 
           <Field label="Email">
@@ -143,6 +145,7 @@ export function RemoveMemberAction({
             }}
             className="mt-5"
           >
+            <CsrfField />
             <input type="hidden" name="project_id" value={projectId} />
             <input type="hidden" name="user_id" value={userId} />
 

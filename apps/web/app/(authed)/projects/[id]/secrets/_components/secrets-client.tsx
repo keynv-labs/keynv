@@ -32,15 +32,31 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [expandedAlias, setExpandedAlias] = useState<string | null>(null);
+  const [hiddenAliases, setHiddenAliases] = useState<Set<string>>(() => new Set());
 
   const parsed = useMemo<ParsedSecret[]>(
     () =>
-      secrets.map((s) => {
-        const { env, keyName } = parseAlias(s.alias);
-        return { ...s, env, keyName };
-      }),
-    [secrets],
+      secrets
+        .filter((s) => !hiddenAliases.has(s.alias))
+        .map((s) => {
+          const { env, keyName } = parseAlias(s.alias);
+          return { ...s, env, keyName };
+        }),
+    [hiddenAliases, secrets],
   );
+
+  const hideAlias = (alias: string) => {
+    setHiddenAliases((current) => new Set(current).add(alias));
+    setExpandedAlias((current) => (current === alias ? null : current));
+  };
+
+  const restoreAlias = (alias: string) => {
+    setHiddenAliases((current) => {
+      const next = new Set(current);
+      next.delete(alias);
+      return next;
+    });
+  };
 
   const countsByEnv = useMemo(() => {
     const map = new Map<string, number>();
@@ -138,6 +154,8 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
           projectId={projectId}
           expandedAlias={expandedAlias}
           onToggleExpand={(alias) => setExpandedAlias((curr) => (curr === alias ? null : alias))}
+          onOptimisticDelete={hideAlias}
+          onDeleteError={restoreAlias}
         />
       )}
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -86,6 +87,7 @@ export function CreateProjectDialog({
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-5">
+          <CsrfField />
           <input type="hidden" name="environments" value={serializeEnvs(envRows)} />
 
           <Field

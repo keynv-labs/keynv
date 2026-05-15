@@ -13,7 +13,7 @@ This document describes the components, data flow, and deployment topology of ke
 │  │ (Claude/...) │─────▶│  • keynv exec (shell wrapper)       │   │
 │  │              │      │  • keynv-mcp (MCP server)           │   │
 │  │ Sees only    │◀─────│  • Output Redactor                  │   │
-│  │ @aliases     │      │  • keynv init (agent onboarding)   │   │
+│  │ @aliases     │      │  • keynv setup flow (onboarding)   │   │
 │  └──────────────┘      └────────────────┬────────────────────┘   │
 │                                          │                         │
 │                                          ▼                         │
@@ -367,7 +367,7 @@ Self-hosters with ≥ 4 GB RAM available should raise memory to 46080 (45 MiB) a
 ## Why not X?
 
 - **Why not Postgres for the MVP?** A 15-person team writes <50 audit rows / second peak. SQLite's WAL handles that with microsecond latency. A separate Postgres instance is operational overhead with no benefit at this scale. Phase 6 adds Postgres for teams that need multi-instance HA.
-- **Why not Vault?** Excellent product, wrong threat model focus. Vault has no agent-isolation story, no `keynv init` onboarding flow, no streaming output redactor.
+- **Why not Vault?** Excellent product, wrong threat model focus. Vault has no agent-isolation story, no guided project setup flow, no streaming output redactor.
 - **Why not just a CLI + SOPS in git?** Works for solo devs. Doesn't scale to team RBAC, doesn't give you audit history, doesn't give you rotation, doesn't give you connection testing.
 - **Why not browser/web auth on day one?** CLI-first is fastest to MVP. Web UI in Phase 4.
 - **Why not Go or Rust?** TypeScript everywhere = one language, one toolchain, one mental model for contributors. Bun gets us a single binary with ~50 ms cold start. Rust would be marginally safer but slower to iterate; Go would lose us the same TypeScript ecosystem the MCP SDK and most npm secrets-related libraries already use.

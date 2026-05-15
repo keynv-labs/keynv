@@ -7,6 +7,10 @@ import { defineConfig } from 'vitest/config';
  * so we widen the include pattern here.
  */
 export default defineConfig({
+  oxc: false,
+  esbuild: {
+    jsx: 'automatic',
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./', import.meta.url)),

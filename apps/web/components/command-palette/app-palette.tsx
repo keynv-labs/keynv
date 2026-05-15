@@ -1,7 +1,9 @@
 'use client';
 
 import { logoutAction } from '@/app/(authed)/actions';
+import { useCsrfToken } from '@/components/security/csrf-field';
 import { cn } from '@/lib/cn';
+import { csrfFieldName } from '@/lib/csrf';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Command } from 'cmdk';
 import {
@@ -26,6 +28,7 @@ import { useCommandPalette } from './use-command-palette';
 
 export function AppPalette() {
   const router = useRouter();
+  const csrfToken = useCsrfToken();
 
   const navigate = useCallback(
     (path: string) => {
@@ -60,8 +63,10 @@ export function AppPalette() {
 
   const closeAndSignOut = useCallback(async () => {
     setOpen(false);
-    await logoutAction();
-  }, [setOpen]);
+    const formData = new FormData();
+    if (csrfToken) formData.set(csrfFieldName(), csrfToken);
+    await logoutAction(formData);
+  }, [csrfToken, setOpen]);
 
   return (
     <>

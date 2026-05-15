@@ -1,6 +1,7 @@
 'use client';
 
 import { createOrgAction } from '@/app/(authed)/actions';
+import { useCsrfToken } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,6 +22,7 @@ interface CreateOrgDialogProps {
 
 export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps) {
   const router = useRouter();
+  const csrfToken = useCsrfToken();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps
     setPending(true);
     setError(null);
 
-    const result = await createOrgAction(name.trim());
+    const result = await createOrgAction(name.trim(), csrfToken);
     if (result.error) {
       setError(result.error);
       setPending(false);

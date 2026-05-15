@@ -2,6 +2,7 @@
 
 import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { envName, projectId, secretKey, secretValue } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -19,6 +20,9 @@ export async function createSecretAction(
   _prev: SecretActionState,
   formData: FormData,
 ): Promise<SecretActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(CreateBody, formData, ['project_id', 'env', 'key', 'value']);
   if (!parsed.success) return parsed;
 
@@ -45,6 +49,9 @@ export async function rotateSecretAction(
   _prev: SecretActionState,
   formData: FormData,
 ): Promise<SecretActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(RotateBody, formData, ['project_id', 'env', 'key', 'new_value']);
   if (!parsed.success) return { error: 'Invalid input.' };
 
@@ -64,6 +71,9 @@ export async function deleteSecretAction(
   _prev: SecretActionState,
   formData: FormData,
 ): Promise<SecretActionState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const project_id = String(formData.get('project_id') ?? '');
   const env = String(formData.get('env') ?? '');
   const key = String(formData.get('key') ?? '');

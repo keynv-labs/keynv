@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form action={action} className="mt-5 space-y-4">
+      <CsrfField />
       <input type="hidden" name="next" value={next} />
 
       <Field label="Email">

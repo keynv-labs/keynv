@@ -145,6 +145,12 @@ jobs:
       # Workspace deps must be built so tsup can bundle them.
       - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
       - run: pnpm --filter @keynv/cli build
+      - name: Verify built CLI version
+        working-directory: apps/cli
+        run: |
+          set -euo pipefail
+          actual="$(node dist/index.js --version)"
+          test "$actual" = "${{ needs.prepare.outputs.version }}"
       - name: Publish to npm
         working-directory: apps/cli
         env:
@@ -152,12 +158,28 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then
-            npm publish --access public --tag next --provenance || true
+            npm publish --access public --tag next --provenance
             npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
           else
             npm publish --access public --provenance
             npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
           fi
+      - name: Verify published npm CLI version
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          for i in $(seq 1 12); do
+            if npm view "@keynv/cli@$version" version >/dev/null 2>&1; then
+              break
+            fi
+            if [ "$i" = "12" ]; then
+              echo "@keynv/cli@$version is not visible on npm" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          actual="$(npm exec --yes --package "@keynv/cli@$version" -- keynv --version)"
+          test "$actual" = "$version"
 
   docker-image:
     name: docker (multi-arch)

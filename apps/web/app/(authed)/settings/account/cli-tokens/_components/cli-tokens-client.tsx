@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -213,6 +214,8 @@ function CreateTokenDialog() {
             </DialogDescription>
 
             <form action={action} className="mt-4 space-y-3">
+              <CsrfField />
+
               <label className="block">
                 <span className="block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle mb-2">
                   Name
@@ -338,6 +341,7 @@ function RevokeAction({ id, name }: { id: string; name: string }) {
             }}
             className="mt-5"
           >
+            <CsrfField />
             <input type="hidden" name="id" value={id} />
 
             <AlertDialogFooter>

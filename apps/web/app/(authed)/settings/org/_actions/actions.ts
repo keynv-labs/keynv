@@ -2,11 +2,15 @@
 
 import { type ActionState, catchApi } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { revalidatePath } from 'next/cache';
 
 export type OrgState = ActionState;
 
 export async function updateOrgAction(_prev: OrgState, formData: FormData): Promise<OrgState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const name = String(formData.get('name') ?? '').trim();
   if (!name) return { error: 'Organization name is required.' };
 

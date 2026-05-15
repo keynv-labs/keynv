@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ export function CreateProjectForm() {
 
   return (
     <form action={action} className="space-y-4">
+      <CsrfField />
       <Field
         label="Name"
         hint={

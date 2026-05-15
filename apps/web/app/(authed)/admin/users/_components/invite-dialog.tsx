@@ -1,5 +1,6 @@
 'use client';
 
+import { CsrfField } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -91,6 +92,8 @@ export function InviteUserDialog({
         </DialogDescription>
 
         <form action={action} className="mt-4 space-y-3">
+          <CsrfField />
+
           <Field label="Email">
             <Input
               type="email"

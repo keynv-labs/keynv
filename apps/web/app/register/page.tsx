@@ -1,6 +1,8 @@
 import { Logomark } from '@/components/brand/logomark';
+import { CsrfProvider } from '@/components/security/csrf-field';
 import { SkipLink } from '@/components/ui/skip-link';
 import { getCapabilities } from '@/lib/capabilities';
+import { createCsrfToken } from '@/lib/csrf';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { RegisterForm } from './_components/form';
@@ -17,9 +19,10 @@ export default async function RegisterPage({
   if (!publicSignup) {
     redirect('/login?reason=registration_disabled');
   }
+  const csrfToken = createCsrfToken();
 
   return (
-    <>
+    <CsrfProvider token={csrfToken}>
       <SkipLink />
       <main
         id="main"
@@ -61,6 +64,6 @@ export default async function RegisterPage({
           </p>
         </div>
       </main>
-    </>
+    </CsrfProvider>
   );
 }

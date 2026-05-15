@@ -50,7 +50,7 @@ Required values in `deploy/.env`:
 |---|---|
 | `KEYNV_JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"` |
 | `KEYNV_BOOTSTRAP_OWNER_EMAIL` | your login email |
-| `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | 12+ char password — what you'll type into `keynv login` |
+| `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | 12+ char password — what you'll use when connecting from `keynv` |
 | `KEYNV_BOOTSTRAP_ORG_NAME` | optional, defaults to `default` |
 | `LITESTREAM_*` | only if you keep the litestream sidecar; otherwise comment that service out |
 

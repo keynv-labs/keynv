@@ -2,6 +2,7 @@
 
 import { type ActionState, parseOr } from '@/lib/action-result';
 import { type ApiError, api } from '@/lib/api';
+import { requireCsrf } from '@/lib/csrf';
 import { email, password } from '@/lib/schemas';
 import { setSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
@@ -23,6 +24,9 @@ interface LoginResponse {
 }
 
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  const csrf = requireCsrf(formData);
+  if (csrf) return csrf;
+
   const parsed = parseOr(Body, formData, ['email', 'password', 'next']);
   if (!parsed.success) return { error: 'Email and password are required.' };
 
