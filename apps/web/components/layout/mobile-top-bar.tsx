@@ -40,6 +40,12 @@ export function MobileTopBar({ email, role, orgId, activeOrgId, activeOrgName, o
         <Link href={{ pathname: '/dashboard' }} className="flex items-center">
           <Logomark size={22} />
         </Link>
+        <div className="min-w-0 flex-1">
+          <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-fg-subtle">
+            Active org
+          </div>
+          <div className="truncate text-xs font-medium text-fg">{activeOrgName}</div>
+        </div>
       </header>
 
       <Sheet open={open} onOpenChange={setOpen}>

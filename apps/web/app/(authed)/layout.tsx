@@ -14,6 +14,12 @@ interface OrgInfo {
   name: string;
 }
 
+interface WhoamiResponse {
+  orgs?: OrgInfo[];
+  org_name?: string;
+  org_role?: string;
+}
+
 export default async function AuthedLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
   if (!session) redirect('/login');
@@ -21,10 +27,12 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
   // Fetch org info for the sidebar switcher.
   let orgs: OrgInfo[] = [];
   let activeOrgName = session.org_id;
+  let activeOrgRole = session.org_role;
   try {
-    const data = await api<{ orgs?: OrgInfo[]; org_name?: string }>('/v1/whoami');
+    const data = await api<WhoamiResponse>('/v1/whoami');
     orgs = data.orgs ?? [];
     activeOrgName = data.org_name ?? session.org_id;
+    activeOrgRole = data.org_role ?? session.org_role;
   } catch {
     orgs = [{ id: session.org_id, name: session.org_id }];
   }
@@ -38,7 +46,7 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
         <SkipLink />
         <Sidebar
           email={session.email}
-          role={session.org_role}
+          role={activeOrgRole}
           orgId={session.org_id}
           activeOrgId={activeOrgId}
           activeOrgName={activeOrgName}
@@ -47,7 +55,7 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
         <div className="flex-1 min-w-0 flex flex-col">
           <MobileTopBar
             email={session.email}
-            role={session.org_role}
+            role={activeOrgRole}
             orgId={session.org_id}
             activeOrgId={activeOrgId}
             activeOrgName={activeOrgName}

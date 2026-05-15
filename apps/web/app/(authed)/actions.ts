@@ -41,10 +41,17 @@ export async function switchOrgAction(orgId: string, formData: FormData): Promis
   const { getSession, setSession } = await import('@/lib/session');
   const session = await getSession();
   if (!session) redirect('/login');
-  if (!session.org_ids?.includes(orgId)) {
+
+  const whoami = await api<{ orgs?: Array<{ id: string }> }>('/v1/whoami').catch(() => null);
+  const knownOrgIds = new Set([
+    ...(session.org_ids ?? []),
+    ...(whoami?.orgs?.map((o) => o.id) ?? []),
+  ]);
+  if (!knownOrgIds.has(orgId)) {
     redirect('/dashboard?toast=custom&toastMsg=You+are+not+a+member+of+that+organization.');
   }
   session.active_org_id = orgId;
+  session.org_ids = Array.from(knownOrgIds);
   await setSession(session);
   redirect('/dashboard');
 }
@@ -56,15 +63,19 @@ export async function createOrgAction(
   const csrf = requireCsrfToken(csrfToken);
   if (csrf) return csrf;
 
+  const name = orgName.trim();
+  if (!name) return { error: 'Organization name is required.' };
+
   try {
     const result = await api<{ id: string }>('/v1/org', {
       method: 'POST',
-      body: { name: orgName },
+      body: { name },
     });
     const { getSession, setSession } = await import('@/lib/session');
     const session = await getSession();
     if (session) {
       session.active_org_id = result.id;
+      session.org_role = 'owner';
       if (!session.org_ids) session.org_ids = [];
       if (!session.org_ids.includes(result.id)) session.org_ids.push(result.id);
       await setSession(session);

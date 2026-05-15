@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 import {
   Activity,
   Building2,
+  Check,
   ChevronDown,
   FolderKanban,
   Inbox,
@@ -133,6 +134,7 @@ export function SidebarContent({
   const handleNavigate = onNavigate ?? NOOP;
   const navGroups = buildGroups(role);
   const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
+  const orgCount = orgs.length;
 
   return (
     <div className="flex h-full flex-col">
@@ -193,14 +195,18 @@ export function SidebarContent({
         <button
           type="button"
           onClick={() => setOrgSwitcherOpen(!orgSwitcherOpen)}
+          aria-expanded={orgSwitcherOpen}
           className={cn(
-            'flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-xs transition-colors duration-fast ease-snap',
-            'border-border hover:border-border-strong cursor-pointer',
+            'flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2.5 text-xs transition-colors duration-fast ease-snap',
+            'border-border bg-bg-inset/50 hover:border-border-strong hover:bg-bg-elevated-hover cursor-pointer',
           )}
         >
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted">
+            <Building2 size={15} strokeWidth={2} />
+          </span>
           <div className="flex-1 min-w-0 text-left">
             <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-fg-subtle">
-              Org
+              Active org
             </div>
             <div className="text-fg leading-tight truncate mt-0.5">{activeOrgName}</div>
           </div>
@@ -215,7 +221,26 @@ export function SidebarContent({
         </button>
 
         {orgSwitcherOpen ? (
-          <div className="mt-1 rounded-md border border-border bg-bg-elevated shadow-lg overflow-hidden">
+          <div className="mt-2 rounded-xl border border-border-strong bg-bg-overlay shadow-[0_20px_50px_-24px_rgba(0,0,0,0.8)] overflow-hidden">
+            <div className="border-b border-border px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
+                    Organizations
+                  </div>
+                  <div className="mt-0.5 text-xs text-fg-muted">
+                    {orgCount} workspace{orgCount === 1 ? '' : 's'} connected
+                  </div>
+                </div>
+                <Link
+                  href="/settings/org"
+                  onClick={handleNavigate}
+                  className="rounded-md px-2 py-1 text-[11px] text-fg-muted hover:bg-bg-elevated-hover hover:text-fg"
+                >
+                  Manage
+                </Link>
+              </div>
+            </div>
             {orgs.map((o) => {
               const isActive = o.id === activeOrgId;
               return (
@@ -223,31 +248,40 @@ export function SidebarContent({
                   <CsrfField />
                   <button
                     type="submit"
+                    disabled={isActive}
                     className={cn(
-                      'flex w-full items-center gap-2 px-3 py-2 text-xs text-left transition-colors duration-fast ease-snap',
+                      'flex w-full items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors duration-fast ease-snap disabled:cursor-default',
                       isActive
                         ? 'bg-accent-soft text-accent'
                         : 'text-fg-muted hover:bg-bg-elevated-hover hover:text-fg',
                     )}
                   >
+                    <span
+                      className={cn(
+                        'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border font-mono text-[10px]',
+                        isActive
+                          ? 'border-accent/30 bg-accent-soft text-accent'
+                          : 'border-border bg-bg-inset text-fg-subtle',
+                      )}
+                    >
+                      {o.name.slice(0, 1).toUpperCase()}
+                    </span>
                     <span className="flex-1 truncate">{o.name}</span>
-                    {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-accent" /> : null}
+                    {isActive ? <Check size={13} strokeWidth={2} /> : null}
                   </button>
                 </form>
               );
             })}
             <div className="border-t border-border">
-              <CreateOrgDialog
-                onOpenChange={(open) => {
-                  if (open) setOrgSwitcherOpen(false);
-                }}
-              >
+              <CreateOrgDialog>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-left text-fg-muted hover:bg-bg-elevated-hover hover:text-fg transition-colors duration-fast ease-snap"
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-xs text-left text-fg-muted hover:bg-bg-elevated-hover hover:text-fg transition-colors duration-fast ease-snap"
                 >
-                  <Plus size={13} strokeWidth={2} />
-                  <span>Create new org</span>
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-border-strong text-fg-subtle">
+                    <Plus size={13} strokeWidth={2} />
+                  </span>
+                  <span className="flex-1">Create new org</span>
                 </button>
               </CreateOrgDialog>
             </div>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogTitle,
   DialogTrigger,
@@ -49,7 +50,8 @@ export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps
 
     setOpen(false);
     setName('');
-    router.push('/dashboard');
+    router.replace('/dashboard');
+    router.refresh();
   };
 
   return (
@@ -57,6 +59,10 @@ export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogTitle>Create organization</DialogTitle>
+        <DialogDescription>
+          Create a separate workspace for another team, client, or environment. You will become the
+          owner and switch to it immediately.
+        </DialogDescription>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="grid gap-2">
             <label
@@ -68,7 +74,10 @@ export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps
             <Input
               id="org-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (error) setError(null);
+              }}
               placeholder="Acme Inc"
               required
               autoFocus
@@ -78,7 +87,7 @@ export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps
           {error ? <ErrorBlock message={error} /> : null}
 
           <DialogFooter>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || !name.trim()}>
               {pending ? 'Creating…' : 'Create'}
             </Button>
           </DialogFooter>
