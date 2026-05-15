@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0-rc.18] — 2026-05-15
+## [0.1.0-rc.21] — 2026-05-15
 
 ### Fixed
 - CLI browser authorization redirects now preserve the `code` query parameter when unauthenticated users are sent through login.
@@ -197,8 +197,8 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
 - **Postgres adapter, KEK rotation flow, MFA, SSO/SAML, multi-region** —
   Phase 6 (commercial tier + keynv Cloud).
 
-[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.18...HEAD
-[0.1.0-rc.18]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.17...v0.1.0-rc.18
+[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.21...HEAD
+[0.1.0-rc.21]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.20...v0.1.0-rc.21
 [0.1.0-rc.17]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.16...v0.1.0-rc.17
 [0.1.0-rc.16]: https://github.com/keynv-labs/keynv/releases/tag/v0.1.0-rc.16
 [0.1.0-rc.1]: https://github.com/keynv-labs/keynv/releases/tag/v0.1.0-rc.1

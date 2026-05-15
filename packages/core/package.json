@@ -1,6 +1,6 @@
 {
   "name": "@keynv/core",
-  "version": "0.1.0-rc.18",
+  "version": "0.1.0-rc.21",
   "private": true,
   "description": "keynv shared core: reference parser, encryption primitives, audit chain, types.",
   "type": "module",
