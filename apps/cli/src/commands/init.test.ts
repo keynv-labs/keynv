@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiClient } from '../client/http.js';
 import { InitCommand } from './init.js';
@@ -65,5 +68,43 @@ describe('InitCommand non-interactive mode', () => {
         '$0 init --env-file .env --project myproject --env dev',
       ]);
     });
+  });
+
+  it('writes .keynv.env for --env-file migrations', async () => {
+    const cwd = process.cwd();
+    const dir = mkdtempSync(join(tmpdir(), 'keynv-init-'));
+    try {
+      process.chdir(dir);
+      writeFileSync('.env', 'API_TOKEN=secret-value\n');
+
+      const request = vi.fn().mockImplementation((path: string) => {
+        if (path === '/v1/projects') {
+          return Promise.resolve({ projects: [{ id: 'p_test', name: 'billing' }] });
+        }
+        return Promise.resolve({});
+      });
+      const command = new InitCommand();
+      command.envFile = '.env';
+      command.project = 'billing';
+      command.env = 'dev';
+      command.noScripts = true;
+      command.secret = [];
+      command.dryRun = false;
+      command.yes = false;
+      Object.assign(command, {
+        context: {
+          stdout: { write: vi.fn() },
+          stderr: { write: vi.fn() },
+        },
+      });
+
+      const result = await command.runNonInteractive({ request } as unknown as ApiClient);
+
+      expect(result).toBe(0);
+      expect(readFileSync('.keynv.env', 'utf8')).toContain('API_TOKEN=@billing.dev.API_TOKEN');
+    } finally {
+      process.chdir(cwd);
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

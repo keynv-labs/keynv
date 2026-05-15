@@ -65,34 +65,34 @@ cli.register(ServerInitCommand);
 
 const argv = process.argv.slice(2);
 
-if (argv.length === 0) {
-  // No subcommand → open the interactive menu (when on a TTY) instead of
-  // dumping a help page. The UICommand itself falls back to a short hint
-  // when stdin/stdout are not a TTY (CI, pipes), so scripts still get
-  // sensible behavior.
-  const { runMenu } = await import('./ui/menu.js');
-  const { isInteractive } = await import('./ui/helpers/tty.js');
-  if (isInteractive()) {
-    runMenu()
-      .then((code) => process.exit(code))
-      .catch((err: { code?: string; message: string; status?: number }) => {
-        process.stderr.write(`${fmtError(err)}\n`);
-        process.exit(1);
-      });
-  } else {
+async function main(): Promise<number> {
+  if (argv.length === 0) {
+    // No subcommand → open the interactive menu (when on a TTY) instead of
+    // dumping a help page. The UICommand itself falls back to a short hint
+    // when stdin/stdout are not a TTY (CI, pipes), so scripts still get
+    // sensible behavior.
+    const { runMenu } = await import('./ui/menu.js');
+    const { isInteractive } = await import('./ui/helpers/tty.js');
+    if (isInteractive()) {
+      return runMenu();
+    }
+
     process.stdout.write(
       'keynv — AI-safe secrets management.\n' +
         'Run `keynv --help` for the full command list, or run `keynv` in an interactive\n' +
         'terminal to open the menu.\n',
     );
-    process.exit(0);
+    return 0;
   }
-} else {
-  cli
-    .run(argv)
-    .then((code) => process.exit(code ?? 0))
-    .catch((err: { code?: string; message: string; status?: number }) => {
-      process.stderr.write(`${fmtError(err)}\n`);
-      process.exit(1);
-    });
+
+  return cli.run(argv);
 }
+
+main()
+  .then((code) => {
+    process.exitCode = code ?? 0;
+  })
+  .catch((err: { code?: string; message: string; status?: number }) => {
+    process.stderr.write(`${fmtError(err)}\n`);
+    process.exitCode = 1;
+  });

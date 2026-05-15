@@ -94,7 +94,7 @@ keynv whoami
 
 ```bash
 keynv project create billing
-keynv secret set @billing.dev.api_key
+keynv secret create @billing.dev.api_key
 ```
 
 The CLI prompts for the value via stdin (so it never lands in your

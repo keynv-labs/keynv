@@ -17,7 +17,9 @@ test.describe('TUI-first onboarding copy', () => {
     const text = await page.locator('body').innerText();
     expect(text).toContain('npm install -g @keynv/cli');
     expect(text).toContain('Set up this project');
+    expect(text).toContain('keynv secret create @billing.dev.api_key');
     expect(text).not.toContain('keynv login --server');
     expect(text).not.toContain('keynv init');
+    expect(text).not.toContain('keynv secret set');
   });
 });

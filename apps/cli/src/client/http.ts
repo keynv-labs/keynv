@@ -163,6 +163,13 @@ export class ApiClient {
               `       Check the server is running: curl ${serverUrl}/v1/health`,
           );
         }
+      } else {
+        this.creds = null;
+        throw clientError(
+          401,
+          'auth.session_expired',
+          'Session expired. Run `keynv` to reconnect.',
+        );
       }
     }
 
