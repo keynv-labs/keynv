@@ -11,7 +11,7 @@ function defaultRender(name: string): string {
 
 function preview(matched: string): string {
   if (matched.length <= 4) return '****';
-  return `${matched.slice(0, 4)}...`;
+  return `${matched.slice(0, 3)}...`;
 }
 
 function escapeRegExp(s: string): string {

@@ -15,16 +15,14 @@ the file:line and a concrete proposed fix.
 | H3  | HIGH     | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | docs/05 §Memory hygiene rewritten to acknowledge JS-string lifetime as a documented compromise; Uint8Array-end-to-end stays on the Phase 6 commercial-hardening backlog. |
 | H4  | HIGH     | RESOLVED | "fix: close audit HIGHs (H1, H4, H5)" | Bootstrap password reads from `KEYNV_BOOTSTRAP_PASSWORD` env / stdin / argv-with-`--unsafe-allow-argv`. argv default is refused. |
 | H5  | HIGH     | RESOLVED | "fix: close audit HIGHs (H1, H4, H5)" | pino logger wired into Hono `onError`; redact paths + a custom `err` serializer that runs the redactor over `Error.message` and `Error.stack`. |
-| M1  | MEDIUM   | DEFERRED | — | Redactor preview length floor. Internal-only today; tighten when consumers (e.g. SIEM forwarder) externalize previews. |
-| M2  | MEDIUM   | DEFERRED | — | `X-Keynv-Agent` client-controlled; informational. Trust boundary documented inline. |
+| M1  | MEDIUM   | RESOLVED | "fix: tighten redactor preview to 3-char floor + document trust boundary" | Preview truncated from 4 to 3 chars; trust boundary documented in `Match.preview` JSDoc. |
+| M2  | MEDIUM   | RESOLVED | "fix: tighten redactor preview to 3-char floor + document trust boundary" | `X-Keynv-Agent` trust boundary documented inline in `agent.ts`; value is informational only, not used for authz. |
 | M3  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | docs/06 amended to match the immediate-delete-on-rotate behavior; configurable grace window declared a Phase 6 commercial feature. |
 | M4  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | docs/02 §pattern-bank table now records the explicit decision: a bare 40-char regex would false-positive on git SHAs / base64-of-public-data. Entropy detector covers AWS keys. |
 | M5  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | `PATCH /v1/users/:id/org-role` shipped with three guards: rbac requires user.role_change, refuses self-mod, refuses owner-role transitions. Emits `user.role_changed` audit event. |
 | M6  | MEDIUM   | RESOLVED | "fix: close audit deferrals H2/H3/M3/M4/M5/M6" | `KEYNV_FILE_DENY_PATTERNS` extended with `**/`-prefixed variants (cloud creds, kube/config, docker/config) so deny-engines anchored at the project root still match `~/.aws/credentials`. |
 
-**Final state**: 13 of 14 findings resolved; the 2 remaining
-deferrals (M1, M2) are documented and tracked, neither carries a
-live security risk.
+**Final state**: All 14 findings resolved.
 
 Drive-by security upgrades during this audit cycle:
 

@@ -17,9 +17,15 @@ export interface Pattern {
 /**
  * Where a pattern was hit. Offsets are into the input string.
  *
- * `preview` is a tightly-bounded fragment (max 8 chars + `…`) — it lets
+ * `preview` is a tightly-bounded fragment (max 3 chars + `…`) — it lets
  * audit consumers eyeball "what kind of secret was this" without
  * exposing the full value. Never log the underlying matched string.
+ *
+ * Trust boundary: `preview` is informational only. It is derived from
+ * the matched string but truncated to at most 3 characters, making it
+ * insufficient to reconstruct the original value. Treat it as a
+ * non-sensitive hint for log readability, not as an authenticated
+ * identifier.
  */
 export interface Match {
   readonly pattern: string;
