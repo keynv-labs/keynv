@@ -13,8 +13,8 @@
  * `.keynv.env` (they get accessed at deploy time via a separate
  * file or `KEYNV_ENV_FILE`).
  */
-import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import {
   cancel,
   confirm,
@@ -29,11 +29,17 @@ import {
 } from '@clack/prompts';
 import { reference } from '@keynv/core';
 import type { ApiClient } from '../../client/http.js';
-import { type EnvFileEntry, parseEnvFile } from '../../exec/envFile.js';
+import { parseEnvFile } from '../../exec/envFile.js';
 import { writeAiContext } from '../../init/ai-context.js';
+import { backupEnvFile } from '../../init/backup.js';
+import {
+  type ResolvedEntry,
+  type SourceEntry,
+  planVaultKeys,
+} from '../../init/collision.js';
 import {
   type EnvFileHit,
-  findEnvFiles,
+  findEnvFilesRecursive,
   findProjectRoot,
   hasExistingKeynvEnv,
   suggestedEnvForSuffix,
@@ -42,20 +48,6 @@ import { classifyEntry, previewValue } from '../../init/heuristics.js';
 import { applyWraps, planScriptWrap } from '../../init/script-wrap.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
 import { listProjects } from '../helpers/pickProject.js';
-
-/**
- * Normalise a raw env-var name to a vault alias key. Preserves the
- * original case when valid; falls back to lowercase + underscore→dash
- * for names that would otherwise fail KEY_RE validation.
- */
-function toAliasKey(name: string): string {
-  if (!name) return name;
-  const KEY_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
-  if (KEY_RE.test(name)) return name;
-  const normalised = name.toLowerCase().replace(/_/g, '-');
-  if (KEY_RE.test(normalised)) return normalised;
-  return normalised.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'key';
-}
 
 export interface RunInitOptions {
   cwd: string;
@@ -67,21 +59,28 @@ export interface InitOutcome {
   exitCode: number;
 }
 
-interface MergedEntry {
-  name: string;
-  value: string;
-  isAlias: boolean;
-  /** First file (in mapping order) where this key appeared inside its env. */
-  source: string;
-  /** Line in `source`. */
-  sourceLine: number;
-  /** Files within the same env that re-declared this key (later wins). */
-  shadowedBy: string[];
-}
-
 interface FileEnvAssignment {
   file: EnvFileHit;
   envName: string;
+}
+
+/**
+ * Render an env-file path relative to the scan root for log/UI
+ * display. Files at the root show just their basename; nested files
+ * show `apps/api/.env` style.
+ */
+function displayName(file: EnvFileHit): string {
+  return file.relativeDir === '' ? file.name : `${file.relativeDir}/${file.name}`;
+}
+
+/**
+ * Render a file path relative to the project root, with POSIX
+ * separators so logs stay portable.
+ */
+function relFromRoot(rootPath: string, absPath: string): string {
+  const r = relative(rootPath, absPath);
+  if (r === '') return '.';
+  return r.split(/[\\/]/).filter(Boolean).join('/');
 }
 
 interface ProjectChoice {
@@ -106,11 +105,11 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   if (root.packageJsonInvalid) {
     log.warn(`package.json at ${root.path} is not valid JSON — script wrapping will be skipped.`);
   }
-  const envFiles = findEnvFiles(root.path);
+  const envFiles = findEnvFilesRecursive(root.path);
   const intoExisting = hasExistingKeynvEnv(root.path);
   if (envFiles.length === 0 && !intoExisting) {
     log.info(
-      `No .env files found in ${root.path}. There's nothing to migrate yet — create a .keynv.env by hand or run \`keynv exec\` once you have one.`,
+      `No .env files found in ${root.path} (scanned root and subdirectories). There's nothing to migrate yet — create a .keynv.env by hand or run \`keynv exec\` once you have one.`,
     );
     outro('Nothing to do.');
     return { exitCode: 0 };
@@ -120,9 +119,9 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
       `Project root: ${root.path}`,
       `Marker: ${root.marker}`,
       envFiles.length > 0
-        ? `Found env files: ${envFiles.map((f) => f.name).join(', ')}`
+        ? `Found env files:\n${envFiles.map((f) => `  ${displayName(f)}`).join('\n')}`
         : 'Found env files: (none)',
-      intoExisting ? 'Existing .keynv.env detected — will merge new entries in.' : '',
+      intoExisting ? 'Existing root .keynv.env detected — will merge new entries in.' : '',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -146,44 +145,90 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   // Distinct env names we're going to need on the server.
   const distinctEnvs = [...new Set(fileMapping.map((m) => m.envName))];
 
-  // 4. Parse files + merge per-env keyspaces --------------------------------
-  const perEnv = parseAndMergePerEnv(fileMapping);
-
-  // 5. Filter framework/shell-managed entries (NODE_ENV, PORT, …).
-  const skipped: Array<{ env: string; entry: MergedEntry }> = [];
-  for (const env of distinctEnvs) {
-    const before = perEnv.get(env) ?? [];
-    const kept: MergedEntry[] = [];
-    for (const e of before) {
-      if (classifyEntry(e.name, e.value).verdict === 'skip') {
-        skipped.push({ env, entry: e });
-      } else {
-        kept.push(e);
-      }
+  // 4. Parse each file into SourceEntry list, filtering framework/shell vars.
+  const allSources: SourceEntry[] = [];
+  const skipped: Array<{ env: string; name: string }> = [];
+  for (const { file, envName } of fileMapping) {
+    let parsed: ReturnType<typeof parseEnvFile>;
+    try {
+      parsed = parseEnvFile(readFileSync(file.path, 'utf8'), file.path);
+    } catch (err) {
+      log.warn(
+        `${displayName(file)}: ${err instanceof Error ? err.message : String(err)} — skipping file`,
+      );
+      continue;
     }
-    perEnv.set(env, kept);
+    for (const e of parsed) {
+      if (classifyEntry(e.name, e.value).verdict === 'skip') {
+        skipped.push({ env: envName, name: e.name });
+        continue;
+      }
+      allSources.push({
+        file,
+        envName,
+        name: e.name,
+        value: e.value,
+        isAlias: e.isAlias,
+        line: e.line,
+      });
+    }
   }
   if (skipped.length > 0) {
-    const names = [...new Set(skipped.map((s) => s.entry.name))];
+    const names = [...new Set(skipped.map((s) => s.name))];
     log.info(
       `Skipped ${skipped.length} framework/shell-managed entr${skipped.length === 1 ? 'y' : 'ies'}: ${names.join(', ')}`,
     );
   }
 
-  // Surface intra-env shadowed keys so the user knows last-wins ran.
-  for (const env of distinctEnvs) {
-    const shadowed = (perEnv.get(env) ?? []).filter((e) => e.shadowedBy.length > 0);
-    if (shadowed.length === 0) continue;
-    const detail = shadowed
-      .map((e) => `  [${env}] ${e.name}: ${e.source} → ${e.shadowedBy[e.shadowedBy.length - 1]}`)
+  // 5. Plan vault keys: intra-dir last-wins + cross-dir collision handling.
+  const plan = planVaultKeys(allSources);
+
+  if (plan.shadowed.length > 0) {
+    const detail = plan.shadowed
+      .map(
+        (s) =>
+          `  [${s.envName}] ${relFromRoot(root.path, s.containingDir)}/${s.localKey}: ${s.earlierFiles.join(', ')} -> ${s.laterFile}`,
+      )
       .join('\n');
     log.warn(
-      `Some keys appear in multiple env files mapped to the same env; using the last value (dotenv convention):\n${detail}`,
+      `Some keys appear in multiple env files in the same directory mapped to the same env; using the last value (dotenv convention):\n${detail}`,
+    );
+  }
+  if (plan.merged.length > 0) {
+    const detail = plan.merged
+      .map(
+        (m) =>
+          `  [${m.envName}] ${m.key}: same value across ${m.sources.map((s) => displayName(s)).join(', ')} -> one vault entry shared`,
+      )
+      .join('\n');
+    log.info(`Merged cross-app duplicates into a single vault entry:\n${detail}`);
+  }
+  if (plan.renamed.length > 0) {
+    // One rename note per source; group by localKey for readable output.
+    const byLocal = new Map<string, typeof plan.renamed>();
+    for (const r of plan.renamed) {
+      const k = `${r.envName}|${r.localKey}`;
+      const arr = byLocal.get(k) ?? [];
+      arr.push(r);
+      byLocal.set(k, arr);
+    }
+    const detail = [...byLocal.values()]
+      .map((group) => {
+        const head = group[0];
+        if (!head) return '';
+        const sources = group
+          .map((r) => `${displayName(r.source)} -> @vault:${r.vaultKey}`)
+          .join('\n      ');
+        return `  [${head.envName}] ${head.localKey} (values differ across apps):\n      ${sources}`;
+      })
+      .filter(Boolean)
+      .join('\n');
+    log.warn(
+      `Vault keys were renamed to avoid cross-app collisions (your code keeps using the original names locally):\n${detail}`,
     );
   }
 
-  const totalEntries = [...perEnv.values()].reduce((n, arr) => n + arr.length, 0);
-  if (totalEntries === 0) {
+  if (plan.resolved.length === 0) {
     log.info(
       'All env files were empty or only contained framework-managed vars. Nothing to upload.',
     );
@@ -191,37 +236,58 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     return { exitCode: 0 };
   }
 
-  // 6. Per-entry secret-or-literal checklist (flat across envs) -------------
-  interface Choice {
-    composite: string; // `${env}|${name}`
-    env: string;
-    name: string;
+  // 6. Per-vault-entry secret-or-literal checklist -------------------------
+  // One row per unique (envName, vaultKey). Merged collisions collapse to a
+  // single row; renamed collisions appear as separate rows (one per app).
+  interface VaultGroup {
+    composite: string; // `${envName}|${vaultKey}`
+    envName: string;
+    vaultKey: string;
+    localKey: string;
     value: string;
     isAlias: boolean;
     verdict: ReturnType<typeof classifyEntry>['verdict'];
     label: string;
     hint: string;
+    sources: ResolvedEntry[];
   }
-  const choices: Choice[] = [];
-  for (const env of distinctEnvs) {
-    for (const e of perEnv.get(env) ?? []) {
-      const c = classifyEntry(e.name, e.value);
-      const hint = c.hint || (e.isAlias ? 'looks like an alias literal' : 'no signal');
-      const preview = e.isAlias ? e.value : previewValue(e.value, 28);
-      const envTag = distinctEnvs.length > 1 ? `[${env}] ` : '';
-      choices.push({
-        composite: `${env}|${e.name}`,
-        env,
-        name: e.name,
-        value: e.value,
-        isAlias: e.isAlias,
+  const groups = new Map<string, VaultGroup>();
+  for (const r of plan.resolved) {
+    const composite = `${r.envName}|${r.vaultKey}`;
+    let g = groups.get(composite);
+    if (!g) {
+      const c = classifyEntry(r.localKey, r.value);
+      const hint = c.hint || (r.isAlias ? 'looks like an alias literal' : 'no signal');
+      const preview = r.isAlias ? r.value : previewValue(r.value, 28);
+      const envTag = distinctEnvs.length > 1 ? `[${r.envName}] ` : '';
+      const renamedTag = r.localKey !== r.vaultKey ? ` -> vault:${r.vaultKey}` : '';
+      g = {
+        composite,
+        envName: r.envName,
+        vaultKey: r.vaultKey,
+        localKey: r.localKey,
+        value: r.value,
+        isAlias: r.isAlias,
         verdict: c.verdict,
-        label: `${envTag}${e.name}  ${preview}`,
+        label: `${envTag}${r.localKey}${renamedTag}  ${preview}`,
         hint,
-      });
+        sources: [],
+      };
+      groups.set(composite, g);
+    }
+    g.sources.push(r);
+  }
+  // Annotate labels with source dirs when there's more than one app feeding a group.
+  for (const g of groups.values()) {
+    const dirs = [...new Set(g.sources.map((s) => s.source.relativeDir || '<root>'))];
+    if (dirs.length > 1) g.label = `${g.label}  (shared by ${dirs.join(', ')})`;
+    else if (envFiles.some((f) => f.relativeDir !== '')) {
+      const only = dirs[0];
+      if (only && only !== '<root>') g.label = `${g.label}  [${only}]`;
     }
   }
 
+  const choices = [...groups.values()];
   const initialSecretSelection = choices
     .filter((c) => c.verdict === 'secret' && !c.isAlias)
     .map((c) => c.composite);
@@ -256,19 +322,31 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   // 9. Final confirm --------------------------------------------------------
   const perEnvCounts = distinctEnvs
     .map((env) => {
-      const entries = perEnv.get(env) ?? [];
-      const sec = entries.filter((e) => selected.has(`${env}|${e.name}`)).length;
-      const lit = entries.length - sec;
-      return `  ${env}: ${sec} secrets, ${lit} literals${env === defaultEnv ? ' (default — written to .keynv.env)' : ''}`;
+      const envGroups = choices.filter((g) => g.envName === env);
+      const sec = envGroups.filter((g) => selected.has(g.composite)).length;
+      const lit = envGroups.length - sec;
+      return `  ${env}: ${sec} secrets, ${lit} literals${env === defaultEnv ? ' (default — written to each app\'s .keynv.env)' : ''}`;
     })
     .join('\n');
+  // Distinct containingDirs that will receive a .keynv.env file.
+  const writeDirs = [...new Set(plan.resolved.map((r) => r.source.containingDir))];
+  const writeDirsLines = writeDirs
+    .map((d) => `  ${relFromRoot(root.path, d)}`)
+    .join('\n');
+  const renameLine =
+    plan.renamed.length > 0
+      ? `Renamed vault keys: ${plan.renamed.length} (to avoid cross-app collisions)`
+      : '';
   const planSummary = [
     `Project:           ${projectChoice.name}${projectChoice.created ? ' (will be created)' : ''}`,
     `Environments:      ${distinctEnvs.join(', ')}`,
     'Per-env breakdown:',
     perEnvCounts,
     `Script wraps:      ${scriptWrapSelection.length}`,
-    'Original .env:     delete after upload',
+    `.keynv.env files:  will be written under`,
+    writeDirsLines,
+    'Original .env files: rename to .env.backup after upload',
+    renameLine,
     opts.dryRun ? 'Dry-run: no changes will be made.' : '',
   ]
     .filter(Boolean)
@@ -289,104 +367,111 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   const projectId = await ensureProjectAndEnvs(client, projectChoice, distinctEnvs);
   if (projectId === null) return { exitCode: 1 };
 
-  // 11. Upload secrets per env ----------------------------------------------
-  // Tracking per env so we can compose .keynv.env from defaultEnv only.
-  const uploadedByEnv = new Map<string, Map<string, string>>(); // env → name → aliasLiteral
+  // 11. Upload secrets — one POST per unique (env, vaultKey). ---------------
+  // Merged groups (multiple sources, same value, same vaultKey) upload once
+  // and reuse the alias across every per-app .keynv.env that references them.
+  const aliasByGroup = new Map<string, string>(); // composite -> aliasLiteral
   const failed: Array<{ env: string; name: string; reason: string }> = [];
-  const totalToUpload = selected.size;
-  if (totalToUpload > 0) {
+  const groupsToUpload = choices.filter((g) => selected.has(g.composite));
+  if (groupsToUpload.length > 0) {
     const s = spinner();
-    s.start(`Uploading ${totalToUpload} secret${totalToUpload === 1 ? '' : 's'}`);
+    s.start(
+      `Uploading ${groupsToUpload.length} secret${groupsToUpload.length === 1 ? '' : 's'}`,
+    );
     let i = 0;
-    for (const env of distinctEnvs) {
-      const envUploaded = new Map<string, string>();
-      uploadedByEnv.set(env, envUploaded);
-      for (const e of perEnv.get(env) ?? []) {
-        if (!selected.has(`${env}|${e.name}`)) continue;
-        i++;
-        s.message(`Uploading (${i}/${totalToUpload}) [${env}] ${e.name}`);
-        const aliasKey = toAliasKey(e.name);
-        try {
-          await client.request(`/v1/projects/${projectId}/secrets`, {
-            method: 'POST',
-            body: { env, key: aliasKey, value: e.value },
-          });
-          const alias = reference.buildAlias({
-            project: projectChoice.name,
-            environment: env,
-            key: aliasKey,
-          });
-          if (alias === null) {
-            failed.push({
-              env,
-              name: e.name,
-              reason: `produced an invalid alias for project=${projectChoice.name} env=${env} key=${aliasKey}`,
-            });
-          } else {
-            envUploaded.set(e.name, alias.literal);
-          }
-        } catch (err) {
+    for (const g of groupsToUpload) {
+      i++;
+      s.message(`Uploading (${i}/${groupsToUpload.length}) [${g.envName}] ${g.vaultKey}`);
+      try {
+        await client.request(`/v1/projects/${projectId}/secrets`, {
+          method: 'POST',
+          body: { env: g.envName, key: g.vaultKey, value: g.value },
+        });
+        const alias = reference.buildAlias({
+          project: projectChoice.name,
+          environment: g.envName,
+          key: g.vaultKey,
+        });
+        if (alias === null) {
           failed.push({
-            env,
-            name: e.name,
-            reason: err instanceof Error ? err.message : String(err),
+            env: g.envName,
+            name: g.localKey,
+            reason: `produced an invalid alias for project=${projectChoice.name} env=${g.envName} key=${g.vaultKey}`,
           });
+        } else {
+          aliasByGroup.set(g.composite, alias.literal);
         }
+      } catch (err) {
+        failed.push({
+          env: g.envName,
+          name: g.localKey,
+          reason: err instanceof Error ? err.message : String(err),
+        });
       }
     }
     if (failed.length === 0) {
-      s.stop(`Uploaded ${totalToUpload} secret${totalToUpload === 1 ? '' : 's'}`);
+      s.stop(`Uploaded ${groupsToUpload.length} secret${groupsToUpload.length === 1 ? '' : 's'}`);
     } else {
       s.error(
-        `${totalToUpload - failed.length}/${totalToUpload} uploaded; ${failed.length} failed`,
+        `${groupsToUpload.length - failed.length}/${groupsToUpload.length} uploaded; ${failed.length} failed`,
       );
       for (const f of failed) log.warn(`  [${f.env}] ${f.name}: ${f.reason}`);
     }
   }
 
-  // 12. Compose .keynv.env from the default env's results -------------------
-  const defaultUploaded = uploadedByEnv.get(defaultEnv) ?? new Map<string, string>();
-  const defaultLiterals = (perEnv.get(defaultEnv) ?? []).filter(
-    (e) => !selected.has(`${defaultEnv}|${e.name}`),
-  );
-  const keynvEnvPath = join(root.path, '.keynv.env');
-  try {
-    const lines = composeKeynvEnv({
-      uploadedAliases: defaultUploaded,
-      literals: defaultLiterals,
-      mergeWithExisting: intoExisting ? readFileSync(keynvEnvPath, 'utf8') : null,
-    });
-    writeFileSync(keynvEnvPath, `${lines.join('\n')}\n`);
-    log.success(
-      `${intoExisting ? 'Updated' : 'Wrote'} ${keynvEnvPath} (${defaultUploaded.size + defaultLiterals.length} entries from "${defaultEnv}")`,
-    );
-  } catch (err) {
-    log.error(`Failed to write .keynv.env: ${err instanceof Error ? err.message : String(err)}`);
-    return { exitCode: 1 };
+  // 12. Compose per-(containingDir, env) .keynv.env files. ------------------
+  // For each app directory that supplied .env files, write its own
+  // .keynv.env (default env) and .keynv.<env>.env (other envs).
+  interface DirEnvBucket {
+    containingDir: string;
+    envName: string;
+    aliasLines: Array<[localKey: string, aliasLiteral: string]>;
+    literalEntries: Array<{ name: string; value: string }>;
+  }
+  const bucketKey = (dir: string, env: string) => `${dir}|${env}`;
+  const buckets = new Map<string, DirEnvBucket>();
+  for (const r of plan.resolved) {
+    const k = bucketKey(r.source.containingDir, r.envName);
+    let b = buckets.get(k);
+    if (!b) {
+      b = {
+        containingDir: r.source.containingDir,
+        envName: r.envName,
+        aliasLines: [],
+        literalEntries: [],
+      };
+      buckets.set(k, b);
+    }
+    const groupKey = `${r.envName}|${r.vaultKey}`;
+    const alias = aliasByGroup.get(groupKey);
+    if (selected.has(groupKey) && alias !== undefined) {
+      b.aliasLines.push([r.localKey, alias]);
+    } else {
+      b.literalEntries.push({ name: r.localKey, value: r.value });
+    }
   }
 
-  // 12b. Compose .keynv.<env>.env for each non-default env -------------------
-  const otherEnvsWithAliases = distinctEnvs.filter(
-    (env) => env !== defaultEnv && (uploadedByEnv.get(env)?.size ?? 0) > 0,
-  );
-  for (const env of otherEnvsWithAliases) {
-    const envUploaded = uploadedByEnv.get(env) ?? new Map<string, string>();
-    const envLiterals = (perEnv.get(env) ?? []).filter((e) => !selected.has(`${env}|${e.name}`));
-    const envFilePath = join(root.path, `.keynv.${env}.env`);
+  for (const b of buckets.values()) {
+    const targetName = b.envName === defaultEnv ? '.keynv.env' : `.keynv.${b.envName}.env`;
+    const targetPath = join(b.containingDir, targetName);
+    const dirIntoExisting = existsSync(targetPath);
     try {
       const lines = composeKeynvEnv({
-        uploadedAliases: envUploaded,
-        literals: envLiterals,
-        mergeWithExisting: null,
+        uploadedAliases: new Map(b.aliasLines),
+        literals: b.literalEntries.map((e) => ({ name: e.name, value: e.value })),
+        mergeWithExisting: dirIntoExisting ? readFileSync(targetPath, 'utf8') : null,
       });
-      writeFileSync(envFilePath, `${lines.join('\n')}\n`);
+      writeFileSync(targetPath, `${lines.join('\n')}\n`);
+      const relTarget = relFromRoot(root.path, targetPath);
+      const total = b.aliasLines.length + b.literalEntries.length;
       log.success(
-        `Wrote .keynv.${env}.env (${envUploaded.size} secret alias${envUploaded.size === 1 ? '' : 'es'} from "${env}")`,
+        `${dirIntoExisting ? 'Updated' : 'Wrote'} ${relTarget} (${total} entr${total === 1 ? 'y' : 'ies'} from "${b.envName}")`,
       );
     } catch (err) {
-      log.warn(
-        `Could not write .keynv.${env}.env: ${err instanceof Error ? err.message : String(err)}`,
+      log.error(
+        `Failed to write ${relFromRoot(root.path, targetPath)}: ${err instanceof Error ? err.message : String(err)}`,
       );
+      return { exitCode: 1 };
     }
   }
 
@@ -418,13 +503,15 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     }
   }
 
-  // 15. Remove the original .env files --------------------------------------
+  // 15. Rename the original .env files to .env.backup ----------------------
   for (const f of envFiles) {
+    const relSrc = relFromRoot(root.path, f.path);
     try {
-      unlinkSync(f.path);
-      log.success(`Removed ${f.name}`);
+      const { renamedTo } = backupEnvFile(f.path);
+      const relTarget = relFromRoot(root.path, renamedTo);
+      log.success(`Renamed ${relSrc} -> ${relTarget}`);
     } catch (err) {
-      log.warn(`Could not remove ${f.name}: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn(`Could not rename ${relSrc}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -432,11 +519,18 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   const otherEnvs = distinctEnvs.filter((e) => e !== defaultEnv);
   if (otherEnvs.length > 0) {
     const lines = otherEnvs.map((env) => {
-      const count = uploadedByEnv.get(env)?.size ?? 0;
-      const hasFile = count > 0;
-      return hasFile
-        ? `  ${env}: ${count} secret${count === 1 ? '' : 's'} → .keynv.${env}.env (use \`keynv exec --from .keynv.${env}.env -- <cmd>\`)`
-        : `  ${env}: 0 secrets in vault (no alias file written)`;
+      const dirsForEnv = [
+        ...new Set(
+          [...buckets.values()].filter((b) => b.envName === env).map((b) => b.containingDir),
+        ),
+      ];
+      if (dirsForEnv.length === 0) {
+        return `  ${env}: 0 secrets in vault (no alias file written)`;
+      }
+      const fileList = dirsForEnv
+        .map((d) => `${relFromRoot(root.path, d)}/.keynv.${env}.env`)
+        .join(', ');
+      return `  ${env}: ${fileList} (use \`keynv exec --from <file> -- <cmd>\`)`;
     });
     note(lines.join('\n'), 'Secrets in other envs');
   }
@@ -550,7 +644,7 @@ async function pickFileEnvMapping(
 
     let envName = unwrap(
       await select({
-        message: `Map ${f.name} to which keynv env?`,
+        message: `Map ${displayName(f)} to which keynv env?`,
         options: opts,
         initialValue: suggested,
       }),
@@ -573,51 +667,7 @@ async function pickFileEnvMapping(
 }
 
 /**
- * Parse each file and merge entries into per-env keyspaces. Within
- * one env, dotenv last-wins applies across the files mapped to it.
- */
-function parseAndMergePerEnv(mapping: FileEnvAssignment[]): Map<string, MergedEntry[]> {
-  // env → name → MergedEntry
-  const acc = new Map<string, Map<string, MergedEntry>>();
-  for (const { file, envName } of mapping) {
-    let entries: EnvFileEntry[];
-    try {
-      entries = parseEnvFile(readFileSync(file.path, 'utf8'), file.path);
-    } catch (err) {
-      log.warn(`${file.name}: ${err instanceof Error ? err.message : String(err)} — skipping file`);
-      continue;
-    }
-    let envMap = acc.get(envName);
-    if (!envMap) {
-      envMap = new Map<string, MergedEntry>();
-      acc.set(envName, envMap);
-    }
-    for (const e of entries) {
-      const existing = envMap.get(e.name);
-      if (existing) {
-        existing.shadowedBy.push(file.name);
-        existing.value = e.value;
-        existing.isAlias = e.isAlias;
-      } else {
-        envMap.set(e.name, {
-          name: e.name,
-          value: e.value,
-          isAlias: e.isAlias,
-          source: file.name,
-          sourceLine: e.line,
-          shadowedBy: [],
-        });
-      }
-    }
-  }
-  // flatten inner Maps to arrays for the caller
-  const out = new Map<string, MergedEntry[]>();
-  for (const [env, m] of acc) out.set(env, [...m.values()]);
-  return out;
-}
-
-/**
- * Decide which env's aliases get written into the cwd `.keynv.env`.
+ * Decide which env's aliases get written into each app's `.keynv.env`.
  * Heuristic: prefer 'dev' when present (matches the typical local
  * dev workflow), otherwise the first env in iteration order.
  */
@@ -702,13 +752,13 @@ function envBodyFor(name: string): {
   };
 }
 
-interface ComposeOpts {
+export interface ComposeOpts {
   uploadedAliases: Map<string, string>;
-  literals: MergedEntry[];
+  literals: Array<{ name: string; value: string }>;
   mergeWithExisting: string | null;
 }
 
-function composeKeynvEnv(opts: ComposeOpts): string[] {
+export function composeKeynvEnv(opts: ComposeOpts): string[] {
   const { uploadedAliases, literals, mergeWithExisting } = opts;
   const lines: string[] = [];
   if (mergeWithExisting !== null) {

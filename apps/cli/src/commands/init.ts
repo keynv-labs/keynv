@@ -1,13 +1,20 @@
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { reference } from '@keynv/core';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { parseEnvFile } from '../exec/envFile.js';
 import { writeAiContext } from '../init/ai-context.js';
-import { findEnvFiles, findProjectRoot, suggestedEnvForSuffix } from '../init/detect.js';
+import { backupEnvFile } from '../init/backup.js';
+import { type SourceEntry, planVaultKeys } from '../init/collision.js';
+import {
+  type EnvFileHit,
+  findEnvFilesRecursive,
+  findProjectRoot,
+  suggestedEnvForSuffix,
+} from '../init/detect.js';
 import { classifyEntry } from '../init/heuristics.js';
-import { runInitFlow } from '../ui/flows/init.js';
+import { composeKeynvEnv, runInitFlow } from '../ui/flows/init.js';
 import { UserCancelled } from '../ui/helpers/cancel.js';
 import { isInteractive } from '../ui/helpers/tty.js';
 import { resolveProjectId } from './project.js';
@@ -28,6 +35,39 @@ function toAliasKey(name: string): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Render an env-file's path relative to the project root, with POSIX
+ * separators, for stdout/stderr lines that mention specific files.
+ */
+function displayHit(rootPath: string, file: EnvFileHit): string {
+  return relFromRootPath(rootPath, file.path);
+}
+
+/** Stable POSIX-style relative path used in logs. */
+function relFromRootPath(rootPath: string, absPath: string): string {
+  const r = relative(rootPath, absPath);
+  if (r === '') return '.';
+  return r.split(/[\\/]/).filter(Boolean).join('/');
+}
+
+/**
+ * Default tier + approval choice for a freshly-created env. Matches
+ * the helper in the interactive flow; duplicated here to avoid making
+ * UI code depend on this command module (or vice versa).
+ */
+function envBodyFor(name: string): {
+  name: string;
+  tier: 'production' | 'non-production';
+  require_approval: boolean;
+} {
+  const isProd = name === 'prod' || name === 'production';
+  return {
+    name,
+    tier: isProd ? 'production' : 'non-production',
+    require_approval: isProd,
+  };
 }
 
 function writeKeynvEnvMappings(
@@ -242,9 +282,15 @@ any prompts.
   }
 
   /**
-   * Auto-scan mode (--yes without explicit --env-file). Finds .env files
-   * in the project root, classifies entries, creates a project, uploads
-   * secrets, and writes .keynv.env — all without prompts.
+   * Auto-scan mode (--yes without explicit --env-file). Recursively
+   * finds .env files across the project (root, apps/*, packages/*, …),
+   * classifies entries, creates the project + needed envs, uploads
+   * secrets, writes a `.keynv.env` next to each source `.env`, and
+   * renames the originals to `.env.backup` — all without prompts.
+   *
+   * Multi-source key collisions are resolved by auto-prefixing the
+   * vault key with the source directory slug; the user's code keeps
+   * using the original env-var name locally.
    */
   async runAutoScan(client: ApiClient): Promise<number> {
     const root = findProjectRoot(process.cwd());
@@ -253,83 +299,235 @@ any prompts.
       return 1;
     }
 
-    const envFiles = findEnvFiles(root.path);
+    const envFiles = findEnvFilesRecursive(root.path);
     if (envFiles.length === 0) {
-      this.context.stdout.write('keynv: no .env files found. Nothing to migrate.\n');
+      this.context.stdout.write(
+        'keynv: no .env files found (scanned root and subdirectories). Nothing to migrate.\n',
+      );
       return 0;
     }
 
     const projectName = this.project ?? root.suggestedName;
-    const envName = this.env ?? suggestedEnvForSuffix(envFiles[0]?.suffix ?? null);
 
-    // Scan and classify entries from all env files
-    const secrets: Array<{ name: string; value: string }> = [];
+    // Parse every file, classify per-entry, build SourceEntry list. Each
+    // file gets its own keynv env from its filename suffix (or --env override).
+    // Both secret-class and literal-class entries are kept (literals pass
+    // through into the `.keynv.env` unchanged so the app keeps working);
+    // only framework/shell-managed entries (NODE_ENV, PORT, …) are filtered.
+    const cliEnv = this.env;
+    const allSources: SourceEntry[] = [];
+    const isSecret = new Set<string>(); // composite `${file.path}|${name}`
+    let skippedCount = 0;
     for (const f of envFiles) {
       try {
         const entries = parseEnvFile(readFileSync(f.path, 'utf8'), f.path);
+        const envName = cliEnv ?? suggestedEnvForSuffix(f.suffix);
         for (const e of entries) {
-          if (classifyEntry(e.name, e.value).verdict === 'secret') {
-            secrets.push({ name: e.name, value: e.value });
+          const verdict = classifyEntry(e.name, e.value).verdict;
+          if (verdict === 'skip') {
+            skippedCount++;
+            continue;
           }
+          if (verdict === 'secret' && !e.isAlias) {
+            isSecret.add(`${f.path}|${e.name}`);
+          }
+          allSources.push({
+            file: f,
+            envName,
+            name: e.name,
+            value: e.value,
+            isAlias: e.isAlias,
+            line: e.line,
+          });
         }
       } catch {
-        this.context.stderr.write(`keynv: warning — could not parse ${f.name}, skipping.\n`);
+        this.context.stderr.write(
+          `keynv: warning — could not parse ${displayHit(root.path, f)}, skipping.\n`,
+        );
       }
     }
 
-    if (secrets.length === 0) {
-      this.context.stdout.write('keynv: no secrets detected in .env files. Nothing to upload.\n');
+    if (allSources.length === 0) {
+      this.context.stdout.write('keynv: no migrable entries in .env files. Nothing to do.\n');
       return 0;
     }
 
+    const plan = planVaultKeys(allSources);
+    for (const r of plan.renamed) {
+      this.context.stderr.write(
+        `keynv: renamed ${r.localKey} -> ${r.vaultKey} in env ${r.envName} (collision with ${r.otherSources.map((s) => displayHit(root.path, s)).join(', ')})\n`,
+      );
+    }
+    for (const m of plan.merged) {
+      this.context.stderr.write(
+        `keynv: merged ${m.key} in env ${m.envName} (same value in ${m.sources.map((s) => displayHit(root.path, s)).join(', ')})\n`,
+      );
+    }
+    for (const s of plan.shadowed) {
+      this.context.stderr.write(
+        `keynv: dotenv last-wins: ${s.localKey} in ${relFromRootPath(root.path, s.containingDir)} (${s.earlierFiles.join(', ')} -> ${s.laterFile})\n`,
+      );
+    }
+
+    const distinctEnvs = [...new Set(plan.resolved.map((r) => r.envName))];
+    const secretCount = plan.resolved.filter((r) =>
+      isSecret.has(`${r.source.path}|${r.localKey}`),
+    ).length;
+    const literalCount = plan.resolved.length - secretCount;
     this.context.stdout.write(
-      `keynv: auto-scan found ${secrets.length} secret(s) across ${envFiles.length} file(s).\n`,
+      `keynv: auto-scan found ${secretCount} secret(s) and ${literalCount} literal(s) across ${envFiles.length} file(s)${skippedCount > 0 ? `; skipped ${skippedCount} framework entr${skippedCount === 1 ? 'y' : 'ies'}` : ''}.\n`,
     );
 
     if (this.dryRun) {
-      for (const { name } of secrets) {
-        const aliasKey = toAliasKey(name);
-        this.context.stdout.write(`  ${name}=@${projectName}.${envName}.${aliasKey}\n`);
+      for (const r of plan.resolved) {
+        const tag = isSecret.has(`${r.source.path}|${r.localKey}`) ? 'secret' : 'literal';
+        const target = isSecret.has(`${r.source.path}|${r.localKey}`)
+          ? `@${projectName}.${r.envName}.${r.vaultKey}`
+          : r.value;
+        this.context.stdout.write(
+          `  ${displayHit(root.path, r.source)}: ${r.localKey}=${target}  [${tag}]\n`,
+        );
       }
       return 0;
     }
 
-    // Resolve or create the project
+    // Resolve or create the project, with all distinct envs.
     let projectId: string;
     try {
       projectId = await resolveProjectId(client, projectName);
+      // Existing project: make sure each env we need exists.
+      try {
+        const detail = await client.request<{
+          environments: Array<{ name: string }>;
+        }>(`/v1/projects/${projectId}`);
+        const existing = new Set(detail.environments.map((e) => e.name));
+        const missing = distinctEnvs.filter((e) => !existing.has(e));
+        for (const env of missing) {
+          await client.request(`/v1/projects/${projectId}/environments`, {
+            method: 'POST',
+            body: envBodyFor(env),
+          });
+          this.context.stdout.write(`keynv: added env "${env}" to project "${projectName}".\n`);
+        }
+      } catch (err) {
+        this.context.stderr.write(
+          `keynv: warning — could not reconcile envs for ${projectName}: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
+      }
     } catch {
       const created = await client.request<{ id: string; name: string }>('/v1/projects', {
         method: 'POST',
         body: {
           name: projectName,
-          environments: [{ name: envName, tier: 'non-production', require_approval: false }],
+          environments: distinctEnvs.map((name) => envBodyFor(name)),
         },
       });
       projectId = created.id;
-      this.context.stdout.write(`keynv: created project "${projectName}" (${projectId}).\n`);
+      this.context.stdout.write(
+        `keynv: created project "${projectName}" (${projectId}) with env(s): ${distinctEnvs.join(', ')}\n`,
+      );
     }
 
-    const secretsWithKeys = secrets.map((s) => ({ ...s, aliasKey: toAliasKey(s.name) }));
-    const result = await this.uploadSecrets(
-      client,
-      projectId,
-      projectName,
-      envName,
-      secretsWithKeys,
-    );
-    if (result !== 0) return result;
+    // Upload — one POST per unique (env, vaultKey) whose group contains
+    // at least one secret-classified source. Literal-only groups stay
+    // out of the vault.
+    const aliasByGroup = new Map<string, string>();
+    interface Group {
+      envName: string;
+      vaultKey: string;
+      value: string;
+    }
+    const secretGroupMap = new Map<string, Group>();
+    for (const r of plan.resolved) {
+      if (!isSecret.has(`${r.source.path}|${r.localKey}`)) continue;
+      const k = `${r.envName}|${r.vaultKey}`;
+      if (!secretGroupMap.has(k)) {
+        secretGroupMap.set(k, { envName: r.envName, vaultKey: r.vaultKey, value: r.value });
+      }
+    }
 
-    // Write .keynv.env with alias mappings
-    const keynvEnvPath = join(root.path, '.keynv.env');
-    const written = writeKeynvEnvMappings(keynvEnvPath, projectName, envName, secretsWithKeys);
+    let uploaded = 0;
+    const failed: Array<{ name: string; reason: string }> = [];
+    for (const [composite, g] of secretGroupMap) {
+      const alias = reference.buildAlias({
+        project: projectName,
+        environment: g.envName,
+        key: g.vaultKey,
+      });
+      if (!alias) {
+        failed.push({ name: g.vaultKey, reason: `invalid alias key: ${g.vaultKey}` });
+        continue;
+      }
+      try {
+        await client.request(`/v1/projects/${projectId}/secrets`, {
+          method: 'POST',
+          body: { env: g.envName, key: g.vaultKey, value: g.value },
+        });
+        aliasByGroup.set(composite, alias.literal);
+        uploaded++;
+      } catch (err) {
+        failed.push({
+          name: g.vaultKey,
+          reason: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
     this.context.stdout.write(
-      written > 0
-        ? `keynv: wrote ${keynvEnvPath}\n`
-        : `keynv: ${keynvEnvPath} already up to date\n`,
+      `keynv: uploaded ${uploaded}/${secretGroupMap.size} secret(s) to ${projectName}.\n`,
     );
+    if (failed.length > 0) {
+      for (const f of failed) this.context.stderr.write(`  failed: ${f.name} — ${f.reason}\n`);
+      return 1;
+    }
 
-    // Write AGENTS.md
+    // Pick a default env for the bare `.keynv.env` filename (others get `.keynv.<env>.env`).
+    const defaultEnv = distinctEnvs.includes('dev') ? 'dev' : (distinctEnvs[0] as string);
+
+    // Group resolved entries by (containingDir, env) and write a file per group.
+    // Secret entries land as alias references; literals pass through unchanged.
+    interface DirEnvBucket {
+      containingDir: string;
+      envName: string;
+      aliasLines: Array<[string, string]>;
+      literalEntries: Array<{ name: string; value: string }>;
+    }
+    const buckets = new Map<string, DirEnvBucket>();
+    for (const r of plan.resolved) {
+      const k = `${r.source.containingDir}|${r.envName}`;
+      let b = buckets.get(k);
+      if (!b) {
+        b = {
+          containingDir: r.source.containingDir,
+          envName: r.envName,
+          aliasLines: [],
+          literalEntries: [],
+        };
+        buckets.set(k, b);
+      }
+      const isSec = isSecret.has(`${r.source.path}|${r.localKey}`);
+      const alias = aliasByGroup.get(`${r.envName}|${r.vaultKey}`);
+      if (isSec && alias !== undefined) {
+        b.aliasLines.push([r.localKey, alias]);
+      } else {
+        b.literalEntries.push({ name: r.localKey, value: r.value });
+      }
+    }
+    for (const b of buckets.values()) {
+      const targetName = b.envName === defaultEnv ? '.keynv.env' : `.keynv.${b.envName}.env`;
+      const targetPath = join(b.containingDir, targetName);
+      const dirIntoExisting = existsSync(targetPath);
+      const lines = composeKeynvEnv({
+        uploadedAliases: new Map(b.aliasLines),
+        literals: b.literalEntries,
+        mergeWithExisting: dirIntoExisting ? readFileSync(targetPath, 'utf8') : null,
+      });
+      writeFileSync(targetPath, `${lines.join('\n')}\n`);
+      this.context.stdout.write(
+        `keynv: ${dirIntoExisting ? 'updated' : 'wrote'} ${relFromRootPath(root.path, targetPath)}\n`,
+      );
+    }
+
+    // AGENTS.md (at project root) — best effort.
     try {
       const outcome = writeAiContext(root.path);
       if (outcome === 'created') this.context.stdout.write('keynv: wrote AGENTS.md\n');
@@ -337,10 +535,19 @@ any prompts.
       this.context.stdout.write('keynv: warning — could not write AGENTS.md.\n');
     }
 
-    // Remove original .env files
+    // Rename original .env files to .env.backup.
     for (const f of envFiles) {
-      unlinkSync(f.path);
-      this.context.stdout.write(`keynv: removed ${f.name} (secrets migrated to vault).\n`);
+      const relSrc = displayHit(root.path, f);
+      try {
+        const { renamedTo } = backupEnvFile(f.path);
+        this.context.stdout.write(
+          `keynv: renamed ${relSrc} -> ${relFromRootPath(root.path, renamedTo)}\n`,
+        );
+      } catch (err) {
+        this.context.stderr.write(
+          `keynv: warning — could not rename ${relSrc}: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
+      }
     }
 
     this.context.stdout.write(

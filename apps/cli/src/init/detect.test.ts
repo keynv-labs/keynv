@@ -1,9 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   findEnvFiles,
+  findEnvFilesRecursive,
   findProjectRoot,
   hasExistingKeynvEnv,
   suggestedEnvForSuffix,
@@ -165,5 +166,140 @@ describe('hasExistingKeynvEnv', () => {
     expect(hasExistingKeynvEnv(root)).toBe(false);
     writeFileSync(join(root, '.keynv.env'), '');
     expect(hasExistingKeynvEnv(root)).toBe(true);
+  });
+});
+
+describe('findEnvFilesRecursive', () => {
+  it('discovers .env files at root and across nested workspace dirs', () => {
+    writeFileSync(join(root, '.env'), '');
+    mkdirSync(join(root, 'apps', 'api'), { recursive: true });
+    mkdirSync(join(root, 'apps', 'web'), { recursive: true });
+    mkdirSync(join(root, 'packages', 'shared'), { recursive: true });
+    writeFileSync(join(root, 'apps', 'api', '.env'), '');
+    writeFileSync(join(root, 'apps', 'web', '.env.production'), '');
+    writeFileSync(join(root, 'packages', 'shared', '.env'), '');
+
+    const hits = findEnvFilesRecursive(root);
+    expect(hits.map((h) => `${h.relativeDir}/${h.name}`)).toEqual([
+      '/.env',
+      'apps/api/.env',
+      'apps/web/.env.production',
+      'packages/shared/.env',
+    ]);
+    const rootHit = hits.find((h) => h.relativeDir === '');
+    expect(rootHit?.containingDir).toBe(root);
+    const apiHit = hits.find((h) => h.relativeDir === 'apps/api');
+    expect(apiHit?.containingDir).toBe(join(root, 'apps', 'api'));
+  });
+
+  it('skips well-known vendor / build / cache / framework / venv / IDE dirs', () => {
+    for (const ignored of [
+      // VCS + dep caches
+      'node_modules',
+      '.git',
+      '.yarn',
+      'bower_components',
+      // Build / output
+      'dist',
+      'build',
+      'out',
+      'coverage',
+      '.nyc_output',
+      'target',
+      'vendor',
+      // JS frameworks
+      '.next',
+      '.turbo',
+      '.nuxt',
+      '.output',
+      '.svelte-kit',
+      '.astro',
+      '.angular',
+      '.parcel-cache',
+      '.expo',
+      // Deployment
+      '.vercel',
+      '.netlify',
+      '.wrangler',
+      '.serverless',
+      '.sst',
+      '.amplify',
+      '.firebase',
+      // Python
+      '.venv',
+      'venv',
+      '__pycache__',
+      '.pytest_cache',
+      // IDE
+      '.idea',
+      '.vscode',
+    ]) {
+      const dir = join(root, ignored, 'inner');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, '.env'), 'SECRET=x');
+    }
+    mkdirSync(join(root, 'apps', 'api'), { recursive: true });
+    writeFileSync(join(root, 'apps', 'api', '.env'), '');
+    const hits = findEnvFilesRecursive(root);
+    expect(hits.map((h) => h.relativeDir)).toEqual(['apps/api']);
+  });
+
+  it('honors maxDepth (root only when maxDepth=1)', () => {
+    writeFileSync(join(root, '.env'), '');
+    mkdirSync(join(root, 'apps', 'api'), { recursive: true });
+    writeFileSync(join(root, 'apps', 'api', '.env'), '');
+    expect(findEnvFilesRecursive(root, { maxDepth: 1 }).map((h) => h.relativeDir)).toEqual(['']);
+    expect(findEnvFilesRecursive(root, { maxDepth: 5 }).map((h) => h.relativeDir).sort()).toEqual([
+      '',
+      'apps/api',
+    ]);
+  });
+
+  it('excludes .keynv.env and .keynv.<env>.env (own outputs) everywhere', () => {
+    writeFileSync(join(root, '.keynv.env'), '');
+    writeFileSync(join(root, '.keynv.prod.env'), '');
+    mkdirSync(join(root, 'apps', 'web'), { recursive: true });
+    writeFileSync(join(root, 'apps', 'web', '.keynv.env'), '');
+    writeFileSync(join(root, 'apps', 'web', '.env'), '');
+    const hits = findEnvFilesRecursive(root);
+    expect(hits.map((h) => `${h.relativeDir}/${h.name}`)).toEqual(['apps/web/.env']);
+  });
+
+  it('skips symlinked directories (cycle safety) but follows symlinked files', () => {
+    mkdirSync(join(root, 'real'), { recursive: true });
+    writeFileSync(join(root, 'real', '.env'), 'X=1');
+    // Symlinked directory — should be skipped.
+    try {
+      symlinkSync(join(root, 'real'), join(root, 'linked-dir'), 'dir');
+    } catch {
+      // Symlink may fail on Windows without dev-mode permission; skip silently.
+      return;
+    }
+    // Symlinked file — should be followed.
+    try {
+      symlinkSync(join(root, 'real', '.env'), join(root, '.env'), 'file');
+    } catch {
+      // ignore
+    }
+    const hits = findEnvFilesRecursive(root);
+    const seenRelative = new Set(hits.map((h) => `${h.relativeDir}/${h.name}`));
+    expect(seenRelative.has('real/.env')).toBe(true);
+    expect(seenRelative.has('linked-dir/.env')).toBe(false);
+  });
+
+  it('places root files (plain .env first) before subdir files; subdirs sorted alphabetically', () => {
+    mkdirSync(join(root, 'z-pkg'), { recursive: true });
+    mkdirSync(join(root, 'a-pkg'), { recursive: true });
+    writeFileSync(join(root, '.env.production'), '');
+    writeFileSync(join(root, '.env'), '');
+    writeFileSync(join(root, 'z-pkg', '.env'), '');
+    writeFileSync(join(root, 'a-pkg', '.env'), '');
+    const hits = findEnvFilesRecursive(root);
+    expect(hits.map((h) => `${h.relativeDir}/${h.name}`)).toEqual([
+      '/.env',
+      '/.env.production',
+      'a-pkg/.env',
+      'z-pkg/.env',
+    ]);
   });
 });

@@ -1,10 +1,11 @@
 /**
  * Project-root + env-file discovery for `keynv init`. Walks upward
  * from a starting dir looking for any conventional project marker;
- * once a root is found, lists the .env-family files inside it.
+ * once a root is found, lists the .env-family files inside it
+ * (recursively, with a sensible ignore list).
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { basename, join, relative, sep } from 'node:path';
 import { walkUp } from '../util/fs.js';
 
 const PROJECT_MARKERS = [
@@ -22,6 +23,68 @@ const GIT_MARKER = '.git';
 const ENV_GLOB = /^\.env(\.[A-Za-z0-9_-]+)?$/;
 const ENV_EXAMPLE = /^\.env\.(example|sample|template|dist|defaults)$/;
 const KEYNV_ENV_BASENAME = '.keynv.env';
+/** Matches `.keynv.env` and `.keynv.<env>.env` — keynv's own output. */
+const KEYNV_ENV_EXCLUDE = /^\.keynv\.(.+\.)?env$/;
+
+/**
+ * Directory basenames we never descend into. Covers VCS metadata, package
+ * manager caches, framework build/cache outputs, deployment-tool state,
+ * Python virtualenvs, and IDE folders. The goal is to skip places that
+ * would yield irrelevant `.env` matches (vendored copies, build artifacts,
+ * fixtures) or massively bloat the scan (node_modules).
+ */
+export const IGNORE_DIRS: ReadonlySet<string> = new Set([
+  // VCS + git hooks
+  '.git',
+  '.husky',
+  // Package managers / dep caches
+  'node_modules',
+  '.yarn', // Yarn Berry / PnP cache
+  'bower_components',
+  // Generic build / output / coverage dirs
+  'dist',
+  'build',
+  'out',
+  'coverage',
+  '.cache',
+  '.nyc_output',
+  // Rust / Go / PHP
+  'target',
+  'vendor',
+  // JS / TS frameworks
+  '.next', // Next.js
+  '.turbo', // Turborepo
+  '.nuxt', // Nuxt 2/3
+  '.output', // Nitro / Nuxt 3 build output
+  '.svelte-kit', // SvelteKit
+  '.astro', // Astro
+  '.angular', // Angular CLI cache
+  '.parcel-cache', // Parcel bundler
+  '.docusaurus', // Docusaurus
+  '.expo', // Expo / React Native
+  // Deployment / serverless platforms
+  '.vercel',
+  '.netlify',
+  '.wrangler', // Cloudflare Workers
+  '.serverless', // Serverless framework
+  '.sst', // SST
+  '.amplify', // AWS Amplify
+  '.firebase', // Firebase
+  // Python tooling (mixed-language monorepos)
+  '.venv',
+  'venv',
+  '__pycache__',
+  '.tox',
+  '.mypy_cache',
+  '.pytest_cache',
+  '.ruff_cache',
+  // IDE / editor state
+  '.idea',
+  '.vscode',
+  '.fleet',
+]);
+
+const DEFAULT_MAX_DEPTH = 5;
 
 export interface ProjectRoot {
   /** Absolute path of the directory containing the project marker. */
@@ -99,39 +162,147 @@ export interface EnvFileHit {
   suffix: string | null;
   /** Suggested keynv environment name based on suffix conventions. */
   suggestedEnv: string;
+  /**
+   * Path of the containing directory relative to the scan root, using
+   * POSIX separators for stable display/sort across platforms.
+   * Empty string for files at the scan root itself.
+   */
+  relativeDir: string;
+  /** Absolute directory containing the file — where the sibling `.keynv.env` goes. */
+  containingDir: string;
+}
+
+export interface FindEnvFilesOptions {
+  /** Max directory depth from the scan root (root itself is depth 0). */
+  maxDepth?: number;
+  /** Directory basenames to skip when descending. Defaults to {@link IGNORE_DIRS}. */
+  ignore?: ReadonlySet<string>;
 }
 
 /**
- * List `.env*` files in a directory (non-recursive). Filters out
- * `.env.example` / `.env.sample` / `.env.template` because those are
- * onboarding placeholders, never real values.
+ * Non-recursive listing of `.env*` files in a single directory.
+ * Kept as a thin wrapper over the recursive walker for callers/tests
+ * that only care about the top level.
  */
 export function findEnvFiles(rootDir: string): EnvFileHit[] {
-  let entries: string[];
+  return findEnvFilesRecursive(rootDir, { maxDepth: 1 });
+}
+
+/**
+ * Recursively list `.env*` files under `rootDir`. Skips well-known
+ * vendor / build / cache directories ({@link IGNORE_DIRS}), follows
+ * symlinked files but never descends into symlinked directories
+ * (cycle safety; a separate realpath-based visited set guards against
+ * cycles created via mixed links). Excludes `.env.example` family and
+ * keynv's own `.keynv*.env` outputs so re-running init never
+ * re-ingests its previous run.
+ *
+ * Returned hits are sorted: files at the scan root first (plain `.env`
+ * before suffixed siblings, alphabetical), then by subdirectory
+ * (alphabetical), then by name within each subdirectory.
+ */
+export function findEnvFilesRecursive(
+  rootDir: string,
+  opts: FindEnvFilesOptions = {},
+): EnvFileHit[] {
+  const maxDepth = Math.max(1, opts.maxDepth ?? DEFAULT_MAX_DEPTH);
+  const ignore = opts.ignore ?? IGNORE_DIRS;
+
+  let rootReal: string;
   try {
-    entries = readdirSync(rootDir);
+    rootReal = realpathSync(rootDir);
   } catch {
     return [];
   }
+
   const hits: EnvFileHit[] = [];
-  for (const name of entries) {
-    if (!ENV_GLOB.test(name)) continue;
-    if (ENV_EXAMPLE.test(name)) continue;
-    if (name === KEYNV_ENV_BASENAME) continue;
-    const full = join(rootDir, name);
+  const seen = new Set<string>([rootReal]);
+  // (absolute dir, depth) — depth is the number of directory levels
+  // below the scan root (0 = root itself).
+  const queue: Array<{ dir: string; depth: number }> = [{ dir: rootDir, depth: 0 }];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+    const { dir, depth } = current;
+
+    let entries: Array<{ name: string; isFile: boolean; isDir: boolean; isSymlink: boolean }>;
     try {
-      if (!statSync(full).isFile()) continue;
+      const raw = readdirSync(dir, { withFileTypes: true });
+      entries = raw.map((d) => ({
+        name: d.name,
+        isFile: d.isFile(),
+        isDir: d.isDirectory(),
+        isSymlink: d.isSymbolicLink(),
+      }));
     } catch {
       continue;
     }
-    const suffixMatch = name.match(/^\.env\.(.+)$/);
-    const suffix = suffixMatch ? (suffixMatch[1] as string) : null;
-    hits.push({ path: full, name, suffix, suggestedEnv: suggestedEnvForSuffix(suffix) });
+
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+
+      // File candidate.
+      // Note: for symlinks, isFile/isDir are false on the dirent; we resolve via statSync.
+      let isFile = entry.isFile;
+      let isDir = entry.isDir;
+      if (entry.isSymlink) {
+        // Files we follow (preserve existing semantics); dirs we skip.
+        try {
+          const st = statSync(full);
+          isFile = st.isFile();
+          // Deliberately leave isDir=false: never descend into symlinked dirs.
+          if (st.isDirectory()) isDir = false;
+        } catch {
+          continue;
+        }
+      }
+
+      if (isFile) {
+        if (!ENV_GLOB.test(entry.name)) continue;
+        if (ENV_EXAMPLE.test(entry.name)) continue;
+        if (KEYNV_ENV_EXCLUDE.test(entry.name)) continue;
+        const suffixMatch = entry.name.match(/^\.env\.(.+)$/);
+        const suffix = suffixMatch ? (suffixMatch[1] as string) : null;
+        const rel = relative(rootDir, dir);
+        const relativeDir = rel === '' ? '' : rel.split(sep).join('/');
+        hits.push({
+          path: full,
+          name: entry.name,
+          suffix,
+          suggestedEnv: suggestedEnvForSuffix(suffix),
+          relativeDir,
+          containingDir: dir,
+        });
+        continue;
+      }
+
+      if (isDir && depth + 1 < maxDepth) {
+        if (ignore.has(entry.name)) continue;
+        let realDir: string;
+        try {
+          realDir = realpathSync(full);
+        } catch {
+          continue;
+        }
+        if (seen.has(realDir)) continue;
+        seen.add(realDir);
+        queue.push({ dir: full, depth: depth + 1 });
+      }
+    }
   }
-  // Stable ordering: plain `.env` first, then alphabetical.
+
+  // Stable ordering:
+  //   1. Root hits before subdirectory hits.
+  //   2. Within root: plain `.env` first, then alphabetical by name.
+  //   3. Across subdirs: alphabetical by relativeDir (POSIX), then plain `.env` first, then name.
   hits.sort((a, b) => {
-    if (a.suffix === null) return -1;
-    if (b.suffix === null) return 1;
+    const aRoot = a.relativeDir === '';
+    const bRoot = b.relativeDir === '';
+    if (aRoot !== bRoot) return aRoot ? -1 : 1;
+    if (a.relativeDir !== b.relativeDir) return a.relativeDir.localeCompare(b.relativeDir);
+    if (a.suffix === null && b.suffix !== null) return -1;
+    if (a.suffix !== null && b.suffix === null) return 1;
     return a.name.localeCompare(b.name);
   });
   return hits;

@@ -23,11 +23,13 @@ export const KEYNV_BLOCK_END = '<!-- keynv:end -->';
 export function aiContextBody(): string {
   return `## keynv (secrets)
 
-This project uses [keynv](https://keynv.dev) for secrets. There is a \`.keynv.env\` file at the project root containing **alias references** like \`OPENAI_API_KEY=@projectname.dev.openai-key\` — these are NOT real values, they are references to secrets stored in the keynv vault.
+This project uses [keynv](https://keynv.dev) for secrets. \`.keynv.env\` files contain **alias references** like \`OPENAI_API_KEY=@projectname.dev.openai-key\` — these are NOT real values, they are references to secrets stored in the keynv vault.
+
+In a monorepo, expect **one \`.keynv.env\` per app directory** (e.g. \`apps/api/.keynv.env\`, \`apps/web/.keynv.env\`) next to the original \`.env\` file that was migrated. \`keynv exec\` walks upward from the current directory and loads the nearest one, so running it from inside an app's folder picks up that app's aliases.
 
 ### Mental model
 
-- **\`.keynv.env\`** — checked into git, contains aliases. Safe to read, edit, commit.
+- **\`.keynv.env\`** — checked into git, contains aliases. Safe to read, edit, commit. May appear in subdirectories of a monorepo.
 - **Vault** — holds the real values. The \`keynv\` CLI reads it on demand.
 - **\`keynv exec -- <command>\`** — forks the command in a subprocess where the real values are injected into env vars. The parent process (where you, the AI agent, run) NEVER sees the real values.
 - **Redactor** — pipes subprocess stdout/stderr through a masker before they reach this terminal. Even if a script accidentally echoes a secret, you see \`<REDACTED:...>\` here.
