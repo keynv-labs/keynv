@@ -3,7 +3,7 @@
 import { logoutAction } from '@/app/(authed)/actions';
 import { useCsrfToken } from '@/components/security/csrf-field';
 import { cn } from '@/lib/cn';
-import { csrfFieldName } from '@/lib/csrf';
+import { csrfFieldName } from '@/lib/csrf-field-name';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Command } from 'cmdk';
 import {

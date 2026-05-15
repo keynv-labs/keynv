@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
-const FIELD_NAME = 'csrf_token';
+import { CSRF_FIELD_NAME, csrfFieldName } from './csrf-field-name';
+
 const TOKEN_TTL_MS = 2 * 60 * 60 * 1000;
 
 function getSecret(): string {
@@ -16,9 +17,7 @@ function sign(payload: string): string {
   return createHmac('sha256', getSecret()).update(payload, 'utf8').digest('base64url');
 }
 
-export function csrfFieldName(): string {
-  return FIELD_NAME;
-}
+export { csrfFieldName };
 
 export function createCsrfToken(now = Date.now()): string {
   const payload = JSON.stringify({
@@ -48,7 +47,7 @@ export function verifyCsrfToken(token: FormDataEntryValue | null, now = Date.now
 }
 
 export function requireCsrf(formData: FormData): { error: string } | null {
-  if (verifyCsrfToken(formData.get(FIELD_NAME))) return null;
+  if (verifyCsrfToken(formData.get(CSRF_FIELD_NAME))) return null;
   return { error: 'Security check failed. Refresh the page and try again.' };
 }
 
