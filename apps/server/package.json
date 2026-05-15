@@ -1,6 +1,6 @@
 {
   "name": "@keynv/server",
-  "version": "0.1.0-rc.14",
+  "version": "0.1.0-rc.15",
   "private": true,
   "description": "keynv REST API server — Hono on Node, SQLite + Litestream backed.",
   "type": "module",
