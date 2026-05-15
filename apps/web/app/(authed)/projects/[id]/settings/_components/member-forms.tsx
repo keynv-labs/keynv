@@ -110,14 +110,16 @@ export function RemoveMemberAction({
   return (
     <>
       <Tooltip content={`Remove ${email}`} side="left">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setOpen(true)}
           aria-label={`Remove ${email}`}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted hover:bg-bg-elevated-hover hover:text-danger transition-colors duration-fast ease-snap"
+          className="h-7 w-7 px-0 text-fg-muted hover:text-danger"
         >
           <Trash2 size={14} strokeWidth={2} />
-        </button>
+        </Button>
       </Tooltip>
 
       <AlertDialog open={open} onOpenChange={setOpen}>

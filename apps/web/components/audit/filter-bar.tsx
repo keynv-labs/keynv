@@ -1,6 +1,7 @@
 'use client';
 
 import { exportAuditAction } from '@/app/(authed)/audit/_actions/export-action';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 import { Download, Search } from 'lucide-react';
@@ -44,24 +45,28 @@ function ExportDropdown() {
 
   return (
     <div className="flex items-center gap-1">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         disabled={pending}
         onClick={() => handleExport('csv')}
-        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-fg-muted hover:text-fg hover:border-border-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="h-auto gap-1 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted"
       >
         <Download size={10} strokeWidth={2} />
         {pending ? '…' : 'CSV'}
-      </button>
+      </Button>
       <span className="text-fg-subtle">/</span>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         disabled={pending}
         onClick={() => handleExport('json')}
-        className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-fg transition-colors disabled:opacity-50"
+        className="h-auto px-1 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted"
       >
         JSON
-      </button>
+      </Button>
     </div>
   );
 }
@@ -158,13 +163,15 @@ export function FilterBar({
       </div>
 
       {isFiltering ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={onClear}
-          className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap"
+          className="h-auto px-1 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent"
         >
           clear
-        </button>
+        </Button>
       ) : null}
 
       <div className="ml-auto flex items-center gap-3">

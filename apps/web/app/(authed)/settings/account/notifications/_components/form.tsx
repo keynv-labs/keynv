@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { ErrorBlock, SuccessBlock } from '@/components/ui/error-block';
+import { cn } from '@/lib/cn';
 import { useCallback, useState } from 'react';
 import { type Preferences, savePreferences } from './actions';
 
@@ -67,18 +68,22 @@ export function NotificationsForm({ prefs: initial }: Props) {
 
         <div className="flex gap-3">
           {(['daily', 'weekly', 'never'] as const).map((d) => (
-            <button
+            <Button
               key={d}
               type="button"
+              variant="outline"
+              size="md"
               onClick={() => setPrefs((p) => ({ ...p, activity_digest: d }))}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+              aria-pressed={prefs.activity_digest === d}
+              className={cn(
+                'px-4',
                 prefs.activity_digest === d
-                  ? 'border-accent bg-accent-bg text-accent-fg'
-                  : 'border-border text-fg-subtle hover:border-border-strong'
-              }`}
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-border text-fg-subtle hover:border-border-strong',
+              )}
             >
               {d.charAt(0).toUpperCase() + d.slice(1)}
-            </button>
+            </Button>
           ))}
         </div>
       </Card>

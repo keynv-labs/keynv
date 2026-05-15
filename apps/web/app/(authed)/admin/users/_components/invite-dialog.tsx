@@ -121,26 +121,30 @@ export function InviteUserDialog({
                 spellCheck={false}
                 className="font-mono"
               />
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={() => setPassword(generateTempPassword())}
                 aria-label="Regenerate password"
-                className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted hover:bg-bg-elevated-hover hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+                className="h-9 w-9 shrink-0 px-0 text-fg-muted"
               >
                 <RefreshCw size={13} strokeWidth={2} />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
+                size="md"
                 onClick={onCopy}
                 aria-label="Copy password"
-                className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted hover:bg-bg-elevated-hover hover:text-fg hover:border-border-strong transition-colors duration-fast ease-snap"
+                className="h-9 w-9 shrink-0 px-0 text-fg-muted"
               >
                 {copied ? (
                   <Check size={13} strokeWidth={2.25} className="text-success" />
                 ) : (
                   <Copy size={13} strokeWidth={2} />
                 )}
-              </button>
+              </Button>
             </div>
           </Field>
 

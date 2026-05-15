@@ -134,14 +134,16 @@ export function CreateProjectDialog({
             </div>
 
             {envRows.length < 8 ? (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setEnvRows((rows) => [...rows, makeRow()])}
-                className="mt-2.5 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent transition-colors duration-fast ease-snap"
+                className="mt-2.5 h-auto px-1 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted hover:text-accent"
               >
                 <Plus size={11} strokeWidth={2.5} />
                 Add environment
-              </button>
+              </Button>
             ) : null}
           </div>
 
@@ -210,15 +212,17 @@ function EnvRowEditor({
         <span className="text-[11px] text-fg-muted whitespace-nowrap">Approval</span>
       </label>
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={onRemove}
         disabled={!canRemove}
         aria-label={`Remove ${row.name || 'environment'}`}
-        className="ml-auto inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-fg-subtle hover:text-danger hover:bg-danger-soft transition-colors duration-fast ease-snap disabled:invisible"
+        className="ml-auto h-6 w-6 shrink-0 px-0 text-fg-subtle hover:bg-danger-soft hover:text-danger disabled:invisible"
       >
         <X size={12} strokeWidth={2} />
-      </button>
+      </Button>
     </div>
   );
 }
