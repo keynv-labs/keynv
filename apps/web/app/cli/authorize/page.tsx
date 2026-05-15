@@ -65,7 +65,7 @@ export default async function CliAuthorizePage({
 
               {params.error ? (
                 <ErrorBlock
-                  message="The authorization code is invalid or expired. Run keynv login again."
+                  message="The authorization code is invalid or expired. Run keynv again."
                   className="mt-5"
                 />
               ) : null}

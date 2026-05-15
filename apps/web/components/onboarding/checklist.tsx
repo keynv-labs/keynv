@@ -183,14 +183,14 @@ function buildSteps(): StepDef[] {
     },
     {
       id: 'cli_authenticated',
-      title: 'Sign in from your CLI',
+      title: 'Connect from your CLI',
       body: () => (
         <div className="space-y-2.5">
           <p className="text-fg-muted">
-            The CLI lives on your laptop and talks to this server. Install + log in:
+            The CLI lives on your laptop and talks to this server. Install it, then open the TUI:
           </p>
           <CommandSnippet command="npm install -g @keynv/cli" />
-          <CommandSnippet command="keynv login --server <your-server-url>" />
+          <CommandSnippet command="keynv" />
         </div>
       ),
     },
@@ -202,9 +202,10 @@ function buildSteps(): StepDef[] {
           <p className="text-fg-muted">
             Run{' '}
             <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
-              keynv init
+              keynv
             </code>{' '}
-            in your project root. It scans{' '}
+            in your project root and choose <span className="text-fg">Set up this project</span>. It
+            scans{' '}
             <code className="font-mono text-accent bg-bg-inset border border-border rounded px-1.5 py-px text-[0.88em]">
               .env
             </code>{' '}
@@ -218,11 +219,11 @@ function buildSteps(): StepDef[] {
             </code>{' '}
             so Claude Code, Cursor, and any other agent understands keynv immediately.
           </p>
-          <CommandSnippet command="keynv init" />
+          <CommandSnippet command="keynv" />
           <p className="text-fg-muted text-xs pt-0.5">
             Or paste this into your agent&apos;s chat to let it set everything up:
           </p>
-          <CommandSnippet command="Install keynv: npm install -g @keynv/cli && keynv login && keynv init" />
+          <CommandSnippet command="Install keynv: npm install -g @keynv/cli, then run keynv and choose Set up this project" />
         </div>
       ),
     },

@@ -11,7 +11,7 @@ import { ImageResponse } from 'next/og';
  * landing's <metadata.twitter.card> is set to 'summary_large_image'.
  */
 
-export const alt = 'keynv — secrets your AI agent can’t leak';
+export const alt = 'keynv — developer-first secrets management';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -179,8 +179,8 @@ export default async function OpengraphImage() {
             maxWidth: 980,
           }}
         >
-          <span>Secrets your AI agent</span>
-          <span style={{ color: FG_MUTED }}>can&rsquo;t leak.</span>
+          <span>Store secrets once.</span>
+          <span style={{ color: FG_MUTED }}>Use safe aliases everywhere.</span>
         </div>
 
         <div

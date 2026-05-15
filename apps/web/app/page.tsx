@@ -11,9 +11,9 @@ import { ArrowRight, Check, EyeOff, Github, Lock, Terminal } from 'lucide-react'
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-const TITLE = 'keynv — secrets your AI agent can’t leak';
+const TITLE = 'keynv — developer-first secrets management';
 const DESCRIPTION =
-  'Self-hosted vault for your team’s API keys, DB passwords, and SSH credentials. Reference them by alias — your AI coding agent sees the alias literal, never the value.';
+  'Store API keys, database credentials, SSH secrets, webhook tokens, and internal credentials in one vault. Use safe aliases in code, terminals, CI, and AI-assisted workflows.';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://keynv.dev'),
@@ -28,6 +28,8 @@ export const metadata: Metadata = {
     'Cursor',
     'self-hosted vault',
     'AI-safe secrets',
+    'developer secret manager',
+    'team credential vault',
     'environment variables',
     'API key vault',
   ],
@@ -62,6 +64,7 @@ export default async function LandingPage() {
       <TopNav ctx={ctx} />
       <main id="main" className="flex-1">
         <Hero ctx={ctx} />
+        <SecretUseCases />
         <Problem />
         <HowItWorks />
         <Integrations />
@@ -159,7 +162,7 @@ function Hero({ ctx }: { ctx: CtaContext }) {
         <div className="animate-hero-rise">
           <Badge tone="accent" className="mx-auto">
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-accent animate-amber-pulse" />
-            Public beta · self-host today
+            Public beta · keynv.dev or self-hosted
           </Badge>
         </div>
 
@@ -167,10 +170,10 @@ function Hero({ ctx }: { ctx: CtaContext }) {
           className="display mt-6 text-[44px] sm:text-[58px] md:text-[72px] lg:text-[84px] max-w-4xl mx-auto animate-hero-rise"
           style={{ animationDelay: '60ms' }}
         >
-          Secrets your AI agent
+          Store secrets once.
           <br />
           <span className="bg-gradient-to-b from-fg-muted to-fg-subtle bg-clip-text text-transparent">
-            can&rsquo;t leak.
+            Use safe aliases everywhere.
           </span>
         </h1>
 
@@ -178,9 +181,10 @@ function Hero({ ctx }: { ctx: CtaContext }) {
           className="mt-6 text-base md:text-lg text-fg-muted max-w-2xl mx-auto leading-relaxed animate-hero-rise"
           style={{ animationDelay: '120ms' }}
         >
-          Self-hosted vault for your team&rsquo;s API keys, database passwords, and SSH credentials.
-          Your AI coding agent sees the alias literal —{' '}
-          <code className="text-accent">@billing.prod.db_password</code> — never the value.
+          Developer-first vault for API keys, database credentials, SSH secrets, webhook tokens, and
+          internal credentials. Use readable aliases like{' '}
+          <code className="text-accent">@billing.prod.db_password</code> in code, terminals, CI, and
+          AI tools — real values stay protected.
         </p>
 
         <div
@@ -220,7 +224,7 @@ function Hero({ ctx }: { ctx: CtaContext }) {
 
         {!ctx.isAuthed && ctx.publicSignup ? (
           <p className="mt-5 text-xs text-fg-subtle font-mono uppercase tracking-[0.14em]">
-            no credit card · self-host the same binary anytime
+            npm install -g @keynv/cli · run keynv · no credit card
           </p>
         ) : null}
 
@@ -246,8 +250,8 @@ function AgentVsSubprocessFrame() {
         {/* ─── Agent's view ─────────────────────────────────────────── */}
         <div className="bg-bg-elevated">
           <TerminalChrome
-            label="agent's view"
-            sublabel="what your AI sees"
+            label="developer / agent view"
+            sublabel="alias only"
             indicator={{ tone: 'warn', icon: <EyeOff size={11} strokeWidth={2.25} /> }}
           />
           <pre className="px-5 py-5 font-mono text-[12px] sm:text-[13px] leading-[1.7] overflow-x-auto whitespace-pre">
@@ -277,8 +281,8 @@ function AgentVsSubprocessFrame() {
         {/* ─── Subprocess (privileged) ──────────────────────────────── */}
         <div className="bg-bg-inset">
           <TerminalChrome
-            label="subprocess"
-            sublabel="privileged · agent-blind"
+            label="runtime"
+            sublabel="resolved privately"
             indicator={{ tone: 'success', icon: <Lock size={11} strokeWidth={2.25} /> }}
           />
           <pre className="px-5 py-5 font-mono text-[12px] sm:text-[13px] leading-[1.7] overflow-x-auto whitespace-pre">
@@ -306,11 +310,11 @@ function AgentVsSubprocessFrame() {
       </div>
 
       <div className="mt-3 flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle flex-wrap">
-        <span>verified</span>
+        <span>vaulted</span>
         <span className="text-fg-subtle/60">·</span>
         <span className="text-accent">sha256:9f4c2e</span>
         <span className="text-fg-subtle/60">·</span>
-        <span>chain head</span>
+        <span>audit chain</span>
         <span className="text-fg-subtle/60">·</span>
         <span>3 actors · 7 reads in last hour</span>
       </div>
@@ -363,29 +367,108 @@ function Cursor() {
   );
 }
 
+// ─── USE CASES ────────────────────────────────────────────────────────────────
+
+function SecretUseCases() {
+  return (
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-24">
+        <div className="display-eyebrow text-center">01 · what keynv protects</div>
+        <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
+          One place for the credentials your team uses every day.{' '}
+          <span className="text-fg-muted">Not just developer env vars.</span>
+        </h2>
+        <p className="mt-6 text-base text-fg-muted text-center max-w-2xl mx-auto leading-relaxed">
+          Store secrets manually in the dashboard, import them from existing{' '}
+          <code className="text-accent">.env</code> files, or manage them from the CLI. keynv keeps
+          the real value in the vault and gives your team a safe alias to use everywhere else.
+        </p>
+
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <UseCaseCard
+            title="Application secrets"
+            body="API keys, database URLs, OAuth client secrets, webhook signing keys, and service tokens organized by project and environment."
+          />
+          <UseCaseCard
+            title="Manual team credentials"
+            body="Shared internal passwords, SSH credentials, admin tokens, and operational secrets that should not live in chat, notes, or local files."
+          />
+          <UseCaseCard
+            title="AI-assisted workflows"
+            body="Aliases are safe to show in prompts, code reviews, terminal transcripts, and agent tool calls; real values resolve only at runtime."
+          />
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <Benefit
+            title="Readable aliases"
+            body="Use names like @billing.prod.stripe_key instead of copying raw values between tools."
+          />
+          <Benefit
+            title="Project + environment scope"
+            body="Keep dev, staging, and production credentials separated with clear ownership."
+          />
+          <Benefit
+            title="Audit-ready access"
+            body="Track who read or changed a secret, when it happened, and which project it belonged to."
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function UseCaseCard({ title, body }: { title: string; body: string }) {
+  return (
+    <article className="rounded-xl border border-border bg-bg-elevated p-6 hover:border-border-strong transition-colors duration-fast ease-snap">
+      <div className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-accent-soft-border bg-accent-soft text-accent">
+        <Check size={14} strokeWidth={2.5} />
+      </div>
+      <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-fg">{title}</h3>
+      <p className="mt-3 text-sm text-fg-muted leading-relaxed">{body}</p>
+    </article>
+  );
+}
+
+function Benefit({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-bg-inset/50 p-4">
+      <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
+        {title}
+      </div>
+      <p className="mt-2 text-xs text-fg-muted leading-relaxed">{body}</p>
+    </div>
+  );
+}
+
 // ─── PROBLEM ─────────────────────────────────────────────────────────────────
 
 function Problem() {
   return (
     <section className="border-b border-border">
       <div className="mx-auto max-w-4xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow">01 · why it exists</div>
+        <div className="display-eyebrow">02 · why it exists</div>
         <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05]">
-          AI coding agents made the secret-leak problem{' '}
-          <span className="text-fg-muted">an order of magnitude worse.</span>
+          The old secret workflow breaks down{' '}
+          <span className="text-fg-muted">as soon as more than one person needs access.</span>
         </h2>
         <p className="mt-6 text-base text-fg-muted leading-relaxed max-w-3xl">
-          Developers leak credentials constantly — <code className="text-fg">.env</code> files
-          committed to repos, keys left in shell history, tokens in tool outputs. AI agents
-          permanently residing in your terminal made it worse: every command, every file, every diff
-          is shipped to a vendor&rsquo;s logs. Existing vaults (HashiCorp, Doppler, 1Password) are
-          mature but none were designed around AI agents being there.
+          Secrets usually start in <code className="text-fg">.env</code> files, then spread into
+          chat, shell history, CI settings, screenshots, and AI agent transcripts. keynv replaces
+          that copying habit with a vault, readable aliases, runtime resolution, and an audit trail
+          your team can actually follow.
         </p>
 
         <ul className="mt-10 grid gap-3 sm:grid-cols-3 text-sm">
-          <Stat value="23.7M" label="hardcoded secrets pushed to GitHub in 2024 (+25% YoY)" />
-          <Stat value="every diff" label="visible to your AI agent's vendor — and their logs" />
-          <Stat value="alias-only" label="resolution happens in a process the agent cannot read" />
+          <Stat value="less copying" label="developers use aliases instead of moving raw values" />
+          <Stat
+            value="manual + app"
+            label="store operational credentials and project env vars together"
+          />
+          <Stat
+            value="agent-safe"
+            label="AI tools see alias literals, not production credentials"
+          />
         </ul>
       </div>
     </section>
@@ -409,10 +492,10 @@ function HowItWorks() {
   return (
     <section id="how-it-works" className="border-b border-border">
       <div className="mx-auto max-w-5xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow text-center">02 · how it works</div>
+        <div className="display-eyebrow text-center">03 · how it works</div>
         <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
-          Aliases in code.{' '}
-          <span className="text-fg-muted">Resolution in a process the agent can&rsquo;t see.</span>
+          A vault for real values.{' '}
+          <span className="text-fg-muted">Aliases for everything developers touch.</span>
         </h2>
 
         <ol className="mt-12 grid gap-4 md:grid-cols-3 relative">
@@ -422,32 +505,32 @@ function HowItWorks() {
           />
           <Step
             number="01"
-            title="Store"
+            title="Connect"
             body={
               <>
-                Add a secret with the CLI or web UI. Encrypted at rest with a per-project DEK; the
-                master KEK lives in your OS keychain.
+                Install the CLI and run <code className="text-accent">keynv</code>. The TUI connects
+                to keynv.dev or your self-hosted server, then offers to set up the current project.
               </>
             }
           />
           <Step
             number="02"
-            title="Reference"
+            title="Store"
             body={
               <>
-                In code, configs, and bash you type{' '}
-                <code className="text-accent">@project.env.key</code>. The literal alias is the only
-                string the agent ever sees.
+                Add secrets manually in the dashboard, create them from the CLI, or import existing{' '}
+                <code className="text-accent">.env</code> files into project and environment scopes.
               </>
             }
           />
           <Step
             number="03"
-            title="Resolve safely"
+            title="Use safely"
             body={
               <>
-                <code className="text-accent">keynv exec</code> spawns a subprocess with the real
-                value injected via stdin. Tool outputs are scanned for leaks before they return.
+                Code, configs, terminals, CI, and AI agents use{' '}
+                <code className="text-accent">@project.env.key</code>. keynv resolves the real value
+                only when a trusted runtime needs it.
               </>
             }
           />
@@ -488,23 +571,22 @@ function Integrations() {
   return (
     <section id="integrations" className="border-b border-border">
       <div className="mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow text-center">03 · agent integrations</div>
+        <div className="display-eyebrow text-center">04 · developer workflows</div>
         <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
-          Drop into the agent you already use.{' '}
-          <span className="text-fg-muted">No prompt-engineering required.</span>
+          Works where secrets already create risk.{' '}
+          <span className="text-fg-muted">Local dev, CI, dashboards, and AI agents.</span>
         </h2>
         <p className="mt-6 text-base text-fg-muted text-center max-w-2xl mx-auto leading-relaxed">
-          Run <code className="text-accent">keynv init</code> in your project root — it scans
-          existing
-          <code className="text-accent">.env</code> files, uploads detected secrets to the vault,
-          and writes a project-local <code className="text-accent">.keynv.env</code> that maps alias
-          names to vault references. Safe to commit — alias literals only, never raw values.
+          Run <code className="text-accent">keynv</code> in your project root and choose{' '}
+          <span className="text-fg">Set up this project</span>. The TUI can migrate existing{' '}
+          <code className="text-accent">.env</code> values, write a commit-safe{' '}
+          <code className="text-accent">.keynv.env</code>, and keep raw secrets out of your repo.
         </p>
 
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           <IntegrationCard
             name="Claude Code"
-            command="keynv init"
+            command="keynv"
             file="your-project/.keynv.env"
             snippet={
               <>
@@ -542,7 +624,7 @@ function Integrations() {
             features={[
               'MCP server with use_secret refs',
               'Output redactor on every tool result',
-              'Shell wrapper: keynv exec --',
+              'TUI-guided project setup',
             ]}
           />
           <IntegrationCard
@@ -589,9 +671,9 @@ function Integrations() {
             ]}
           />
           <IntegrationCard
-            name="Any shell"
+            name="Local dev + CI"
             command="keynv exec -- pnpm dev"
-            file="any process · zero config"
+            file="any process · aliases only"
             snippet={
               <>
                 <Line dim># in your bash / zsh / fish</Line>
@@ -838,10 +920,12 @@ function BottomCta({ ctx }: { ctx: CtaContext }) {
     <section className="relative overflow-hidden border-b border-border">
       <div aria-hidden className="absolute inset-0 bg-amber-glow pointer-events-none opacity-70" />
       <div className="relative mx-auto max-w-3xl px-4 md:px-6 py-20 md:py-24 text-center">
-        <h2 className="display text-3xl md:text-[42px] leading-[1.05]">Ready to stop leaking?</h2>
+        <h2 className="display text-3xl md:text-[42px] leading-[1.05]">
+          Ready to clean up your secret workflow?
+        </h2>
         <p className="mt-4 text-base text-fg-muted max-w-xl mx-auto">
-          15-minute self-host on Coolify. Single binary CLI. Source-available, MIT-when-Phase-5
-          ships.
+          Start on keynv.dev or self-host the same stack. One CLI, one dashboard, one safe alias
+          layer for developers and AI-assisted teams.
         </p>
         <div className="mt-9 flex items-center justify-center gap-3 flex-wrap">
           {ctx.isAuthed ? (

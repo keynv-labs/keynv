@@ -11,7 +11,7 @@ const REPO = 'https://github.com/keynv-labs/keynv';
 
 const BODY = `# keynv
 
-> Self-hosted secrets management built for the AI-coding era. Developers store API keys, DB passwords, and SSH credentials in a vault; reference them everywhere by alias (\`@project.env.key\`); AI coding agents (Claude Code, Cursor, Copilot, etc.) only ever see the alias literal, never the resolved value.
+> Developer-first secrets management for projects, teams, and AI-assisted workflows. Store API keys, database credentials, SSH secrets, webhook tokens, and internal credentials in a vault; reference them everywhere by alias (\`@project.env.key\`); AI coding agents (Claude Code, Cursor, Copilot, etc.) only ever see the alias literal, never the resolved value.
 
 keynv ships three things in one product:
 
@@ -19,15 +19,15 @@ keynv ships three things in one product:
 2. An AI-safety layer: a privileged \`keynv exec\` subprocess wrapper, an MCP server that returns single-use reference tokens (never the resolved value), and an output redactor (50+ regex patterns + Shannon-entropy fallback) on every tool result.
 3. A tamper-evident audit log: every read, write, rotation, approval, and role change is SHA-256 hash-chained and verifiable via \`POST /v1/audit/verify\`.
 
-The product exists because existing vaults (HashiCorp, Doppler, 1Password) were not designed around an AI agent permanently residing in the developer's terminal.
+The product exists because existing workflows still push secrets through .env files, shell history, chat, CI settings, and AI transcripts. keynv gives developers a vault, readable aliases, runtime resolution, and audit logs without changing how they run projects.
 
 ## Setting up with an AI agent
 
-keynv writes an \`AGENTS.md\` to your project on \`keynv init\`. All agents that index the repo (Claude Code, Cursor, Windsurf, Aider, Copilot, etc.) pick it up automatically on the next session.
+Run \`keynv\` in your project root and choose **Set up this project**. keynv writes an \`AGENTS.md\` to your project. All agents that index the repo (Claude Code, Cursor, Windsurf, Aider, Copilot, etc.) pick it up automatically on the next session.
 
 Quick one-liner for any agent chat:
 
-  Install keynv: npm install -g @keynv/cli && keynv login && keynv init
+  Install keynv: npm install -g @keynv/cli, then run keynv and choose Set up this project
   After that, always run: keynv exec -- <command>
   Docs: ${SITE}/docs/ai-setup
 
@@ -57,7 +57,7 @@ Full copy-paste prompts for each agent: ${SITE}/docs/ai-setup
 - **KEK**: master Key Encryption Key. Lives in the OS keychain locally; in HSM/KMS in commercial tier.
 - **\`keynv exec\`**: privileged subprocess wrapper. Resolves aliases inside a child process the AI agent's tree cannot inherit or read.
 - **Redactor**: pattern + entropy scanner that masks secrets in tool outputs before they reach the AI agent.
-- **\`keynv init\`**: one-time per-project setup. Scans \`.env\` files, uploads secrets to vault, writes \`.keynv.env\` (alias refs only, safe to commit), and writes \`AGENTS.md\` for agent context.
+- **\`keynv\` setup flow**: one-time per-project setup from the TUI. Scans \`.env\` files, uploads secrets to vault, writes \`.keynv.env\` (alias refs only, safe to commit), and writes \`AGENTS.md\` for agent context.
 
 ## Integrations
 
