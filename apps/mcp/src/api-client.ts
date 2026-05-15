@@ -24,7 +24,7 @@ export class McpApiClient {
     });
 
     if (!res.ok) {
-      throw new Error(`keynv-mcp: token refresh failed (${res.status}). Re-run keynv login.`);
+      throw new Error(`keynv-mcp: token refresh failed (${res.status}). Re-run keynv.`);
     }
 
     const data = (await res.json()) as {

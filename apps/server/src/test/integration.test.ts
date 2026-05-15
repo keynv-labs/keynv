@@ -339,6 +339,99 @@ describe('Phase 1 acceptance flow', () => {
   });
 });
 
+describe('Clean user walkthrough', () => {
+  it('registers, creates a second org, switches active org, creates a project, and resolves a secret', async () => {
+    const local = await makeHarness({ publicRegistrationEnabled: true });
+    try {
+      const register = await local.app.request('http://localhost/v1/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: 'new-user@example.test',
+          password: 'new-user-password-12345',
+          org_name: 'First Workspace',
+        }),
+      });
+      expect(register.status).toBe(201);
+      const registered = (await register.json()) as { access_token: string };
+
+      const createOrg = await local.app.request('http://localhost/v1/org', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${registered.access_token}`,
+        },
+        body: JSON.stringify({ name: 'Side Project' }),
+      });
+      expect(createOrg.status).toBe(201);
+      const org = (await createOrg.json()) as { id: string; name: string };
+      expect(org.name).toBe('Side Project');
+
+      const me = await local.app.request('http://localhost/v1/whoami', {
+        headers: {
+          authorization: `Bearer ${registered.access_token}`,
+          'x-keynv-org': org.id,
+        },
+      });
+      expect(me.status).toBe(200);
+      const meBody = (await me.json()) as {
+        org_id: string;
+        org_role: string;
+        orgs: Array<{ id: string; name: string }>;
+      };
+      expect(meBody.org_id).toBe(org.id);
+      expect(meBody.org_role).toBe('owner');
+      expect(meBody.orgs.map((o) => o.id)).toContain(org.id);
+
+      const projectRes = await local.app.request('http://localhost/v1/projects', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${registered.access_token}`,
+          'x-keynv-org': org.id,
+        },
+        body: JSON.stringify({
+          name: 'walkthrough',
+          environments: [{ name: 'dev', tier: 'non-production' }],
+        }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = (await projectRes.json()) as { id: string; name: string };
+      expect(project.name).toBe('walkthrough');
+
+      const createSecret = await local.app.request(
+        `http://localhost/v1/projects/${project.id}/secrets`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${registered.access_token}`,
+            'x-keynv-org': org.id,
+          },
+          body: JSON.stringify({ env: 'dev', key: 'api_key', value: 'walkthrough-secret' }),
+        },
+      );
+      expect(createSecret.status).toBe(201);
+
+      const resolved = await local.app.request(
+        `http://localhost/v1/projects/${project.id}/secrets/dev/api_key`,
+        {
+          headers: {
+            authorization: `Bearer ${registered.access_token}`,
+            'x-keynv-org': org.id,
+          },
+        },
+      );
+      expect(resolved.status).toBe(200);
+      const resolvedBody = (await resolved.json()) as { alias: string; value: string };
+      expect(resolvedBody.alias).toBe('@walkthrough.dev.api_key');
+      expect(resolvedBody.value).toBe('walkthrough-secret');
+    } finally {
+      local.cleanup();
+    }
+  });
+});
+
 // Regression suite for audit finding B2 — cross-org access.
 describe('B2 regression — cross-org access is denied', () => {
   async function twoOrgHarness() {

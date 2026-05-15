@@ -1,6 +1,4 @@
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import Link from 'next/link';
+import { NewProjectButton } from '../../projects/new-project-button';
 
 export function FirstRunEmpty() {
   return (
@@ -13,12 +11,7 @@ export function FirstRunEmpty() {
           secrets your AI agents will reference by alias.
         </p>
         <div className="mt-7 flex items-center justify-center gap-2">
-          <Link href="/projects/new">
-            <Button className="gap-1.5">
-              <Plus size={14} strokeWidth={2.25} />
-              Create first project
-            </Button>
-          </Link>
+          <NewProjectButton label="Create first project" />
         </div>
       </div>
     </div>

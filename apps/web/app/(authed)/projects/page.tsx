@@ -135,8 +135,8 @@ function EmptyState({ canCreate }: { canCreate: boolean }) {
           <div className="mt-7">
             <NewProjectButton label="Create first project" />
             <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-              or run <code className="text-accent normal-case">keynv project init</code> from the
-              CLI
+              or run <code className="text-accent normal-case">keynv</code> and choose projects from
+              the TUI
             </div>
           </div>
         ) : (

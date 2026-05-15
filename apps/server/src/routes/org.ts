@@ -5,7 +5,7 @@ import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { newOrgId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { audit, parseBody } from '../lib/route-utils.js';
+import { audit, guard, parseBody } from '../lib/route-utils.js';
 
 interface OrgDeps {
   db: Db;

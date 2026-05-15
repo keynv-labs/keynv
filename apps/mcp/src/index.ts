@@ -5,7 +5,7 @@ async function main(): Promise<void> {
   const creds = await loadCredentials();
   if (!creds) {
     process.stderr.write(
-      'keynv-mcp: no credentials. Run `keynv login` first; the MCP server inherits the developer session.\n',
+      'keynv-mcp: no credentials. Run `keynv` first; the MCP server inherits the developer session.\n',
     );
     process.exit(1);
   }

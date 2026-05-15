@@ -195,8 +195,9 @@ function CreateTokenDialog() {
           <>
             <DialogTitle>Copy your new token</DialogTitle>
             <DialogDescription>
-              This is the only time the value will be shown. Paste it into your password manager or
-              `keynv login --token` now. If you lose it, revoke this token and create a new one.
+              This is the only time the value will be shown. Use tokens for CI and other
+              non-interactive automation. For your laptop, run the normal <code>keynv</code> TUI
+              instead. If you lose this token, revoke it and create a new one.
             </DialogDescription>
             <RawTokenReveal token={issued.token} name={issued.name} />
             <DialogFooter>
