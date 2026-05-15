@@ -1,6 +1,6 @@
 {
   "name": "@keynv/cli",
-  "version": "0.1.0-rc.15",
+  "version": "0.1.0-rc.16",
   "description": "keynv command-line interface — AI-safe secrets management with alias-based references and a privileged subprocess wrapper.",
   "license": "MIT",
   "type": "module",

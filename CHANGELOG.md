@@ -12,8 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc.16] — 2026-05-15
+
 ### Fixed
+- **Server integration tests**: all 4 route handlers that used `db.transaction(async (tx) => …)` now use synchronous callbacks. better-sqlite3 v11 rejects Promise-returning transaction callbacks, causing a ROLLBACK and subsequent FK constraint failures on every insert-after-rollback. Affected routes: `POST /v1/auth/register`, `POST /v1/projects`, `POST /v1/projects/:id/secrets/:env/:key/rotate`, `POST /v1/org`.
+- **E2E tests on Windows**: `playwright.config.ts` and `next.config.ts` used `new URL(...).pathname` which produces `/C:/...` on Windows — an invalid path for `spawn` cwd. Replaced with `fileURLToPath()` from `node:url`.
+- **Redactor preview leak (M1)**: `preview()` truncated to 4 chars for secrets > 4 chars long, allowing reconstruction of 5–8 char secrets. Tightened to 3 chars + `...`. Trust boundary documented in `Match.preview` JSDoc.
+- **X-Keynv-Agent trust boundary (M2)**: documented that the header is client-controlled and informational only — never used for authorization. Authenticated identity comes from JWT.
 - `keynv init` now auto-generates `.keynv.<env>.env` files for each non-default environment (e.g. `.keynv.prod.env`) so `keynv exec --from .keynv.prod.env` works immediately after init without manual file creation.
+
+### Security
+- All 14/14 audit findings now resolved (M1, M2 were the last two deferrals).
 
 ## [0.1.0-rc.14] — 2026-05-13
 

@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node: ['20', '22']
     runs-on: ${{ matrix.os }}
     steps:
@@ -72,6 +72,28 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
       - run: pnpm test
+
+  e2e:
+    name: e2e (playwright / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E tests
+        run: pnpm --filter @keynv/tests-e2e test
 
   gitleaks:
     name: gitleaks (secret scan)
