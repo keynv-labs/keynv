@@ -1,10 +1,10 @@
 'use server';
 
+import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { approvalReason, expiresInSeconds, projectId } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { projectId, approvalReason, expiresInSeconds } from '@/lib/schemas';
-import { type ActionState, parseOr, catchApi } from '@/lib/action-result';
 
 export type GrantState = ActionState;
 
@@ -19,7 +19,12 @@ export async function grantApprovalAction(
   _prev: GrantState,
   formData: FormData,
 ): Promise<GrantState> {
-  const parsed = parseOr(GrantBody, formData, ['project_id', 'approval_id', 'expires_in_seconds', 'reason']);
+  const parsed = parseOr(GrantBody, formData, [
+    'project_id',
+    'approval_id',
+    'expires_in_seconds',
+    'reason',
+  ]);
   if (!parsed.success) return parsed;
 
   const result = await catchApi(() =>

@@ -1,10 +1,10 @@
 'use server';
 
+import { catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { cliTokenName } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { cliTokenName } from '@/lib/schemas';
-import { parseOr, catchApi } from '@/lib/action-result';
 
 export type CreateTokenState = {
   error?: string;
@@ -46,9 +46,7 @@ export async function revokeCliTokenAction(
   const id = String(formData.get('id') ?? '');
   if (!id) return { error: 'Missing token id.' };
 
-  const result = await catchApi(() =>
-    api(`/v1/cli-tokens/${id}`, { method: 'DELETE' }),
-  );
+  const result = await catchApi(() => api(`/v1/cli-tokens/${id}`, { method: 'DELETE' }));
   if (!result.success) return { error: result.error };
 
   revalidatePath('/settings/account/cli-tokens');

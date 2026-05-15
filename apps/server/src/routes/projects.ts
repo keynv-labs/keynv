@@ -8,7 +8,7 @@ import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 import { newEnvironmentId, newProjectId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { parseBody, guard, audit } from '../lib/route-utils.js';
+import { audit, guard, parseBody } from '../lib/route-utils.js';
 
 interface ProjectDeps {
   db: Db;
@@ -57,9 +57,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
     const params = Object.fromEntries(new URL(c.req.url).searchParams);
     const limitRaw = Number(params.limit ?? 100);
     const limit =
-      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200
-        ? Math.floor(limitRaw)
-        : 100;
+      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200 ? Math.floor(limitRaw) : 100;
     const beforeCreatedAt =
       typeof params.before_created_at === 'string' ? params.before_created_at : null;
 
@@ -159,8 +157,9 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       require_approval: env.require_approval,
     }));
 
-    deps.db.transaction((tx) => {
-      tx.insert(schema.projects)
+    await deps.db.transaction(async (tx) => {
+      await tx
+        .insert(schema.projects)
         .values({
           id: projectId,
           org_id: user.org_id,
@@ -170,7 +169,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
         })
         .run();
       for (const row of envInserts) {
-        tx.insert(schema.environments).values(row).run();
+        await tx.insert(schema.environments).values(row).run();
       }
     });
 

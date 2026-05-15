@@ -79,6 +79,7 @@ export const PAYLOAD_SCHEMAS = {
   'secret.test.invoked': z
     .object({ alias, tester: z.string(), ok: z.boolean(), latency_ms: z.number() })
     .strict(),
+  'secret.test.denied': z.object({ alias }).strict(),
   'approval.requested': z.object({ alias }).strict(),
   'approval.granted': z.object({ alias, granted_by: userId }).strict(),
   'approval.denied': z.object({ alias, denied_by: userId }).strict(),

@@ -66,7 +66,7 @@ Non-interactive with --yes to skip prompts.
     ].join('\n');
 
     const { writeFileSync } = await import('node:fs');
-    writeFileSync(outPath, `${contents}\n`);
+    writeFileSync(outPath, `${contents}\n`, { mode: 0o600 });
 
     this.context.stdout.write(`Wrote ${outPath}\n\n`);
     this.context.stdout.write('Generated secrets:\n');
@@ -128,7 +128,7 @@ volumes:
   keynv-data:
 `;
 
-      writeFileSync('docker-compose.yml', composeContent);
+      writeFileSync('docker-compose.yml', composeContent, { mode: 0o600 });
       this.context.stdout.write(
         '\nWrote docker-compose.yml (update Litestream S3 config before deploying).\n',
       );

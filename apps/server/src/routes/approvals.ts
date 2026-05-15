@@ -6,7 +6,7 @@ import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 import { newApprovalId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { parseBody, guard, audit } from '../lib/route-utils.js';
+import { audit, guard, parseBody } from '../lib/route-utils.js';
 
 interface ApprovalDeps {
   db: Db;
@@ -101,8 +101,7 @@ export function approvalRoutes(deps: ApprovalDeps): Hono {
     // next_cursor: page is "full" → caller may want more, so hand back
     // the last row's created_at so they can ask for older rows next.
     const tail = rows.at(-1);
-    const next_cursor =
-      tail && rows.length === parsed.data.limit ? tail.created_at : null;
+    const next_cursor = tail && rows.length === parsed.data.limit ? tail.created_at : null;
     return c.json({ approvals: rows, next_cursor });
   });
 
@@ -269,8 +268,7 @@ export function orgApprovalRoutes(deps: ApprovalDeps): Hono {
       .limit(parsed.data.limit);
 
     const tail = rows.at(-1);
-    const next_cursor =
-      tail && rows.length === parsed.data.limit ? tail.created_at : null;
+    const next_cursor = tail && rows.length === parsed.data.limit ? tail.created_at : null;
     return c.json({ approvals: rows, next_cursor });
   });
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { loadMoreProjectApprovalsAction } from '@/app/(authed)/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +26,6 @@ import { cn } from '@/lib/cn';
 import { Check, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useActionState } from 'react';
-import { loadMoreProjectApprovalsAction } from '@/app/(authed)/actions';
 import { type GrantState, denyApprovalAction, grantApprovalAction } from '../_actions/actions';
 
 export interface ApprovalRow {

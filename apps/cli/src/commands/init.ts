@@ -1,12 +1,12 @@
-import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { reference } from '@keynv/core';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { parseEnvFile } from '../exec/envFile.js';
+import { writeAiContext } from '../init/ai-context.js';
 import { findEnvFiles, findProjectRoot, suggestedEnvForSuffix } from '../init/detect.js';
 import { classifyEntry } from '../init/heuristics.js';
-import { writeAiContext } from '../init/ai-context.js';
 import { runInitFlow } from '../ui/flows/init.js';
 import { UserCancelled } from '../ui/helpers/cancel.js';
 import { isInteractive } from '../ui/helpers/tty.js';
@@ -53,10 +53,7 @@ any prompts.
       ['Preview without writing or uploading', '$0 init --dry-run'],
       ['Skip the package.json script-wrapping step', '$0 init --no-scripts'],
       ['Non-interactive (CI/CD)', '$0 init --env-file .env --project myproject --env dev'],
-      [
-        'Auto-scan & set up without prompts (CI/CD)',
-        '$0 init --yes',
-      ],
+      ['Auto-scan & set up without prompts (CI/CD)', '$0 init --yes'],
     ],
   });
 
@@ -209,9 +206,7 @@ any prompts.
   async runAutoScan(client: ApiClient): Promise<number> {
     const root = findProjectRoot(process.cwd());
     if (!root) {
-      this.context.stderr.write(
-        'keynv: no project root found (no package.json, .git, etc.).\n',
-      );
+      this.context.stderr.write('keynv: no project root found (no package.json, .git, etc.).\n');
       return 1;
     }
 
@@ -263,14 +258,23 @@ any prompts.
     } catch {
       const created = await client.request<{ id: string; name: string }>('/v1/projects', {
         method: 'POST',
-        body: { name: projectName, environments: [{ name: envName, tier: 'non-production', require_approval: false }] },
+        body: {
+          name: projectName,
+          environments: [{ name: envName, tier: 'non-production', require_approval: false }],
+        },
       });
       projectId = created.id;
       this.context.stdout.write(`keynv: created project "${projectName}" (${projectId}).\n`);
     }
 
     const secretsWithKeys = secrets.map((s) => ({ ...s, aliasKey: toAliasKey(s.name) }));
-    const result = await this.uploadSecrets(client, projectId, projectName, envName, secretsWithKeys);
+    const result = await this.uploadSecrets(
+      client,
+      projectId,
+      projectName,
+      envName,
+      secretsWithKeys,
+    );
     if (result !== 0) return result;
 
     // Write .keynv.env with alias mappings
@@ -295,7 +299,9 @@ any prompts.
       this.context.stdout.write(`keynv: removed ${f.name} (secrets migrated to vault).\n`);
     }
 
-    this.context.stdout.write('keynv: done. Use `keynv exec` to run commands with resolved secrets.\n');
+    this.context.stdout.write(
+      'keynv: done. Use `keynv exec` to run commands with resolved secrets.\n',
+    );
     return 0;
   }
 
@@ -313,7 +319,11 @@ any prompts.
     let uploaded = 0;
     const failed: Array<{ name: string; reason: string }> = [];
     for (const s of secrets) {
-      const alias = reference.buildAlias({ project: projectName, environment: envName, key: s.aliasKey });
+      const alias = reference.buildAlias({
+        project: projectName,
+        environment: envName,
+        key: s.aliasKey,
+      });
       if (!alias) {
         failed.push({ name: s.name, reason: `invalid alias key: ${s.aliasKey}` });
         continue;

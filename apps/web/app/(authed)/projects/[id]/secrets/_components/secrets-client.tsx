@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { CreateSecretDialog } from './secret-dialogs';
 import { EmptyState } from './empty-state';
 import { EnvTab } from './env-tab';
 import { NoMatches } from './no-matches';
-import { SecretsTable, type Environment, type ParsedSecret, type SecretRow } from './secrets-table';
+import { CreateSecretDialog } from './secret-dialogs';
+import { type Environment, type ParsedSecret, type SecretRow, SecretsTable } from './secrets-table';
 
 interface Props {
   projectId: string;
@@ -152,5 +152,3 @@ export function SecretsClient({ projectId, environments, secrets }: Props) {
 }
 
 // ─── Env tab ─────────────────────────────────────────────────────────────────
-
-

@@ -32,10 +32,12 @@ export function authorize(action: Action, ctx: AuthorizeContext): Decision {
   const effective: Role = membership.role;
   if (!allowed.includes(effective)) return 'deny';
 
-  // Production-tier secret reads may require explicit approval for
-  // developers when the environment is marked require_approval.
+  // Production-tier secret operations may require explicit approval for
+  // developers when the environment is marked require_approval. Both
+  // secret.read (viewing the decrypted value) and secret.test (sending
+  // it over the network to a target) expose the value.
   if (
-    action === 'secret.read' &&
+    (action === 'secret.read' || action === 'secret.test') &&
     effective === 'developer' &&
     ctx.resource?.environment_tier === 'production' &&
     ctx.resource?.require_approval

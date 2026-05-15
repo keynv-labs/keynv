@@ -1,14 +1,21 @@
 /**
- * Reads ~/.keynv/credentials.json (same file the CLI writes after
- * `keynv login`). The MCP server inherits the developer's session;
- * agents calling MCP tools act as the developer.
+ * Reads CLI credentials, preferring the encrypted store
+ * (~/.keynv/credentials.enc) when available. Falls back to the legacy
+ * plaintext JSON file (~/.keynv/credentials.json) only when the
+ * encrypted store doesn't exist yet (e.g. pre-migration).
  *
- * Keeping a separate identity for the agent (so audits clearly tag
- * the agent vs the human) is a Phase 6 commercial feature.
+ * The CLI's `loadCredentialsAsync()` from `secure-store.ts` handles
+ * decryption internally and returns the same shape, so we delegate to
+ * it when possible.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { crypto } from '@keynv/core';
+import { Entry } from '@napi-rs/keyring';
+
+const SERVICE = 'keynv-cli';
+const KEY_ACCOUNT = 'credentials-key';
 
 export interface Credentials {
   server_url: string;
@@ -21,13 +28,61 @@ export interface Credentials {
   access_expires_at: string;
 }
 
-export function loadCredentials(): Credentials | null {
-  const path =
-    process.env['KEYNV_CREDENTIALS_FILE'] ?? join(homedir(), '.keynv', 'credentials.json');
+function defaultEncPath(): string {
+  return process.env['KEYNV_CREDENTIALS_FILE'] ?? join(homedir(), '.keynv', 'credentials.enc');
+}
+
+function legacyPath(): string {
+  return (
+    process.env['KEYNV_CREDENTIALS_FILE_LEGACY'] ?? join(homedir(), '.keynv', 'credentials.json')
+  );
+}
+
+async function loadKeyFromKeychain(): Promise<Uint8Array | null> {
+  try {
+    const e = new Entry(SERVICE, KEY_ACCOUNT);
+    const stored = e.getPassword();
+    if (!stored) return null;
+    return new Uint8Array(Buffer.from(stored, 'base64'));
+  } catch {
+    return null;
+  }
+}
+
+async function loadFromEncryptedStore(): Promise<Credentials | null> {
+  const path = defaultEncPath();
+  if (!existsSync(path)) return null;
+
+  const blob = readFileSync(path);
+  if (blob.length < 1 + 24 + 16) return null;
+  const version = blob[0];
+  if (version !== 0x01) return null;
+  const nonce = new Uint8Array(blob.subarray(1, 1 + 24));
+  const ciphertext = new Uint8Array(blob.subarray(1 + 24));
+
+  const key = await loadKeyFromKeychain();
+  if (!key) return null;
+
+  try {
+    const plain = await crypto.decryptSecret({ ciphertext, nonce }, key);
+    return JSON.parse(plain) as Credentials;
+  } catch {
+    return null;
+  }
+}
+
+function loadFromLegacyJson(): Credentials | null {
+  const path = legacyPath();
   if (!existsSync(path)) return null;
   try {
     return JSON.parse(readFileSync(path, 'utf8')) as Credentials;
   } catch {
     return null;
   }
+}
+
+export async function loadCredentials(): Promise<Credentials | null> {
+  const enc = await loadFromEncryptedStore();
+  if (enc) return enc;
+  return loadFromLegacyJson();
 }

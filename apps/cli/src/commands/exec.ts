@@ -128,8 +128,7 @@ spelled \`--from\` to avoid the collision.)
 
     if (!envFileLoaded && !this.noEnvFile && !this.envFile && !process.env.KEYNV_ENV_FILE) {
       this.context.stderr.write(
-        `keynv: no ${ENV_FILE_BASENAME} found in this directory or any parent.\n` +
-          `       Run \`keynv init\` in your project root to migrate secrets and create one.\n`,
+        `keynv: no ${ENV_FILE_BASENAME} found in this directory or any parent.\n       Run \`keynv init\` in your project root to migrate secrets and create one.\n`,
       );
     }
 
@@ -217,13 +216,13 @@ spelled \`--from\` to avoid the collision.)
       const displayPath = relative(process.cwd(), envFileLoaded.path) || envFileLoaded.path;
       const parts: string[] = [];
       if (aliasEntries.length > 0) {
-        parts.push(aliasEntries.map((e) => `${e.name}=${e.value}`).join(', ') + ' (vault)');
+        parts.push(`${aliasEntries.map((e) => `${e.name}=${e.value}`).join(', ')} (vault)`);
       }
       if (plainEntries.length > 0) {
-        parts.push(plainEntries.map((e) => e.name).join(', ') + ' (plain)');
+        parts.push(`${plainEntries.map((e) => e.name).join(', ')} (plain)`);
       }
       this.context.stderr.write(
-        `keynv: loaded ${displayPath}` + (parts.length > 0 ? ` — ${parts.join('; ')}` : '') + '\n',
+        `keynv: loaded ${displayPath}${parts.length > 0 ? ` — ${parts.join('; ')}` : ''}\n`,
       );
     }
 

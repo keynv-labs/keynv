@@ -1,8 +1,8 @@
 'use server';
 
+import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
 import { z } from 'zod';
-import { type ActionState, parseOr, catchApi } from '@/lib/action-result';
 
 export type PasswordState = ActionState;
 

@@ -35,7 +35,7 @@ export function handleExecError(stderr: NodeJS.WritableStream, err: unknown): 1 
   } else if (err instanceof Error) {
     stderr.write(`keynv: ${err.message}\n`);
   } else {
-    stderr.write(`keynv: unexpected error\n`);
+    stderr.write('keynv: unexpected error\n');
   }
   return 1;
 }

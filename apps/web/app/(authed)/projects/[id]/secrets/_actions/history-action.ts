@@ -1,7 +1,7 @@
 'use server';
 
-import { api } from '@/lib/api';
 import type { AuditEntry } from '@/components/audit/types';
+import { api } from '@/lib/api';
 
 export interface SecretHistoryState {
   entries?: AuditEntry[];

@@ -39,7 +39,8 @@ export class LoginCommand extends Command {
   token = Option.String('--token', { description: 'CLI token for headless auth.' });
   email = Option.String('--email', { description: 'Email address.' });
   password = Option.String('--password', {
-    description: 'Password (use stdin to avoid argv leak).',
+    description:
+      'Password. WARNING: passing passwords via --password leaks them to process listings (ps). Use interactive prompt or pipe via stdin instead.',
   });
 
   async execute(): Promise<number> {
@@ -72,7 +73,15 @@ export class LoginCommand extends Command {
     }
 
     const email = this.email ?? (await promptLine('email: '));
-    const password = this.password ?? (await promptHidden('password: '));
+    let password: string;
+    if (this.password) {
+      this.context.stderr.write(
+        'keynv: WARNING: --password leaks credentials to process listings. Use interactive prompt or pipe via stdin instead.\n',
+      );
+      password = this.password;
+    } else {
+      password = await promptHidden('password: ');
+    }
 
     let res: Response;
     try {

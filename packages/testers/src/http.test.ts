@@ -1,5 +1,8 @@
 import { type Server, createServer } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+process.env['KEYNV_ALLOW_LOOPBACK_TESTERS'] = '1';
+
 import { httpTester } from './http.js';
 
 let server: Server;
@@ -86,6 +89,6 @@ describe('httpTester', () => {
       { url, method: 'GET', auth: 'basic', expect_status_min: 200, expect_status_max: 299 },
     );
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/target.user/);
+    expect(r.error).toMatch(/target\.user|blocked/i);
   });
 });

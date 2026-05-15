@@ -4,9 +4,9 @@ import { Card, CardEyebrow, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { formatRelative } from '@/lib/time';
 import { Users } from 'lucide-react';
-import { AddMemberDialog, RemoveMemberAction } from './_components/member-forms';
 import { DeleteProjectDialog } from './_components/delete-project-dialog';
 import { InfoRow } from './_components/info-row';
+import { AddMemberDialog, RemoveMemberAction } from './_components/member-forms';
 import { roleTone } from './_components/role-tone';
 
 interface Member {
@@ -159,5 +159,3 @@ export default async function ProjectSettingsPage({
     </div>
   );
 }
-
-

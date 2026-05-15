@@ -6,7 +6,7 @@ import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { parseBody, audit } from '../lib/route-utils.js';
+import { audit, parseBody } from '../lib/route-utils.js';
 
 interface CliTokenDeps {
   db: Db;
@@ -41,9 +41,7 @@ export function cliTokenRoutes(deps: CliTokenDeps): Hono {
     const params = Object.fromEntries(new URL(c.req.url).searchParams);
     const limitRaw = Number(params.limit ?? 100);
     const limit =
-      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200
-        ? Math.floor(limitRaw)
-        : 100;
+      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200 ? Math.floor(limitRaw) : 100;
     const beforeCreatedAt =
       typeof params.before_created_at === 'string' ? params.before_created_at : null;
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,11 +12,6 @@ import {
 import { cn } from '@/lib/cn';
 import { MoreHorizontal, Trash2, UserCog } from 'lucide-react';
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { changeUserRoleAction } from '../_actions/actions';
 import { RemoveUserDialog } from './remove-dialog';
 
@@ -104,5 +100,3 @@ function RoleItem({
     </DropdownMenuItem>
   );
 }
-
-

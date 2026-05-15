@@ -1,10 +1,10 @@
 'use server';
 
+import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { envName, projectId, secretKey, secretValue } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { projectId, envName, secretKey, secretValue } from '@/lib/schemas';
-import { type ActionState, parseOr, catchApi } from '@/lib/action-result';
 
 const CreateBody = z.object({
   project_id: projectId,
@@ -23,13 +23,10 @@ export async function createSecretAction(
   if (!parsed.success) return parsed;
 
   const result = await catchApi(() =>
-    api<{ alias: string; version: number }>(
-      `/v1/projects/${parsed.data.project_id}/secrets`,
-      {
-        method: 'POST',
-        body: { env: parsed.data.env, key: parsed.data.key, value: parsed.data.value },
-      },
-    ),
+    api<{ alias: string; version: number }>(`/v1/projects/${parsed.data.project_id}/secrets`, {
+      method: 'POST',
+      body: { env: parsed.data.env, key: parsed.data.key, value: parsed.data.value },
+    }),
   );
   if (!result.success) return { error: result.error };
 

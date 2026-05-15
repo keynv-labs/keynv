@@ -1,9 +1,9 @@
 import type { AuditEntry } from '@/components/audit/audit-timeline';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Breadcrumb } from '@/components/layout/breadcrumb';
 import { PageHeader, SectionHeader, StatCard } from '@/components/layout/page-header';
 import { OnboardingChecklist } from '@/components/onboarding/checklist';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { type OnboardingStatus, isOnboardingComplete } from '@/lib/onboarding';
 import { fetchOnboardingStatus } from '@/lib/onboarding-server';
@@ -11,9 +11,9 @@ import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ActivityFeed } from './_components/activity-feed';
+import { FirstRunEmpty } from './_components/empty-state';
 import { ProjectsSidebar } from './_components/projects-sidebar';
 import { QuickActions } from './_components/quick-actions';
-import { FirstRunEmpty } from './_components/empty-state';
 import { ActivitySkeleton } from './_components/skeleton';
 
 interface ProjectSummary {
@@ -122,9 +122,7 @@ async function ActivityContent() {
               >
                 <Badge tone="warn">pending</Badge>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] text-fg break-all">
-                    {p.project_name}
-                  </div>
+                  <div className="text-[13px] text-fg break-all">{p.project_name}</div>
                   <div className="text-[11px] text-fg-subtle mt-1 font-mono tabular">
                     {p.pending_count} pending ·{' '}
                     <Link
@@ -183,12 +181,15 @@ async function ActivityContent() {
         </div>
 
         <aside className="space-y-6">
-          <ProjectsSidebar items={data.slice(0, 6).map((p) => ({
-            project: { id: p.id, name: p.name, created_at: p.created_at },
-            envCount: p.env_count,
-            secretCount: p.secret_count,
-            pending: [],
-          }))} totalCount={data.length} />
+          <ProjectsSidebar
+            items={data.slice(0, 6).map((p) => ({
+              project: { id: p.id, name: p.name, created_at: p.created_at },
+              envCount: p.env_count,
+              secretCount: p.secret_count,
+              pending: [],
+            }))}
+            totalCount={data.length}
+          />
           <QuickActions />
         </aside>
       </section>

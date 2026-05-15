@@ -29,6 +29,7 @@ describe('PAYLOAD_SCHEMAS', () => {
       'secret.rotated',
       'secret.deleted',
       'secret.test.invoked',
+      'secret.test.denied',
       'approval.requested',
       'approval.granted',
       'approval.denied',

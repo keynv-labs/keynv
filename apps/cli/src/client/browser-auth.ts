@@ -36,7 +36,17 @@ async function errorMessage(res: Response, fallback: string): Promise<string> {
   }
 }
 
+function isSafeUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 export function openBrowser(url: string): boolean {
+  if (!isSafeUrl(url)) return false;
   try {
     const os = platform();
     const command = os === 'win32' ? 'cmd' : os === 'darwin' ? 'open' : 'xdg-open';

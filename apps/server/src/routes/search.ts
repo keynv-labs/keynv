@@ -23,9 +23,7 @@ export function searchRoutes(deps: SearchDeps): Hono {
 
     const limitRaw = Number(c.req.query('limit') ?? 50);
     const limit =
-      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 100
-        ? Math.floor(limitRaw)
-        : 50;
+      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 100 ? Math.floor(limitRaw) : 50;
     const beforeCreatedAt = c.req.query('before_created_at') ?? null;
 
     const searchTerm = `%${q}%`;

@@ -84,11 +84,15 @@ export function authMiddleware(deps: DepsFn): MiddlewareHandler {
       .select({ org_id: schema.org_memberships.org_id })
       .from(schema.org_memberships)
       .where(eq(schema.org_memberships.user_id, userRow.id));
-    const allOrgIds: string[] = [primaryOrgId, ...omRows.map((r) => r.org_id).filter((id) => id !== primaryOrgId)];
+    const allOrgIds: string[] = [
+      primaryOrgId,
+      ...omRows.map((r) => r.org_id).filter((id) => id !== primaryOrgId),
+    ];
 
     // Resolve the active org for this request.
     const requestedOrgId = c.req.header('x-keynv-org');
-    const activeOrgId = requestedOrgId && allOrgIds.includes(requestedOrgId) ? requestedOrgId : primaryOrgId;
+    const activeOrgId =
+      requestedOrgId && allOrgIds.includes(requestedOrgId) ? requestedOrgId : primaryOrgId;
 
     // Determine the user's role in the active org.
     let activeRole = userRow.org_role;

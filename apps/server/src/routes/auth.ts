@@ -11,7 +11,7 @@ import { jsonError } from '../lib/errors.js';
 import { newOrgId, newUserId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
 import { ipRateLimitMiddleware } from '../lib/rate-limit.js';
-import { parseBody, audit } from '../lib/route-utils.js';
+import { audit, parseBody } from '../lib/route-utils.js';
 
 interface AuthDeps {
   db: Db;
@@ -78,7 +78,7 @@ const BROWSER_AUTH_INTERVAL_S = 2;
 const USER_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function hashCode(raw: string): string {
-  return createHash('sha256').update(raw, 'utf8').digest('hex');
+  return createHash('sha256').update('keynv-hash-v1:', 'utf8').update(raw, 'utf8').digest('hex');
 }
 
 function newDeviceCode(): string {
@@ -104,13 +104,6 @@ function browserAuthorizeUrl(base: string, userCode: string): string {
 export function authRoutes(deps: AuthDeps): Hono {
   const r = new Hono();
 
-  // Public signup. Aggressive per-IP rate limit lives on this route
-  // alone — the rest of /v1/auth (login/refresh/logout) follows the
-  // existing pattern of being unrate-limited because failed attempts
-  // are already mitigated by argon2id constant-time and audit-log
-  // visibility. Register, by contrast, mutates state on every call,
-  // so a flood would inflate the orgs table and burn KEK derivation
-  // cycles.
   r.post(
     '/register',
     ipRateLimitMiddleware({ perMinute: deps.registerRateLimitPerMinute ?? 5 }),
@@ -118,7 +111,11 @@ export function authRoutes(deps: AuthDeps): Hono {
       if (!deps.publicRegistrationEnabled) {
         return jsonError(c, 'rbac.denied', 'Public registration is not enabled on this instance.');
       }
-      const body = await parseBody(c, RegisterBody, 'Email, 12+ char password, and org name are required.');
+      const body = await parseBody(
+        c,
+        RegisterBody,
+        'Email, 12+ char password, and org name are required.',
+      );
       if ('errorResponse' in body) return body.errorResponse;
       const { email, password, org_name } = body.data;
 
@@ -135,9 +132,10 @@ export function authRoutes(deps: AuthDeps): Hono {
       const userId = newUserId();
       const password_hash = await hashPassword(password);
 
-      deps.db.transaction((tx) => {
-        tx.insert(schema.orgs).values({ id: orgId, name: org_name }).run();
-        tx.insert(schema.users)
+      await deps.db.transaction(async (tx) => {
+        await tx.insert(schema.orgs).values({ id: orgId, name: org_name }).run();
+        await tx
+          .insert(schema.users)
           .values({
             id: userId,
             org_id: orgId,
@@ -205,152 +203,164 @@ export function authRoutes(deps: AuthDeps): Hono {
     );
   });
 
-  r.post('/cli/browser/poll', async (c) => {
-    const body = await parseBody(c, BrowserPollBody, 'Invalid browser auth poll body.');
-    if ('errorResponse' in body) return body.errorResponse;
+  r.post(
+    '/cli/browser/poll',
+    ipRateLimitMiddleware({ perMinute: deps.registerRateLimitPerMinute ?? 5 }),
+    async (c) => {
+      const body = await parseBody(c, BrowserPollBody, 'Invalid browser auth poll body.');
+      if ('errorResponse' in body) return body.errorResponse;
 
-    const rows = await deps.db
-      .select()
-      .from(schema.cli_auth_flows)
-      .where(eq(schema.cli_auth_flows.device_code_hash, hashCode(body.data.device_code)))
-      .limit(1);
-    const flow = rows[0];
-    if (!flow) return jsonError(c, 'validation.failed', 'Browser auth flow not found.');
-    if (new Date(flow.expires_at).getTime() <= Date.now()) {
-      return jsonError(c, 'validation.failed', 'Browser auth flow expired.');
-    }
-    if (flow.consumed_at)
-      return jsonError(c, 'validation.failed', 'Browser auth flow already used.');
-    if (!flow.authorized_at || !flow.user_id) return c.json({ status: 'pending' }, 202);
+      const rows = await deps.db
+        .select()
+        .from(schema.cli_auth_flows)
+        .where(eq(schema.cli_auth_flows.device_code_hash, hashCode(body.data.device_code)))
+        .limit(1);
+      const flow = rows[0];
+      if (!flow) return jsonError(c, 'validation.failed', 'Browser auth flow not found.');
+      if (new Date(flow.expires_at).getTime() <= Date.now()) {
+        return jsonError(c, 'validation.failed', 'Browser auth flow expired.');
+      }
+      if (flow.consumed_at)
+        return jsonError(c, 'validation.failed', 'Browser auth flow already used.');
+      if (!flow.authorized_at || !flow.user_id) return c.json({ status: 'pending' }, 202);
 
-    const userRows = await deps.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, flow.user_id))
-      .limit(1);
-    const user = userRows[0];
-    if (!user) return jsonError(c, 'auth.invalid_credentials', 'User not found.');
+      const userRows = await deps.db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, flow.user_id))
+        .limit(1);
+      const user = userRows[0];
+      if (!user) return jsonError(c, 'auth.invalid_credentials', 'User not found.');
 
-    await deps.db
-      .update(schema.cli_auth_flows)
-      .set({ consumed_at: new Date().toISOString() })
-      .where(eq(schema.cli_auth_flows.device_code_hash, flow.device_code_hash));
+      await deps.db
+        .update(schema.cli_auth_flows)
+        .set({ consumed_at: new Date().toISOString() })
+        .where(eq(schema.cli_auth_flows.device_code_hash, flow.device_code_hash));
 
-    const access = await signAccessToken(
-      {
-        sub: user.id,
-        email: user.email,
-        org_id: user.org_id,
-        org_role: user.org_role,
-      },
-      { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
-    );
-    const refresh = await issueRefreshToken(deps.db, {
-      user_id: user.id,
-      ttlSeconds: deps.refreshTtlS,
-      device_fingerprint: flow.device_name ?? undefined,
-    });
+      const access = await signAccessToken(
+        {
+          sub: user.id,
+          email: user.email,
+          org_id: user.org_id,
+          org_role: user.org_role,
+        },
+        { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
+      );
+      const refresh = await issueRefreshToken(deps.db, {
+        user_id: user.id,
+        ttlSeconds: deps.refreshTtlS,
+        device_fingerprint: flow.device_name ?? undefined,
+      });
 
-    await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
+      await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
 
-    return c.json({
-      access_token: access,
-      refresh_token: refresh.rawToken,
-      expires_in: deps.accessTtlS,
-      user: {
-        id: user.id,
-        email: user.email,
-        org_id: user.org_id,
-        org_role: user.org_role,
-      },
-    });
-  });
+      return c.json({
+        access_token: access,
+        refresh_token: refresh.rawToken,
+        expires_in: deps.accessTtlS,
+        user: {
+          id: user.id,
+          email: user.email,
+          org_id: user.org_id,
+          org_role: user.org_role,
+        },
+      });
+    },
+  );
 
-  r.post('/login', async (c) => {
-    const body = await parseBody(c, LoginBody, 'Invalid login body.');
-    if ('errorResponse' in body) return body.errorResponse;
+  r.post(
+    '/login',
+    ipRateLimitMiddleware({ perMinute: deps.registerRateLimitPerMinute ?? 5 }),
+    async (c) => {
+      const body = await parseBody(c, LoginBody, 'Invalid login body.');
+      if ('errorResponse' in body) return body.errorResponse;
 
-    const rows = await deps.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, body.data.email))
-      .limit(1);
-    const user = rows[0];
+      const rows = await deps.db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.email, body.data.email))
+        .limit(1);
+      const user = rows[0];
 
-    const dummyHash =
-      '$argon2id$v=19$m=19456,t=2,p=1$MAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
-    const ok = await verifyPassword(user?.password_hash ?? dummyHash, body.data.password);
+      const dummyHash =
+        '$argon2id$v=19$m=19456,t=2,p=1$MAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+      const ok = await verifyPassword(user?.password_hash ?? dummyHash, body.data.password);
 
-    if (!user || !ok) {
-      await audit(c, deps.db, 'auth.login.denied', { email: body.data.email });
-      return jsonError(c, 'auth.invalid_credentials', 'Invalid email or password.');
-    }
+      if (!user || !ok) {
+        await audit(c, deps.db, 'auth.login.denied', { email: body.data.email });
+        return jsonError(c, 'auth.invalid_credentials', 'Invalid email or password.');
+      }
 
-    const access = await signAccessToken(
-      {
-        sub: user.id,
-        email: user.email,
-        org_id: user.org_id,
-        org_role: user.org_role,
-      },
-      { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
-    );
-    const refresh = await issueRefreshToken(deps.db, {
-      user_id: user.id,
-      ttlSeconds: deps.refreshTtlS,
-    });
+      const access = await signAccessToken(
+        {
+          sub: user.id,
+          email: user.email,
+          org_id: user.org_id,
+          org_role: user.org_role,
+        },
+        { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
+      );
+      const refresh = await issueRefreshToken(deps.db, {
+        user_id: user.id,
+        ttlSeconds: deps.refreshTtlS,
+      });
 
-    await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
+      await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
 
-    return c.json({
-      access_token: access,
-      refresh_token: refresh.rawToken,
-      expires_in: deps.accessTtlS,
-      user: {
-        id: user.id,
-        email: user.email,
-        org_id: user.org_id,
-        org_role: user.org_role,
-      },
-    });
-  });
+      return c.json({
+        access_token: access,
+        refresh_token: refresh.rawToken,
+        expires_in: deps.accessTtlS,
+        user: {
+          id: user.id,
+          email: user.email,
+          org_id: user.org_id,
+          org_role: user.org_role,
+        },
+      });
+    },
+  );
 
-  r.post('/refresh', async (c) => {
-    const body = await parseBody(c, RefreshBody, 'Invalid refresh body.');
-    if ('errorResponse' in body) return body.errorResponse;
+  r.post(
+    '/refresh',
+    ipRateLimitMiddleware({ perMinute: deps.registerRateLimitPerMinute ?? 5 }),
+    async (c) => {
+      const body = await parseBody(c, RefreshBody, 'Invalid refresh body.');
+      if ('errorResponse' in body) return body.errorResponse;
 
-    const result = await rotateRefreshToken(deps.db, {
-      rawToken: body.data.refresh_token,
-      ttlSeconds: deps.refreshTtlS,
-    });
-    if (!result) return jsonError(c, 'auth.token_revoked', 'Refresh token invalid or expired.');
+      const result = await rotateRefreshToken(deps.db, {
+        rawToken: body.data.refresh_token,
+        ttlSeconds: deps.refreshTtlS,
+      });
+      if (!result) return jsonError(c, 'auth.token_revoked', 'Refresh token invalid or expired.');
 
-    const userRows = await deps.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, result.user_id))
-      .limit(1);
-    const user = userRows[0];
-    if (!user) return jsonError(c, 'auth.invalid_credentials', 'User not found.');
+      const userRows = await deps.db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, result.user_id))
+        .limit(1);
+      const user = userRows[0];
+      if (!user) return jsonError(c, 'auth.invalid_credentials', 'User not found.');
 
-    const access = await signAccessToken(
-      {
-        sub: user.id,
-        email: user.email,
-        org_id: user.org_id,
-        org_role: user.org_role,
-      },
-      { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
-    );
+      const access = await signAccessToken(
+        {
+          sub: user.id,
+          email: user.email,
+          org_id: user.org_id,
+          org_role: user.org_role,
+        },
+        { secret: deps.jwtSecret, ttlSeconds: deps.accessTtlS },
+      );
 
-    await audit(c, deps.db, 'auth.refresh', {});
+      await audit(c, deps.db, 'auth.refresh', {});
 
-    return c.json({
-      access_token: access,
-      refresh_token: result.rawToken,
-      expires_in: deps.accessTtlS,
-    });
-  });
+      return c.json({
+        access_token: access,
+        refresh_token: result.rawToken,
+        expires_in: deps.accessTtlS,
+      });
+    },
+  );
 
   r.post('/logout', async (c) => {
     const body = await parseBody(c, LogoutBody, 'Invalid logout body.');
@@ -379,10 +389,7 @@ export function authRoutes(deps: AuthDeps): Hono {
       .select()
       .from(schema.cli_auth_flows)
       .where(
-        eq(
-          schema.cli_auth_flows.user_code_hash,
-          hashCode(normalizeUserCode(body.data.user_code)),
-        ),
+        eq(schema.cli_auth_flows.user_code_hash, hashCode(normalizeUserCode(body.data.user_code))),
       )
       .limit(1);
     const flow = rows[0];
@@ -404,7 +411,11 @@ export function authRoutes(deps: AuthDeps): Hono {
 
   authedSubrouter.post('/password', async (c) => {
     const me = c.var.user;
-    const body = await parseBody(c, ChangePasswordBody, 'Invalid body. New password must be 12+ chars.');
+    const body = await parseBody(
+      c,
+      ChangePasswordBody,
+      'Invalid body. New password must be 12+ chars.',
+    );
     if ('errorResponse' in body) return body.errorResponse;
 
     const rows = await deps.db

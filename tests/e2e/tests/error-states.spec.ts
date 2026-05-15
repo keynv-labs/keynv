@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 test.describe('Error states', () => {
   test('non-existent docs page shows not-found content', async ({ page }) => {

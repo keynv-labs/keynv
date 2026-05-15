@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isBlockedHost } from './ssrf.js';
 import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const Target = z.object({
@@ -15,6 +16,13 @@ export const postgresTester: Tester<PostgresTarget> = {
   type: 'postgres',
   schema: Target,
   async test(secret: ResolvedSecret, target: PostgresTarget): Promise<TestResult> {
+    if (isBlockedHost(target.host)) {
+      return {
+        ok: false,
+        latency_ms: 0,
+        error: 'Target host is blocked (private/internal IP or metadata endpoint).',
+      };
+    }
     const start = Date.now();
     // Lazy-load to keep the dep optional for environments that don't
     // exercise this tester (e.g., running only the http tester).
@@ -25,7 +33,7 @@ export const postgresTester: Tester<PostgresTarget> = {
       database: target.database,
       user: target.user,
       password: secret.value,
-      ssl: target.ssl ?? false,
+      ssl: target.ssl ?? true,
       connectionTimeoutMillis: 5000,
       statement_timeout: 5000,
     });

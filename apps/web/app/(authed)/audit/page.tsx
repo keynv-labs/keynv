@@ -34,11 +34,7 @@ export default async function GlobalAuditPage({
     <div className="space-y-7">
       <Breadcrumb segments={[{ label: 'Audit log' }]} />
 
-      <PageHeader
-        eyebrow="audit"
-        title="Audit log"
-        description="Every operation, hash-chained."
-      />
+      <PageHeader eyebrow="audit" title="Audit log" description="Every operation, hash-chained." />
 
       <AuditTimeline
         entries={audit.entries}

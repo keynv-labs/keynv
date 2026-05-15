@@ -31,15 +31,19 @@ function entry(): Entry {
 }
 
 async function loadOrCreateKey(): Promise<Uint8Array> {
+  if (process.env['KEYNV_DISABLE_KEYCHAIN'] === '1') {
+    return loadOrCreateFileKey();
+  }
+
   const e = entry();
   let stored: string | null;
   try {
     stored = e.getPassword();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(
-      `keynv: OS keychain unavailable (${message}). Install libsecret on Linux, or set KEYNV_DISABLE_KEYCHAIN=1 to use a (less secure) file-based key store.`,
-    );
+  } catch {
+    const message = process.env['KEYNV_DISABLE_KEYCHAIN']
+      ? 'keynv: OS keychain unavailable. Set KEYNV_DISABLE_KEYCHAIN=1 to use a file-based key store (less secure).'
+      : 'keynv: OS keychain unavailable. Install libsecret on Linux, or set KEYNV_DISABLE_KEYCHAIN=1 to use a file-based key store (less secure).';
+    throw new Error(message);
   }
   if (stored) {
     return new Uint8Array(Buffer.from(stored, 'base64'));
@@ -52,6 +56,22 @@ async function loadOrCreateKey(): Promise<Uint8Array> {
       `keynv: failed to write key to OS keychain (${err instanceof Error ? err.message : String(err)}).`,
     );
   }
+  return fresh;
+}
+
+function fileKeyPath(): string {
+  return process.env['KEYNV_CREDENTIALS_KEY_FILE'] ?? join(homedir(), '.keynv', '.credentials-key');
+}
+
+async function loadOrCreateFileKey(): Promise<Uint8Array> {
+  const path = fileKeyPath();
+  if (existsSync(path)) {
+    const raw = readFileSync(path, 'utf8').trim();
+    return new Uint8Array(Buffer.from(raw, 'base64'));
+  }
+  const fresh = await crypto.generateKey();
+  if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  writeFileSync(path, Buffer.from(fresh).toString('base64'), { mode: 0o600 });
   return fresh;
 }
 
@@ -114,14 +134,19 @@ export function clearCredentialsFile(): boolean {
   if (existsSync(path)) rmSync(path, { force: true });
   const legacy = legacyPath();
   if (existsSync(legacy)) rmSync(legacy, { force: true });
+
+  if (process.env['KEYNV_DISABLE_KEYCHAIN'] === '1') {
+    const keyPath = fileKeyPath();
+    if (existsSync(keyPath)) rmSync(keyPath, { force: true });
+    return true;
+  }
+
   try {
     entry().deletePassword();
     return true;
   } catch (err) {
     process.stderr.write(
-      `keynv: warning — could not remove OS keychain entry (${err instanceof Error ? err.message : String(err)}).\n` +
-        `  You may need to remove the '${SERVICE}' / '${KEY_ACCOUNT}' entry manually\n` +
-        `  via your OS credential manager (Windows Credential Manager, macOS Keychain, or libsecret).\n`,
+      `keynv: warning — could not remove OS keychain entry (${err instanceof Error ? err.message : String(err)}).\n  You may need to remove the '${SERVICE}' / '${KEY_ACCOUNT}' entry manually\n  via your OS credential manager (Windows Credential Manager, macOS Keychain, or libsecret).\n`,
     );
     return false;
   }

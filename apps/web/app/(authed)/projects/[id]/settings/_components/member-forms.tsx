@@ -25,7 +25,11 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useActionState } from 'react';
-import { type MemberActionState, addMemberAction, removeMemberAction } from '../_actions/member-actions';
+import {
+  type MemberActionState,
+  addMemberAction,
+  removeMemberAction,
+} from '../_actions/member-actions';
 
 export function AddMemberDialog({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);

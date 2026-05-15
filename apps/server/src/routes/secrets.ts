@@ -9,7 +9,7 @@ import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 import { newSecretId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { parseBody, guard, audit } from '../lib/route-utils.js';
+import { audit, guard, parseBody } from '../lib/route-utils.js';
 import { ensurePendingApproval, findActiveGrant } from './approvals.js';
 
 interface SecretDeps {
@@ -19,8 +19,15 @@ interface SecretDeps {
   getKek: () => Uint8Array;
 }
 
-const envSchema = z.string().min(1).max(24).regex(/^[a-z0-9][a-z0-9-]*$/);
-const valueSchema = z.string().min(0).max(1024 * 64);
+const envSchema = z
+  .string()
+  .min(1)
+  .max(24)
+  .regex(/^[a-z0-9][a-z0-9-]*$/);
+const valueSchema = z
+  .string()
+  .min(0)
+  .max(1024 * 64);
 const KEY_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 
 const CreateSecretBody = z.object({
@@ -87,10 +94,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
       .select()
       .from(schema.environments)
       .where(
-        and(
-          eq(schema.environments.project_id, projectId),
-          eq(schema.environments.name, secretEnv),
-        ),
+        and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, secretEnv)),
       )
       .limit(1);
     const env = envRows[0];
@@ -187,6 +191,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
 
   r.get('/:projectId/secrets/:env/:key', async (c) => {
     const user = c.var.user;
+    if (!user) return jsonError(c, 'auth.missing_token', 'Not authenticated.');
     const projectId = c.req.param('projectId');
     const envName = c.req.param('env');
     const keyName = c.req.param('key');
@@ -345,8 +350,9 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const newId = newSecretId();
     const newVersion = prev.version + 1;
     const now = new Date().toISOString();
-    deps.db.transaction((tx) => {
-      tx.insert(schema.secrets)
+    await deps.db.transaction(async (tx) => {
+      await tx
+        .insert(schema.secrets)
         .values({
           id: newId,
           project_id: projectId,
@@ -359,7 +365,8 @@ export function secretRoutes(deps: SecretDeps): Hono {
           created_by: user.id,
         })
         .run();
-      tx.update(schema.secrets)
+      await tx
+        .update(schema.secrets)
         .set({ deleted_at: now })
         .where(eq(schema.secrets.id, prev.id))
         .run();
@@ -425,7 +432,11 @@ export function secretRoutes(deps: SecretDeps): Hono {
       .returning({ id: schema.secrets.id });
     if (result.length === 0) return jsonError(c, 'secret.not_found', 'Secret not found.');
 
-    await audit(c, deps.db, 'secret.deleted', { project_id: projectId, env: envName, key: keyName });
+    await audit(c, deps.db, 'secret.deleted', {
+      project_id: projectId,
+      env: envName,
+      key: keyName,
+    });
     return c.body(null, 204);
   });
 
@@ -438,6 +449,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     if ('errorResponse' in body) return body.errorResponse;
 
     const user = c.var.user;
+    if (!user) return jsonError(c, 'auth.missing_token', 'Not authenticated.');
 
     const projectRows = await deps.db
       .select({ name: schema.projects.name })
@@ -470,6 +482,41 @@ export function secretRoutes(deps: SecretDeps): Hono {
     });
     if ('errorResponse' in g) return g.errorResponse;
 
+    const alias = `@${projectRow.name}.${envName}.${keyName}`;
+
+    const grant = await findActiveGrant({
+      db: deps.db,
+      projectId,
+      alias,
+      requesterUserId: g.user.id,
+    });
+
+    const approvalDecision = authorize('secret.test', {
+      user: g.user,
+      resource: {
+        project_id: projectId,
+        environment_tier: env.tier,
+        require_approval: env.require_approval,
+      },
+      approval: grant ? { granted: true } : undefined,
+    });
+    if (approvalDecision === 'pending_approval') {
+      const ensured = await ensurePendingApproval({
+        db: deps.db,
+        projectId,
+        alias,
+        requesterUserId: g.user.id,
+      });
+      if (ensured.created) {
+        await audit(c, deps.db, 'approval.requested', { alias });
+      }
+      return jsonError(c, 'rbac.approval_required', 'Production test access requires approval.');
+    }
+    if (approvalDecision !== 'allow') {
+      await audit(c, deps.db, 'secret.test.denied', { alias });
+      return jsonError(c, 'rbac.denied', 'Permission denied.');
+    }
+
     const secretRows = await deps.db
       .select()
       .from(schema.secrets)
@@ -497,7 +544,6 @@ export function secretRoutes(deps: SecretDeps): Hono {
       loaded.dek,
     );
 
-    const alias = `@${projectRow.name}.${envName}.${keyName}`;
     const tester = findTester(body.data.tester);
     if (!tester) {
       return jsonError(c, 'validation.failed', `Unknown tester type: ${body.data.tester}`);

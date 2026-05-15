@@ -33,9 +33,10 @@ export function whoamiRoute(deps: WhoamiDeps): Hono {
       .from(schema.org_memberships)
       .innerJoin(schema.orgs, eq(schema.orgs.id, schema.org_memberships.org_id))
       .where(eq(schema.org_memberships.user_id, u.id));
-    const orgs = allOrgRows.length > 0
-      ? allOrgRows.map((o) => ({ id: o.id, name: o.name }))
-      : [{ id: u.org_id, name: active_org_name }];
+    const orgs =
+      allOrgRows.length > 0
+        ? allOrgRows.map((o) => ({ id: o.id, name: o.name }))
+        : [{ id: u.org_id, name: active_org_name }];
 
     let memberships: Array<{ project_id: string; project_name: string; role: string }> = [];
     if (u.memberships.length > 0) {

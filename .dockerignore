@@ -20,6 +20,7 @@
 scripts/
 tests/
 deploy/
+deploy/.env
 /Users/
 CODE_OF_CONDUCT.md
 CONTRIBUTING.md

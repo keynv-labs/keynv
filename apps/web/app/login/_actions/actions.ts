@@ -1,11 +1,11 @@
 'use server';
 
+import { type ActionState, parseOr } from '@/lib/action-result';
 import { type ApiError, api } from '@/lib/api';
+import { email, password } from '@/lib/schemas';
 import { setSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { email, password } from '@/lib/schemas';
-import { type ActionState, parseOr } from '@/lib/action-result';
 
 const Body = z.object({
   email,

@@ -32,21 +32,32 @@ export async function switchOrgAction(orgId: string): Promise<void> {
   const { getSession, setSession } = await import('@/lib/session');
   const session = await getSession();
   if (!session) redirect('/login');
+  if (!session.org_ids?.includes(orgId)) {
+    redirect('/dashboard?toast=custom&toastMsg=You+are+not+a+member+of+that+organization.');
+  }
   session.active_org_id = orgId;
   await setSession(session);
   redirect('/dashboard');
 }
 
-export async function createOrgAction(orgName: string): Promise<{ org_id?: string; error?: string }> {
+export async function createOrgAction(
+  orgName: string,
+): Promise<{ org_id?: string; error?: string }> {
   try {
-    const result = await api<{ id: string }>('/v1/org', { method: 'POST', body: { name: orgName } });
+    const result = await api<{ id: string }>('/v1/org', {
+      method: 'POST',
+      body: { name: orgName },
+    });
     return { org_id: result.id };
   } catch (err) {
     return { error: (err as { message?: string }).message || 'Failed to create org.' };
   }
 }
 
-export async function loadMoreAuditAction(cursor: number, projectId?: string): Promise<{
+export async function loadMoreAuditAction(
+  cursor: number,
+  projectId?: string,
+): Promise<{
   entries: Array<{
     id: number;
     ts: string;

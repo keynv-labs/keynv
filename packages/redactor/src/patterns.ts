@@ -73,8 +73,16 @@ export const BUILTIN_PATTERNS: ReadonlyArray<Pattern> = [
     regex: /\bsk_live_[A-Za-z0-9]{24,}\b/g,
   },
   {
+    name: 'stripe-test-secret-key',
+    regex: /\bsk_test_[A-Za-z0-9]{24,}\b/g,
+  },
+  {
     name: 'stripe-restricted-live-key',
     regex: /\brk_live_[A-Za-z0-9]{24,}\b/g,
+  },
+  {
+    name: 'stripe-restricted-test-key',
+    regex: /\brk_test_[A-Za-z0-9]{24,}\b/g,
   },
   {
     // Negative lookahead skips Anthropic-prefixed keys so the more

@@ -10,10 +10,9 @@ export default async function ApprovalsPage({
   const { id } = await params;
   const [session, page] = await Promise.all([
     getSession(),
-    api<{ approvals: ApprovalRow[]; next_cursor: string | null }>(
-      `/v1/projects/${id}/approvals`,
-      { query: { limit: 50 } },
-    ),
+    api<{ approvals: ApprovalRow[]; next_cursor: string | null }>(`/v1/projects/${id}/approvals`, {
+      query: { limit: 50 },
+    }),
   ]);
 
   // 'approval.grant' RBAC = owner / admin / lead. We do a permissive

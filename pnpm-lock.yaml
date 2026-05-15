@@ -88,6 +88,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.4
         version: 1.29.0(zod@4.4.3)
+      '@napi-rs/keyring':
+        specifier: ^1.1.0
+        version: 1.3.0
     devDependencies:
       tsx:
         specifier: ^4.19.2

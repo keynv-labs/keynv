@@ -3,8 +3,8 @@ import { Card, CardEyebrow, CardTitle } from '@/components/ui/card';
 import { getSession } from '@/lib/session';
 import { CheckCircle2 } from 'lucide-react';
 import { redirect } from 'next/navigation';
-import { ChangePasswordForm } from './_components/password-form';
 import { Field } from './_components/field';
+import { ChangePasswordForm } from './_components/password-form';
 
 export default async function AccountProfilePage() {
   const session = await getSession();
@@ -78,5 +78,3 @@ export default async function AccountProfilePage() {
     </div>
   );
 }
-
-

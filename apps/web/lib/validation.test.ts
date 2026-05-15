@@ -1,6 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import {
+  cliTokenName,
+  email,
+  envName,
+  orgName,
+  password,
+  passwordMin12,
+  projectId,
+  projectRole,
+  secretKey,
+  secretValue,
+} from '@/lib/schemas';
+import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { email, password, passwordMin12, projectId, envName, secretKey, secretValue, projectRole, cliTokenName, orgName } from '@/lib/schemas';
 
 const loginSchema = z.object({
   email,

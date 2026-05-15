@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isBlockedHost } from './ssrf.js';
 import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const Target = z.object({
@@ -15,6 +16,13 @@ export const redisTester: Tester<RedisTarget> = {
   type: 'redis',
   schema: Target,
   async test(secret: ResolvedSecret, target: RedisTarget): Promise<TestResult> {
+    if (isBlockedHost(target.host)) {
+      return {
+        ok: false,
+        latency_ms: 0,
+        error: 'Target host is blocked (private/internal IP or metadata endpoint).',
+      };
+    }
     const start = Date.now();
     const { default: Redis } = await import('ioredis');
     const client = new Redis({

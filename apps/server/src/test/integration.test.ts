@@ -1490,12 +1490,18 @@ describe('Project — list, describe, delete', () => {
     await harness.app.request('http://localhost/v1/projects', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: 'alpha', environments: [{ name: 'dev', tier: 'non-production' }] }),
+      body: JSON.stringify({
+        name: 'alpha',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
     });
     await harness.app.request('http://localhost/v1/projects', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: 'beta', environments: [{ name: 'dev', tier: 'non-production' }] }),
+      body: JSON.stringify({
+        name: 'beta',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
     });
 
     const listRes = await harness.app.request('http://localhost/v1/projects', {
@@ -1509,7 +1515,11 @@ describe('Project — list, describe, delete', () => {
     const describeRes = await harness.app.request(`http://localhost/v1/projects/${alpha.id}`, {
       headers: { authorization: `Bearer ${token}` },
     });
-    const desc = (await describeRes.json()) as { id: string; name: string; environments: Array<{ name: string }> };
+    const desc = (await describeRes.json()) as {
+      id: string;
+      name: string;
+      environments: Array<{ name: string }>;
+    };
     expect(desc.name).toBe('alpha');
     expect(desc.environments).toHaveLength(1);
     expect(desc.environments[0]!.name).toBe('dev');
@@ -1520,7 +1530,10 @@ describe('Project — list, describe, delete', () => {
     const projRes = await harness.app.request('http://localhost/v1/projects', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: 'delete-me', environments: [{ name: 'dev', tier: 'non-production' }] }),
+      body: JSON.stringify({
+        name: 'delete-me',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
     });
     const project = (await projRes.json()) as { id: string };
 
@@ -1542,7 +1555,10 @@ describe('Project — list, describe, delete', () => {
     const projRes = await harness.app.request('http://localhost/v1/projects', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
-      body: JSON.stringify({ name: 'protect', environments: [{ name: 'dev', tier: 'non-production' }] }),
+      body: JSON.stringify({
+        name: 'protect',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
     });
     const project = (await projRes.json()) as { id: string };
     await harness.app.request(`http://localhost/v1/projects/${project.id}/members`, {
@@ -1584,7 +1600,10 @@ describe('Secret — delete and list', () => {
     const projRes = await harness.app.request('http://localhost/v1/projects', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: 'secret-list', environments: [{ name: 'dev', tier: 'non-production' }] }),
+      body: JSON.stringify({
+        name: 'secret-list',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
     });
     const project = (await projRes.json()) as { id: string };
     await harness.app.request(`http://localhost/v1/projects/${project.id}/secrets`, {
@@ -1598,9 +1617,12 @@ describe('Secret — delete and list', () => {
       body: JSON.stringify({ env: 'dev', key: 'remove', value: 'remove-me' }),
     });
 
-    const beforeRes = await harness.app.request(`http://localhost/v1/projects/${project.id}/secrets`, {
-      headers: { authorization: `Bearer ${token}` },
-    });
+    const beforeRes = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets`,
+      {
+        headers: { authorization: `Bearer ${token}` },
+      },
+    );
     const before = (await beforeRes.json()) as { secrets: Array<{ alias: string }> };
     expect(before.secrets).toHaveLength(2);
 
@@ -1610,9 +1632,12 @@ describe('Secret — delete and list', () => {
     );
     expect(delRes.status).toBe(204);
 
-    const afterRes = await harness.app.request(`http://localhost/v1/projects/${project.id}/secrets`, {
-      headers: { authorization: `Bearer ${token}` },
-    });
+    const afterRes = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets`,
+      {
+        headers: { authorization: `Bearer ${token}` },
+      },
+    );
     const after = (await afterRes.json()) as { secrets: Array<{ alias: string }> };
     expect(after.secrets).toHaveLength(1);
     expect(after.secrets[0]!.alias).toContain('keep');
@@ -1622,7 +1647,9 @@ describe('Secret — delete and list', () => {
 describe('CORS — Access-Control-Allow-Origin header', () => {
   it('sets CORS headers when webUrl is configured', async () => {
     const webUrl = 'https://keynv.example.com';
-    const { db, raw } = await import('../db/index.js').then((m) => m.openDb({ path: ':memory:', migrate: true }));
+    const { db, raw } = await import('../db/index.js').then((m) =>
+      m.openDb({ path: ':memory:', migrate: true }),
+    );
     const kek = await import('@keynv/core').then((m) => m.crypto.generateKey());
     const app = createApp({
       db,
@@ -1650,7 +1677,9 @@ describe('CORS — Access-Control-Allow-Origin header', () => {
   });
 
   it('omits CORS headers when webUrl is not configured', async () => {
-    const { db, raw } = await import('../db/index.js').then((m) => m.openDb({ path: ':memory:', migrate: true }));
+    const { db, raw } = await import('../db/index.js').then((m) =>
+      m.openDb({ path: ':memory:', migrate: true }),
+    );
     const kek = await import('@keynv/core').then((m) => m.crypto.generateKey());
     const app = createApp({
       db,

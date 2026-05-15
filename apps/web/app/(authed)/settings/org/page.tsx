@@ -14,7 +14,9 @@ export default async function OrgSettingsPage() {
   const orgId = session?.active_org_id || session?.org_id || '';
 
   const [orgsRes, usersRes] = await Promise.all([
-    api<{ orgs: Array<{ id: string; name: string; created_at: string }> }>('/v1/org').catch(() => null),
+    api<{ orgs: Array<{ id: string; name: string; created_at: string }> }>('/v1/org').catch(
+      () => null,
+    ),
     api<{ users: OrgUser[]; next_cursor: string | null }>('/v1/users', {
       query: { limit: 50 },
     }).catch(() => null),
@@ -68,7 +70,11 @@ export default async function OrgSettingsPage() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
-            Members <span className="tabular">({users.length}{hasMoreUsers ? '+' : ''})</span>
+            Members{' '}
+            <span className="tabular">
+              ({users.length}
+              {hasMoreUsers ? '+' : ''})
+            </span>
           </h3>
           {session?.org_role === 'owner' || session?.org_role === 'admin' ? (
             <a
@@ -87,10 +93,7 @@ export default async function OrgSettingsPage() {
         ) : (
           <ul className="rounded-lg border border-border bg-bg-elevated divide-y divide-border overflow-hidden">
             {users.map((u) => (
-              <li
-                key={u.id}
-                className="flex items-center gap-3 px-4 py-3"
-              >
+              <li key={u.id} className="flex items-center gap-3 px-4 py-3">
                 <span
                   aria-hidden
                   className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-strong bg-bg-inset font-mono text-[11px] font-semibold text-fg"

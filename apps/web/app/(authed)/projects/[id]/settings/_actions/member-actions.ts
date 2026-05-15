@@ -1,10 +1,10 @@
 'use server';
 
+import { type ActionState, catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { email, projectId, projectRole } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { projectId, email, projectRole } from '@/lib/schemas';
-import { type ActionState, parseOr, catchApi } from '@/lib/action-result';
 
 const AddBody = z.object({
   project_id: projectId,

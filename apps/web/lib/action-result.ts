@@ -16,9 +16,7 @@ export function parseOr<T extends z.ZodRawShape>(
   schema: z.ZodObject<T>,
   formData: FormData,
   keys: (keyof z.infer<z.ZodObject<T>>)[],
-):
-  | { success: true; data: z.infer<z.ZodObject<T>> }
-  | { success: false; error: string } {
+): { success: true; data: z.infer<z.ZodObject<T>> } | { success: false; error: string } {
   const raw: Record<string, FormDataEntryValue | null> = {};
   for (const key of keys) {
     raw[key as string] = formData.get(key as string);
@@ -33,9 +31,7 @@ export function parseOr<T extends z.ZodRawShape>(
 export function parseRaw<T extends z.ZodRawShape>(
   schema: z.ZodObject<T>,
   raw: Record<string, unknown>,
-):
-  | { success: true; data: z.infer<z.ZodObject<T>> }
-  | { success: false; error: string } {
+): { success: true; data: z.infer<z.ZodObject<T>> } | { success: false; error: string } {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     return { success: false, error: formatZodIssues(parsed.error) };
@@ -49,10 +45,7 @@ export function parseRaw<T extends z.ZodRawShape>(
  */
 export async function catchApi<T>(
   fn: () => Promise<T>,
-): Promise<
-  | { success: true; data: T }
-  | { success: false; error: string }
-> {
+): Promise<{ success: true; data: T } | { success: false; error: string }> {
   try {
     const data = await fn();
     return { success: true, data };

@@ -1,10 +1,10 @@
-import { authorize, type Action } from '@keynv/rbac';
+import { type Action, authorize } from '@keynv/rbac';
 import type { Context } from 'hono';
 import type { z } from 'zod';
-import { appendAudit, type AppendArgs } from '../audit/append.js';
+import { type AppendArgs, appendAudit } from '../audit/append.js';
+import type { AuthedUser } from '../auth/middleware.js';
 import { readAgent } from './agent.js';
 import { jsonError } from './errors.js';
-import type { AuthedUser } from '../auth/middleware.js';
 
 export async function parseBody<T extends z.ZodTypeAny>(
   c: Context,
@@ -20,12 +20,17 @@ export async function parseBody<T extends z.ZodTypeAny>(
 export function guard(
   c: Context,
   action: Action,
-  resource?: { project_id?: string; environment_tier?: 'production' | 'non-production'; require_approval?: boolean },
+  resource?: {
+    project_id?: string;
+    environment_tier?: 'production' | 'non-production';
+    require_approval?: boolean;
+  },
 ): { user: AuthedUser } | { errorResponse: Response } {
   const user = c.var.user;
   if (!user) return { errorResponse: jsonError(c, 'auth.missing_token', 'Not authenticated.') };
   const decision = authorize(action, { user, ...(resource ? { resource } : {}) });
-  if (decision !== 'allow') return { errorResponse: jsonError(c, 'rbac.denied', 'Permission denied.') };
+  if (decision !== 'allow')
+    return { errorResponse: jsonError(c, 'rbac.denied', 'Permission denied.') };
   return { user };
 }
 

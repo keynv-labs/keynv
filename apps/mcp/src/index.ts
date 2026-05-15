@@ -2,7 +2,7 @@ import { loadCredentials } from './credentials.js';
 import { runStdio } from './server.js';
 
 async function main(): Promise<void> {
-  const creds = loadCredentials();
+  const creds = await loadCredentials();
   if (!creds) {
     process.stderr.write(
       'keynv-mcp: no credentials. Run `keynv login` first; the MCP server inherits the developer session.\n',

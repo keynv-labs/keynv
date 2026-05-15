@@ -72,7 +72,10 @@ export function preferenceRoutes(deps: PreferenceDeps): Hono {
     await deps.db
       .insert(schema.user_preferences)
       .values({ user_id: user.id, ...update } as typeof schema.user_preferences.$inferInsert)
-      .onConflictDoUpdate({ target: schema.user_preferences.user_id, set: update as Record<string, unknown> });
+      .onConflictDoUpdate({
+        target: schema.user_preferences.user_id,
+        set: update as Record<string, unknown>,
+      });
 
     return c.json({ ok: true });
   });

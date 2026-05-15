@@ -87,7 +87,8 @@ export async function listAudit(
   const conditions: ReturnType<typeof sql>[] = [];
   if (opts.sinceId) conditions.push(sql`id > ${opts.sinceId}`);
   if (opts.eventType) conditions.push(sql`event_type = ${opts.eventType}`);
-  if (opts.projectId) conditions.push(sql`json_extract(payload_json, '$.project_id') = ${opts.projectId}`);
+  if (opts.projectId)
+    conditions.push(sql`json_extract(payload_json, '$.project_id') = ${opts.projectId}`);
   const whereClause = conditions.length ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
   const rows = (await db.all(
     sql`SELECT * FROM audit ${whereClause} ORDER BY id ASC LIMIT ${limit}`,

@@ -27,6 +27,7 @@ function makeEnv(dir: string): ServerEnvT {
     KEYNV_ARGON2_MEMORY_KIB: 19_456,
     KEYNV_ARGON2_TIME_COST: 2,
     KEYNV_ARGON2_PARALLELISM: 1,
+    KEYNV_TRUSTED_PROXY_COUNT: 1,
   };
 }
 

@@ -16,7 +16,10 @@ export default async function ProjectAuditPage({
   const { id } = await params;
   const sp = await searchParams;
   const audit = await api<AuditResponse>('/v1/audit', {
-    query: { event_type: sp.event_type, limit: sp.limit ?? 200, project_id: id } as Record<string, string | number | undefined>,
+    query: { event_type: sp.event_type, limit: sp.limit ?? 200, project_id: id } as Record<
+      string,
+      string | number | undefined
+    >,
   });
 
   return (

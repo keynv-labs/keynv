@@ -42,7 +42,12 @@ export function AppPalette() {
     function handler(e: KeyboardEvent) {
       if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
         const el = e.target as HTMLElement | null;
-        const inField = el && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+        const inField =
+          el &&
+          (el.isContentEditable ||
+            el.tagName === 'INPUT' ||
+            el.tagName === 'TEXTAREA' ||
+            el.tagName === 'SELECT');
         if (!inField && !open) {
           e.preventDefault();
           setShowShortcuts(true);
@@ -104,49 +109,70 @@ export function AppPalette() {
                     label="Activity"
                     keywords={['activity', 'home', 'dashboard', 'feed']}
                     hint="g h"
-                    onSelect={() => { setOpen(false); router.push('/dashboard'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/dashboard');
+                    }}
                   />
                   <PaletteItem
                     icon={<FolderKanban size={14} strokeWidth={2} />}
                     label="Projects"
                     keywords={['projects', 'list', 'all']}
                     hint="g p"
-                    onSelect={() => { setOpen(false); router.push('/projects'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/projects');
+                    }}
                   />
                   <PaletteItem
                     icon={<Inbox size={14} strokeWidth={2} />}
                     label="Inbox"
                     keywords={['inbox', 'approvals', 'pending', 'queue', 'review']}
                     hint="g i"
-                    onSelect={() => { setOpen(false); router.push('/inbox'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/inbox');
+                    }}
                   />
                   <PaletteItem
                     icon={<Search size={14} strokeWidth={2} />}
                     label="Search secrets"
                     keywords={['search', 'find', 'secrets', 'keys', 'discover']}
                     hint="g f"
-                    onSelect={() => { setOpen(false); router.push('/search'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/search');
+                    }}
                   />
                   <PaletteItem
                     icon={<ScrollText size={14} strokeWidth={2} />}
                     label="Audit log"
                     keywords={['audit', 'log', 'history', 'events']}
                     hint="g a"
-                    onSelect={() => { setOpen(false); router.push('/audit'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/audit');
+                    }}
                   />
                   <PaletteItem
                     icon={<Settings size={14} strokeWidth={2} />}
                     label="Account settings"
                     keywords={['settings', 'account', 'profile', 'password']}
                     hint="g s"
-                    onSelect={() => { setOpen(false); router.push('/settings/account'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/settings/account');
+                    }}
                   />
                   <PaletteItem
                     icon={<Users size={14} strokeWidth={2} />}
                     label="Org users"
                     keywords={['admin', 'users', 'members', 'invite']}
                     hint="g u"
-                    onSelect={() => { setOpen(false); router.push('/admin/users'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/admin/users');
+                    }}
                   />
                 </Command.Group>
 
@@ -155,19 +181,28 @@ export function AppPalette() {
                     icon={<Plus size={14} strokeWidth={2} />}
                     label="New project"
                     keywords={['new', 'create', 'project']}
-                    onSelect={() => { setOpen(false); router.push('/projects/new'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/projects/new');
+                    }}
                   />
                   <PaletteItem
                     icon={<ShieldCheck size={14} strokeWidth={2} />}
                     label="Verify audit chain"
                     keywords={['verify', 'audit', 'chain', 'integrity', 'tamper']}
-                    onSelect={() => { setOpen(false); router.push('/audit'); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      router.push('/audit');
+                    }}
                   />
                   <PaletteItem
                     icon={<Search size={14} strokeWidth={2} />}
                     label="Keyboard shortcuts"
                     keywords={['shortcuts', 'keys', 'keyboard', 'help', 'hotkeys']}
-                    onSelect={() => { setOpen(false); setShowShortcuts(true); }}
+                    onSelect={() => {
+                      setOpen(false);
+                      setShowShortcuts(true);
+                    }}
                   />
                   <PaletteItem
                     icon={<LogOut size={14} strokeWidth={2} />}

@@ -8,9 +8,9 @@ import { fetchOnboardingStatus } from '@/lib/onboarding-server';
 import { getSession } from '@/lib/session';
 import { Terminal } from 'lucide-react';
 import { Suspense } from 'react';
-import { NewProjectButton } from './new-project-button';
 import type { ProjectSummary } from './_actions/actions';
 import { ProjectsListing } from './_components/projects-listing';
+import { NewProjectButton } from './new-project-button';
 
 interface SummaryResponse {
   projects: ProjectSummary[];

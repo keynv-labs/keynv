@@ -1,9 +1,9 @@
 'use server';
 
+import { catchApi, parseOr } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { envName, projectId, secretKey, testerName } from '@/lib/schemas';
 import { z } from 'zod';
-import { projectId, envName, secretKey, testerName } from '@/lib/schemas';
-import { parseOr, catchApi } from '@/lib/action-result';
 
 export interface TestResult {
   ok: boolean;

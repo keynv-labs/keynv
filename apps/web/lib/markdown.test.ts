@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { parseChangelog } from './markdown';
 
 function firstSection(raw: string) {
@@ -54,7 +54,9 @@ describe('parseChangelog', () => {
   });
 
   it('parses multiple sections', () => {
-    const result = parseChangelog('## [1.0.0] - 2025-01-01\n\nFirst.\n## [0.9.0] - 2024-12-01\n\nSecond.');
+    const result = parseChangelog(
+      '## [1.0.0] - 2025-01-01\n\nFirst.\n## [0.9.0] - 2024-12-01\n\nSecond.',
+    );
     expect(result.sections).toHaveLength(2);
     expect(result.sections[0]!.version).toBe('1.0.0');
     expect(result.sections[1]!.version).toBe('0.9.0');

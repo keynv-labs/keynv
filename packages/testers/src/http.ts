@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isBlockedUrl } from './ssrf.js';
 import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const Target = z.object({
@@ -22,6 +23,14 @@ export const httpTester: Tester<HttpTarget> = {
   type: 'http',
   schema: Target,
   async test(secret: ResolvedSecret, target: HttpTarget): Promise<TestResult> {
+    if (isBlockedUrl(target.url)) {
+      return {
+        ok: false,
+        latency_ms: 0,
+        error: 'Target URL is blocked (private/internal IP or metadata endpoint).',
+      };
+    }
+
     const start = Date.now();
     const headers: Record<string, string> = {};
     switch (target.auth) {

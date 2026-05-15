@@ -5,7 +5,7 @@ import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { newOrgId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { parseBody, guard, audit } from '../lib/route-utils.js';
+import { audit, guard, parseBody } from '../lib/route-utils.js';
 
 interface OrgDeps {
   db: Db;
@@ -38,14 +38,17 @@ export function orgRoutes(deps: OrgDeps): Hono {
 
   // POST /v1/org  — create a new org and add the caller as owner.
   r.post('/', async (c) => {
-    const u = c.var.user;
+    const g = guard(c, 'project.create');
+    if ('errorResponse' in g) return g.errorResponse;
+    const u = g.user;
     const parsed = await parseBody(c, CreateOrgBody, 'Org name is required (1-64 chars).');
     if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const orgId = newOrgId();
-    deps.db.transaction((tx) => {
-      tx.insert(schema.orgs).values({ id: orgId, name: parsed.data.name }).run();
-      tx.insert(schema.org_memberships)
+    await deps.db.transaction(async (tx) => {
+      await tx.insert(schema.orgs).values({ id: orgId, name: parsed.data.name }).run();
+      await tx
+        .insert(schema.org_memberships)
         .values({ user_id: u.id, org_id: orgId, role: 'owner' })
         .run();
     });

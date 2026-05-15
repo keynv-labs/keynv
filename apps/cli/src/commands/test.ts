@@ -1,5 +1,5 @@
 import { reference } from '@keynv/core';
-import { testers, runTest } from '@keynv/testers';
+import { runTest, testers } from '@keynv/testers';
 import { Command, Option } from 'clipanion';
 import { ApiClient } from '../client/http.js';
 import { resolveProjectId } from './project.js';

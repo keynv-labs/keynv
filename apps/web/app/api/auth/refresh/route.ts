@@ -2,6 +2,29 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 const COOKIE_NAME = 'keynv_session';
 
+const BLOCKED_HOSTS = [
+  '127.0.0.1',
+  '0.0.0.0',
+  '::1',
+  'localhost',
+  '169.254.169.254',
+  'metadata.google.internal',
+  'metadata.internal',
+];
+
+function isSafeServerUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    const host = parsed.hostname.toLowerCase();
+    if (BLOCKED_HOSTS.some((b) => host === b || host.endsWith(`.${b}`))) return false;
+    if (/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const origin = req.nextUrl.origin;
   const referrer = req.headers.get('referer') || '';
@@ -40,7 +63,7 @@ export async function GET(req: NextRequest) {
   if (!session.refresh_token) return redirectTo('/login', next);
 
   const serverUrl = session.server_url || process.env.KEYNV_SERVER_URL;
-  if (!serverUrl) return redirectTo('/login');
+  if (!serverUrl || !isSafeServerUrl(serverUrl)) return redirectTo('/login');
 
   try {
     const res = await fetch(new URL('/v1/auth/refresh', serverUrl).toString(), {

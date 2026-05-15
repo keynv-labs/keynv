@@ -7,7 +7,7 @@ import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 import { newUserId } from '../lib/id.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { parseBody, guard, audit } from '../lib/route-utils.js';
+import { audit, guard, parseBody } from '../lib/route-utils.js';
 
 interface UserDeps {
   db: Db;
@@ -43,9 +43,7 @@ export function userRoutes(deps: UserDeps): Hono {
     const params = Object.fromEntries(new URL(c.req.url).searchParams);
     const limitRaw = Number(params.limit ?? 100);
     const limit =
-      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200
-        ? Math.floor(limitRaw)
-        : 100;
+      Number.isFinite(limitRaw) && limitRaw > 0 && limitRaw <= 200 ? Math.floor(limitRaw) : 100;
     const beforeCreatedAt =
       typeof params.before_created_at === 'string' ? params.before_created_at : null;
 
@@ -121,8 +119,16 @@ export function userRoutes(deps: UserDeps): Hono {
       password_hash,
       org_role: parsed.data.org_role,
     });
-    await audit(c, deps.db, 'user.invited', { target_user_id: id, email: parsed.data.email, org_role: parsed.data.org_role, org_id: targetOrgId });
-    return c.json({ id, email: parsed.data.email, org_role: parsed.data.org_role, org_id: targetOrgId }, 201);
+    await audit(c, deps.db, 'user.invited', {
+      target_user_id: id,
+      email: parsed.data.email,
+      org_role: parsed.data.org_role,
+      org_id: targetOrgId,
+    });
+    return c.json(
+      { id, email: parsed.data.email, org_role: parsed.data.org_role, org_id: targetOrgId },
+      201,
+    );
   });
 
   // PATCH /v1/users/:id/org-role  (audit finding M5; docs/06-api-spec.md §69-72)
@@ -156,7 +162,10 @@ export function userRoutes(deps: UserDeps): Hono {
       .set({ org_role: parsed.data.org_role })
       .where(eq(schema.users.id, targetId));
 
-    await audit(c, deps.db, 'user.role_changed', { target_user_id: targetId, org_role: parsed.data.org_role });
+    await audit(c, deps.db, 'user.role_changed', {
+      target_user_id: targetId,
+      org_role: parsed.data.org_role,
+    });
     return c.json({ id: targetId, org_role: parsed.data.org_role });
   });
 

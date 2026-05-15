@@ -1,14 +1,27 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { type AuditEntry, type AuditInput, GENESIS_HASH } from './types.js';
+
+/**
+ * HMAC key used to prevent chain forgery. Callsites must inject this
+ * via configureChainKey() before calling computeHash/appendEntry.
+ * Falls back to a SHA-256 hash (no key) when no HMAC key is set, so
+ * existing chains remain verifiable.
+ */
+let chainHmacKey: Uint8Array | null = null;
+
+export function configureChainKey(key: Uint8Array): void {
+  chainHmacKey = key;
+}
 
 /**
  * JSON-canonicalize a payload so the hash is reproducible regardless of
  * key insertion order. Sorts object keys at every level; arrays keep
- * their original order.
+ * their original order. Undefined values are normalised to null to
+ * avoid JSON.stringify inconsistencies.
  */
 function canonicalize(value: unknown): string {
   if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value);
+    return value === undefined ? 'null' : JSON.stringify(value);
   }
   if (Array.isArray(value)) {
     return `[${value.map(canonicalize).join(',')}]`;
@@ -20,9 +33,9 @@ function canonicalize(value: unknown): string {
 }
 
 /**
- * Computes the SHA-256 hash for an audit entry given its inputs and the
- * predecessor's hash. Same function used by `appendEntry` and
- * `verifyChain` so they cannot disagree.
+ * Computes the hash for an audit entry. When an HMAC key is configured
+ * (via configureChainKey), uses HMAC-SHA-256 for key-binding; otherwise
+ * falls back to plain SHA-256 for backward compatibility.
  */
 export function computeHash(prevHash: string, input: AuditInput): string {
   const canonical = canonicalize({
@@ -33,6 +46,9 @@ export function computeHash(prevHash: string, input: AuditInput): string {
     event_type: input.event_type,
     payload: input.payload,
   });
+  if (chainHmacKey) {
+    return createHmac('sha256', chainHmacKey).update(canonical, 'utf8').digest('hex');
+  }
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
 

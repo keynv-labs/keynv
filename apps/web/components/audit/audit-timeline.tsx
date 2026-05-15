@@ -4,12 +4,8 @@ import { cn } from '@/lib/cn';
 import { Loader2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  type Category,
-  categoryOf,
-  dayBucket,
-} from './event';
-import { FilterBar, FILTER_ORDER } from './filter-bar';
+import { type Category, categoryOf, dayBucket } from './event';
+import { FILTER_ORDER, FilterBar } from './filter-bar';
 import { TimelineRow } from './timeline-row';
 import type { AuditEntry } from './types';
 
@@ -36,7 +32,12 @@ function parseInitialCategories(raw: string | null): Set<Category> {
   return next;
 }
 
-export function AuditTimeline({ entries: initialEntries, nextCursor: initialCursor, projects = [], initialProject }: Props) {
+export function AuditTimeline({
+  entries: initialEntries,
+  nextCursor: initialCursor,
+  projects = [],
+  initialProject,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -218,7 +219,3 @@ export function AuditTimeline({ entries: initialEntries, nextCursor: initialCurs
     </div>
   );
 }
-
-
-
-

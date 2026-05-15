@@ -15,7 +15,10 @@ import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { deleteProjectAction } from '../_actions/project-actions';
 
-export function DeleteProjectDialog({ projectId, projectName }: { projectId: string; projectName: string }) {
+export function DeleteProjectDialog({
+  projectId,
+  projectName,
+}: { projectId: string; projectName: string }) {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState('');
 
@@ -53,8 +56,8 @@ export function DeleteProjectDialog({ projectId, projectName }: { projectId: str
             <div className="flex-1 min-w-0">
               <AlertDialogTitle>Delete this project?</AlertDialogTitle>
               <AlertDialogDescription>
-                This permanently removes <span className="font-mono text-fg">{projectName}</span> and
-                every secret, environment, and member relationship tied to it.
+                This permanently removes <span className="font-mono text-fg">{projectName}</span>{' '}
+                and every secret, environment, and member relationship tied to it.
               </AlertDialogDescription>
             </div>
           </div>

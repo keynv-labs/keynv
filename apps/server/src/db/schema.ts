@@ -303,6 +303,8 @@ export const user_preferences = sqliteTable('user_preferences', {
   approval_requests: integer('approval_requests', { mode: 'boolean' }).notNull().default(true),
   secret_changes: integer('secret_changes', { mode: 'boolean' }).notNull().default(true),
   member_changes: integer('member_changes', { mode: 'boolean' }).notNull().default(true),
-  activity_digest: text('activity_digest', { enum: ['daily', 'weekly', 'never'] }).notNull().default('daily'),
+  activity_digest: text('activity_digest', { enum: ['daily', 'weekly', 'never'] })
+    .notNull()
+    .default('daily'),
   updated_at: text('updated_at').notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 });

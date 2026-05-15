@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { categoryOf, describeEvent, actorInitials, dayBucket, relativeTime } from './event';
+import { describe, expect, it } from 'vitest';
+import { actorInitials, categoryOf, dayBucket, describeEvent, relativeTime } from './event';
 
 describe('categoryOf', () => {
   it('returns the prefix for known event types', () => {

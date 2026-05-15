@@ -1,9 +1,9 @@
 'use server';
 
+import { catchApi, parseRaw } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { EnvSpec, projectName } from '@/lib/schemas';
 import { z } from 'zod';
-import { projectName, EnvSpec } from '@/lib/schemas';
-import { parseRaw, catchApi } from '@/lib/action-result';
 
 export interface CreateProjectState {
   error?: string;

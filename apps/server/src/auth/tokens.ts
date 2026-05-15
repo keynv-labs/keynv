@@ -20,7 +20,10 @@ interface IssueArgs {
 }
 
 function hashToken(raw: string): string {
-  return createHash('sha256').update(raw, 'utf8').digest('hex');
+  return createHash('sha256')
+    .update('keynv-refresh-token-v1:', 'utf8')
+    .update(raw, 'utf8')
+    .digest('hex');
 }
 
 function newRawToken(): string {

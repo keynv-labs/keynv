@@ -44,7 +44,15 @@ export function MobileTopBar({ email, role, orgId, activeOrgId, activeOrgName, o
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <SidebarContent email={email} role={role} orgId={orgId} activeOrgId={activeOrgId} activeOrgName={activeOrgName} orgs={orgs} onNavigate={() => setOpen(false)} />
+          <SidebarContent
+            email={email}
+            role={role}
+            orgId={orgId}
+            activeOrgId={activeOrgId}
+            activeOrgName={activeOrgName}
+            orgs={orgs}
+            onNavigate={() => setOpen(false)}
+          />
         </SheetContent>
       </Sheet>
     </>

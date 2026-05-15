@@ -5,7 +5,7 @@ import type { Db } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { jsonError } from '../lib/errors.js';
 import { authedChain } from '../lib/middleware-chain.js';
-import { parseBody, guard, audit } from '../lib/route-utils.js';
+import { audit, guard, parseBody } from '../lib/route-utils.js';
 
 interface MemberDeps {
   db: Db;
@@ -102,7 +102,11 @@ export function memberRoutes(deps: MemberDeps): Hono {
             eq(schema.memberships.project_id, projectId),
           ),
         );
-      await audit(c, deps.db, 'member.role_changed', { project_id: projectId, target_user_id: target.id, role: body.data.role });
+      await audit(c, deps.db, 'member.role_changed', {
+        project_id: projectId,
+        target_user_id: target.id,
+        role: body.data.role,
+      });
     } else {
       await deps.db.insert(schema.memberships).values({
         user_id: target.id,
@@ -110,7 +114,11 @@ export function memberRoutes(deps: MemberDeps): Hono {
         role: body.data.role,
         granted_by: g.user.id,
       });
-      await audit(c, deps.db, 'member.added', { project_id: projectId, target_user_id: target.id, role: body.data.role });
+      await audit(c, deps.db, 'member.added', {
+        project_id: projectId,
+        target_user_id: target.id,
+        role: body.data.role,
+      });
     }
     return c.json({ user_id: target.id, role: body.data.role }, 201);
   });
@@ -139,7 +147,11 @@ export function memberRoutes(deps: MemberDeps): Hono {
     if (result.length === 0) {
       return jsonError(c, 'membership.not_found', 'Membership not found.');
     }
-    await audit(c, deps.db, 'member.role_changed', { project_id: projectId, target_user_id: targetUserId, role: body.data.role });
+    await audit(c, deps.db, 'member.role_changed', {
+      project_id: projectId,
+      target_user_id: targetUserId,
+      role: body.data.role,
+    });
     return c.json({ user_id: targetUserId, role: body.data.role });
   });
 
@@ -163,7 +175,10 @@ export function memberRoutes(deps: MemberDeps): Hono {
     if (result.length === 0) {
       return jsonError(c, 'membership.not_found', 'Membership not found.');
     }
-    await audit(c, deps.db, 'member.removed', { project_id: projectId, target_user_id: targetUserId });
+    await audit(c, deps.db, 'member.removed', {
+      project_id: projectId,
+      target_user_id: targetUserId,
+    });
     return c.body(null, 204);
   });
 

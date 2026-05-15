@@ -29,7 +29,10 @@ export function ToastFlashHandler() {
     if (key === 'custom') {
       const msg = params.get('toastMsg');
       const level = (params.get('toastLevel') ?? 'info') as 'success' | 'info' | 'error';
-      if (msg) notify[level](msg);
+      if (msg) {
+        const sanitized = msg.replace(/[<>&]/g, '').slice(0, 200);
+        notify[level](sanitized);
+      }
     } else {
       const entry = TOAST_FLASH_REGISTRY[key];
       if (entry) {

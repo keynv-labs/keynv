@@ -44,6 +44,14 @@ const ServerEnv = z.object({
    */
   KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).default(5),
   /**
+   * Number of trusted reverse proxies in front of this server.
+   * Controls which X-Forwarded-For entry is used to identify the
+   * real client IP. With 1 trusted proxy (default), the second-to-
+   * last entry is the client. Set to 0 to use the leftmost (unsafe
+   * unless no untrusted proxy can inject headers).
+   */
+  KEYNV_TRUSTED_PROXY_COUNT: z.coerce.number().int().min(0).default(1),
+  /**
    * Argon2id parameters for password hashing. Defaults are OWASP
    * 2024 minimums (19 MiB memory, 2 iterations, 1 thread). Raise
    * on beefier hardware for stronger resistance; individual login

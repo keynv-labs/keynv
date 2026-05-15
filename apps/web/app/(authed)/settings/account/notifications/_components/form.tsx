@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { ErrorBlock, SuccessBlock } from '@/components/ui/error-block';
 import { useCallback, useState } from 'react';
-import { savePreferences, type Preferences } from './actions';
+import { type Preferences, savePreferences } from './actions';
 
 interface Props {
   prefs: Preferences;
@@ -37,9 +37,8 @@ export function NotificationsForm({ prefs: initial }: Props) {
       <Card className="p-5 space-y-4">
         <CardTitle>Email notifications</CardTitle>
         <p className="text-sm text-fg-subtle">
-          Control which activities generate notifications. Sending is not yet
-          implemented — these preferences will be used once a transport is
-          configured.
+          Control which activities generate notifications. Sending is not yet implemented — these
+          preferences will be used once a transport is configured.
         </p>
 
         <ToggleRow
@@ -64,9 +63,7 @@ export function NotificationsForm({ prefs: initial }: Props) {
 
       <Card className="p-5 space-y-4">
         <CardTitle>Activity digest</CardTitle>
-        <p className="text-sm text-fg-subtle">
-          How often to receive a summary of org activity.
-        </p>
+        <p className="text-sm text-fg-subtle">How often to receive a summary of org activity.</p>
 
         <div className="flex gap-3">
           {(['daily', 'weekly', 'never'] as const).map((d) => (

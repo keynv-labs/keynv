@@ -43,6 +43,11 @@ COPY docs ./docs
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS=--max-old-space-size=4096
+# Build-time defaults for env vars that are required at runtime but
+# must not cause the build to fail. Real values come from Coolify at
+# deploy time; these are only used during `next build`.
+ENV KEYNV_WEB_SESSION_SECRET=build-time-placeholder-not-a-real-secret
+ENV KEYNV_SERVER_URL=http://localhost:8080
 
 WORKDIR /repo/apps/web
 RUN ./node_modules/.bin/next build

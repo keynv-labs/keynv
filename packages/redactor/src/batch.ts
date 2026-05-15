@@ -10,7 +10,8 @@ function defaultRender(name: string): string {
 }
 
 function preview(matched: string): string {
-  return matched.length <= 8 ? matched : `${matched.slice(0, 4)}...`;
+  if (matched.length <= 4) return '****';
+  return `${matched.slice(0, 4)}...`;
 }
 
 function escapeRegExp(s: string): string {

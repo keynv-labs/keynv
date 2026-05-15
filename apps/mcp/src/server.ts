@@ -1,6 +1,6 @@
 import { reference } from '@keynv/core';
 import { redact } from '@keynv/redactor';
-import { testers, runTest } from '@keynv/testers';
+import { runTest, testers } from '@keynv/testers';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';

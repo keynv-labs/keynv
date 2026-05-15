@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isBlockedHost } from './ssrf.js';
 import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const Target = z.object({
@@ -6,6 +7,7 @@ const Target = z.object({
   port: z.coerce.number().int().min(1).max(65535).default(3306),
   database: z.string().min(1).optional(),
   user: z.string().min(1),
+  ssl: z.coerce.boolean().optional(),
 });
 
 type MysqlTarget = z.infer<typeof Target>;
@@ -14,6 +16,13 @@ export const mysqlTester: Tester<MysqlTarget> = {
   type: 'mysql',
   schema: Target,
   async test(secret: ResolvedSecret, target: MysqlTarget): Promise<TestResult> {
+    if (isBlockedHost(target.host)) {
+      return {
+        ok: false,
+        latency_ms: 0,
+        error: 'Target host is blocked (private/internal IP or metadata endpoint).',
+      };
+    }
     const start = Date.now();
     const mysql = await import('mysql2/promise');
     const conn = await mysql
@@ -23,6 +32,7 @@ export const mysqlTester: Tester<MysqlTarget> = {
         ...(target.database ? { database: target.database } : {}),
         user: target.user,
         password: secret.value,
+        ...(target.ssl !== false ? { ssl: {} } : {}),
         connectTimeout: 5000,
       })
       .catch((err: unknown) => {

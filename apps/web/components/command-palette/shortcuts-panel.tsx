@@ -1,7 +1,7 @@
 'use client';
 
-import * as RadixDialog from '@radix-ui/react-dialog';
 import { cn } from '@/lib/cn';
+import * as RadixDialog from '@radix-ui/react-dialog';
 import { Kbd, KbdGroup } from './kbd';
 
 interface ShortcutRow {

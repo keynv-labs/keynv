@@ -4,8 +4,8 @@ import { Badge, envTone } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
 import { formatRelative } from '@/lib/time';
 import { ChevronRight } from 'lucide-react';
-import { RowActions } from './row-actions';
 import { SecretHistoryPanel } from './history-panel';
+import { RowActions } from './row-actions';
 
 export interface Environment {
   name: string;

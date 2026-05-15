@@ -5,6 +5,7 @@ import { maybeAutoBootstrap } from './auto-bootstrap.js';
 import { openDb } from './db/index.js';
 import { loadOrCreateKek } from './kek/load.js';
 import { loadEnv } from './lib/env.js';
+import { configureTrustedProxyCount } from './lib/ip.js';
 
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -18,6 +19,7 @@ export const VERSION = pkg.version;
 
 async function main(): Promise<void> {
   const env = loadEnv();
+  configureTrustedProxyCount(env.KEYNV_TRUSTED_PROXY_COUNT);
   configureArgon2({
     memoryKib: env.KEYNV_ARGON2_MEMORY_KIB,
     timeCost: env.KEYNV_ARGON2_TIME_COST,

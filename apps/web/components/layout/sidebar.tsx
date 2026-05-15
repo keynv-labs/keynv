@@ -2,8 +2,8 @@
 
 import { logoutAction, switchOrgAction } from '@/app/(authed)/actions';
 import { Logomark } from '@/components/brand/logomark';
-import { cn } from '@/lib/cn';
 import { CreateOrgDialog } from '@/components/layout/create-org-dialog';
+import { cn } from '@/lib/cn';
 import {
   Activity,
   Building2,
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, type ComponentType } from 'react';
+import { type ComponentType, useState } from 'react';
 
 interface NavItem {
   href: string;
@@ -119,7 +119,14 @@ interface SidebarContentProps {
 
 const NOOP = () => {};
 
-export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, onNavigate }: SidebarContentProps) {
+export function SidebarContent({
+  email,
+  role,
+  activeOrgId,
+  activeOrgName,
+  orgs,
+  onNavigate,
+}: SidebarContentProps) {
   const pathname = usePathname() ?? '';
   const initials = email.slice(0, 2).toUpperCase();
   const handleNavigate = onNavigate ?? NOOP;
@@ -129,11 +136,7 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
   return (
     <div className="flex h-full flex-col">
       <div className="h-14 px-4 flex items-center border-b border-border shrink-0">
-        <Link
-          href="/dashboard"
-          onClick={handleNavigate}
-          className="flex items-center"
-        >
+        <Link href="/dashboard" onClick={handleNavigate} className="flex items-center">
           <Logomark size={22} />
         </Link>
       </div>
@@ -150,7 +153,7 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
                 const active = item.match(pathname);
                 return (
                   <li key={item.href}>
-                      <Link
+                    <Link
                       href={item.href}
                       onClick={handleNavigate}
                       aria-current={active ? 'page' : undefined}
@@ -195,7 +198,9 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
           )}
         >
           <div className="flex-1 min-w-0 text-left">
-            <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-fg-subtle">Org</div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-fg-subtle">
+              Org
+            </div>
             <div className="text-fg leading-tight truncate mt-0.5">{activeOrgName}</div>
           </div>
           <ChevronDown
@@ -224,9 +229,7 @@ export function SidebarContent({ email, role, activeOrgId, activeOrgName, orgs, 
                     )}
                   >
                     <span className="flex-1 truncate">{o.name}</span>
-                    {isActive ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                    ) : null}
+                    {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-accent" /> : null}
                   </button>
                 </form>
               );

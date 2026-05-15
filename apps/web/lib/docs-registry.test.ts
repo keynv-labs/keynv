@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { allDocSlugs, listAllPages, findDocPage, neighborPages } from './docs-registry';
+import { describe, expect, it } from 'vitest';
+import { allDocSlugs, findDocPage, listAllPages, neighborPages } from './docs-registry';
 
 describe('allDocSlugs', () => {
   it('returns slug for every doc page', () => {

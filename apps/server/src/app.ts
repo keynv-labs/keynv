@@ -1,5 +1,5 @@
-import { cors } from 'hono/cors';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import type { Db } from './db/index.js';
 import { jsonError } from './lib/errors.js';
 import { type Logger, makeLogger } from './lib/logger.js';
@@ -56,6 +56,17 @@ export interface AppDeps {
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
   const logger = deps.logger ?? makeLogger(process.env['KEYNV_LOG_LEVEL'] ?? 'info');
+
+  app.use('*', async (c, next) => {
+    await next();
+    c.header('X-Content-Type-Options', 'nosniff');
+    c.header('X-Frame-Options', 'DENY');
+    c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https://')) {
+      c.header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+    }
+  });
 
   /**
    * CORS — only allows the configured KEYNV_WEB_URL (if set) so that

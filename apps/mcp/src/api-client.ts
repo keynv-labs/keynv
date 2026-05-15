@@ -9,10 +9,43 @@ interface RequestOpts {
 }
 
 export class McpApiClient {
-  constructor(private readonly creds: Credentials) {}
+  constructor(private creds: Credentials) {}
+
+  private async refreshIfNeeded(): Promise<Credentials> {
+    const expiresAt = new Date(this.creds.access_expires_at).getTime();
+    const bufferMs = 60 * 1000;
+    if (Date.now() + bufferMs < expiresAt) return this.creds;
+
+    const serverUrl = this.creds.server_url;
+    const res = await fetch(new URL('/v1/auth/refresh', serverUrl).toString(), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-keynv-agent': AGENT },
+      body: JSON.stringify({ refresh_token: this.creds.refresh_token }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`keynv-mcp: token refresh failed (${res.status}). Re-run keynv login.`);
+    }
+
+    const data = (await res.json()) as {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+    };
+
+    this.creds = {
+      ...this.creds,
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      access_expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+    };
+
+    return this.creds;
+  }
 
   async request<T = unknown>(path: string, opts: RequestOpts = {}): Promise<T> {
-    const url = new URL(path, this.creds.server_url);
+    const creds = await this.refreshIfNeeded();
+    const url = new URL(path, creds.server_url);
     if (opts.query) {
       for (const [k, v] of Object.entries(opts.query)) {
         if (v !== undefined) url.searchParams.set(k, String(v));
@@ -23,7 +56,7 @@ export class McpApiClient {
       headers: {
         'content-type': 'application/json',
         'x-keynv-agent': AGENT,
-        authorization: `Bearer ${this.creds.access_token}`,
+        authorization: `Bearer ${creds.access_token}`,
       },
       ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
     };

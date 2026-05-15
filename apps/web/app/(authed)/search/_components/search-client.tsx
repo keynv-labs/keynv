@@ -82,7 +82,9 @@ export function SearchClient() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-xs text-fg-subtle">v{r.version}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${r.env_tier === 'production' ? 'bg-warn-bg text-warn-fg' : 'bg-success-bg text-success-fg'}`}>
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded font-medium ${r.env_tier === 'production' ? 'bg-warn-bg text-warn-fg' : 'bg-success-bg text-success-fg'}`}
+                  >
                     {r.env_tier === 'production' ? 'prod' : r.env_tier}
                   </span>
                 </div>

@@ -1,10 +1,10 @@
 'use server';
 
+import { type ActionState, catchApi, parseOr, parseRaw } from '@/lib/action-result';
 import { api } from '@/lib/api';
+import { email, orgId, orgRole, passwordMin12 } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { email, passwordMin12, orgRole, orgId } from '@/lib/schemas';
-import { type ActionState, parseOr, parseRaw, catchApi } from '@/lib/action-result';
 
 export type UserActionState = ActionState;
 
@@ -42,9 +42,7 @@ export async function inviteUserAction(
   });
   if (!parsed.success) return parsed;
 
-  const result = await catchApi(() =>
-    api('/v1/users', { method: 'POST', body: parsed.data }),
-  );
+  const result = await catchApi(() => api('/v1/users', { method: 'POST', body: parsed.data }));
   if (!result.success) return { error: result.error };
 
   revalidatePath('/admin/users');
@@ -82,9 +80,7 @@ export async function removeUserAction(
   const user_id = String(formData.get('user_id') ?? '');
   if (!user_id) return { error: 'User ID is required.' };
 
-  const result = await catchApi(() =>
-    api(`/v1/users/${user_id}`, { method: 'DELETE' }),
-  );
+  const result = await catchApi(() => api(`/v1/users/${user_id}`, { method: 'DELETE' }));
   if (!result.success) return { error: result.error };
 
   revalidatePath('/admin/users');

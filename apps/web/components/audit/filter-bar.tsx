@@ -1,10 +1,10 @@
 'use client';
 
+import { exportAuditAction } from '@/app/(authed)/audit/_actions/export-action';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 import { Download, Search } from 'lucide-react';
 import { useTransition } from 'react';
-import { exportAuditAction } from '@/app/(authed)/audit/_actions/export-action';
 import { CATEGORY_LABELS, type Category, categoryOf } from './event';
 import type { AuditEntry } from './types';
 
@@ -34,7 +34,11 @@ function ExportDropdown() {
   function handleExport(format: 'csv' | 'json') {
     start(async () => {
       const content = await exportAuditAction(format);
-      download(content, `audit-export.${format}`, format === 'csv' ? 'text/csv' : 'application/json');
+      download(
+        content,
+        `audit-export.${format}`,
+        format === 'csv' ? 'text/csv' : 'application/json',
+      );
     });
   }
 
@@ -132,7 +136,9 @@ export function FilterBar({
         >
           <option value="">all projects</option>
           {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
           ))}
         </select>
       ) : null}

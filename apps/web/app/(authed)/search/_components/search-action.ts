@@ -18,10 +18,7 @@ interface SearchResponse {
   next_cursor: string | null;
 }
 
-export async function searchSecrets(
-  q: string,
-  beforeCreatedAt?: string,
-): Promise<SearchResponse> {
+export async function searchSecrets(q: string, beforeCreatedAt?: string): Promise<SearchResponse> {
   return api<SearchResponse>('/v1/secrets/search', {
     query: {
       q,

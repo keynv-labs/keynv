@@ -18,7 +18,8 @@
     "@keynv/core": "workspace:*",
     "@keynv/redactor": "workspace:*",
     "@keynv/testers": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.0.4"
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@napi-rs/keyring": "^1.1.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

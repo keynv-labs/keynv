@@ -981,10 +981,7 @@ function FooterLink({
   }
   return (
     <li>
-      <Link
-        href={href}
-        className="hover:text-fg transition-colors duration-fast ease-snap"
-      >
+      <Link href={href} className="hover:text-fg transition-colors duration-fast ease-snap">
         {children}
       </Link>
     </li>

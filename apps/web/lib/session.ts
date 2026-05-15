@@ -1,18 +1,38 @@
-/**
- * Session-cookie helpers. The session payload is the same shape the
- * keynv-server returns from POST /v1/auth/login, JSON-serialized into
- * a single httpOnly Secure cookie. We do NOT add a separate HMAC over
- * the cookie value because the contained access_token is already a
- * signed JWT — tampering breaks signature verification on the next
- * server call.
- *
- * The cookie is httpOnly + SameSite=Lax + Secure-when-HTTPS so client
- * JavaScript cannot exfiltrate it.
- */
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 
 const COOKIE_NAME = 'keynv_session';
 const ONE_WEEK_S = 7 * 24 * 3600;
+
+function getSecret(): string {
+  const secret = process.env.KEYNV_WEB_SESSION_SECRET;
+  if (secret && secret.length >= 32) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'KEYNV_WEB_SESSION_SECRET must be set (min 32 chars) in production. ' +
+      'Generate one with: openssl rand -base64 48',
+    );
+  }
+  // Dev/build fallback — never use in production.
+  return 'dev-session-secret-32chars-minimum-length';
+}
+
+function sign(payload: string): string {
+  const hmac = createHmac('sha256', getSecret()).update(payload, 'utf8').digest('hex');
+  return `${payload}.${hmac}`;
+}
+
+function verify(signed: string): string | null {
+  const dot = signed.lastIndexOf('.');
+  if (dot === -1) return null;
+  const payload = signed.slice(0, dot);
+  const providedMac = signed.slice(dot + 1);
+  const expectedMac = createHmac('sha256', getSecret()).update(payload, 'utf8').digest('hex');
+  if (providedMac.length !== expectedMac.length) return null;
+  if (!timingSafeEqual(Buffer.from(providedMac, 'hex'), Buffer.from(expectedMac, 'hex')))
+    return null;
+  return payload;
+}
 
 export interface Session {
   user_id: string;
@@ -33,7 +53,9 @@ export async function getSession(): Promise<Session | null> {
   const raw = jar.get(COOKIE_NAME)?.value;
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as Session;
+    const payload = verify(raw);
+    if (!payload) return null;
+    return JSON.parse(payload) as Session;
   } catch {
     return null;
   }
@@ -41,7 +63,9 @@ export async function getSession(): Promise<Session | null> {
 
 export async function setSession(session: Session): Promise<void> {
   const jar = await cookies();
-  jar.set(COOKIE_NAME, JSON.stringify(session), {
+  const payload = JSON.stringify(session);
+  const signed = sign(payload);
+  jar.set(COOKIE_NAME, signed, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

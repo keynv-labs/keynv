@@ -1,10 +1,16 @@
 'use client';
 
+import { createOrgAction } from '@/app/(authed)/actions';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { ErrorBlock } from '@/components/ui/error-block';
 import { Input } from '@/components/ui/input';
-import { createOrgAction } from '@/app/(authed)/actions';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -25,7 +31,7 @@ export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps
     onOpenChange?.(next);
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
