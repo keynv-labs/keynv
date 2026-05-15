@@ -132,9 +132,9 @@ export function authRoutes(deps: AuthDeps): Hono {
       const userId = newUserId();
       const password_hash = await hashPassword(password);
 
-      await deps.db.transaction(async (tx) => {
-        await tx.insert(schema.orgs).values({ id: orgId, name: org_name }).run();
-        await tx
+      deps.db.transaction((tx) => {
+        tx.insert(schema.orgs).values({ id: orgId, name: org_name }).run();
+        tx
           .insert(schema.users)
           .values({
             id: userId,

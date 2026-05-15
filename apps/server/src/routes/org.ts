@@ -45,9 +45,9 @@ export function orgRoutes(deps: OrgDeps): Hono {
     if ('errorResponse' in parsed) return parsed.errorResponse;
 
     const orgId = newOrgId();
-    await deps.db.transaction(async (tx) => {
-      await tx.insert(schema.orgs).values({ id: orgId, name: parsed.data.name }).run();
-      await tx
+    deps.db.transaction((tx) => {
+      tx.insert(schema.orgs).values({ id: orgId, name: parsed.data.name }).run();
+      tx
         .insert(schema.org_memberships)
         .values({ user_id: u.id, org_id: orgId, role: 'owner' })
         .run();

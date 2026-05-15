@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
@@ -24,7 +25,7 @@ export default defineConfig({
           command: 'pnpm --filter @keynv/web dev --port 3000',
           url: 'http://localhost:3000',
           reuseExistingServer: true,
-          cwd: new URL('../../', import.meta.url).pathname,
+          cwd: fileURLToPath(new URL('../../', import.meta.url)),
         },
       }),
 });

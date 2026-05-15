@@ -157,8 +157,8 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       require_approval: env.require_approval,
     }));
 
-    await deps.db.transaction(async (tx) => {
-      await tx
+    deps.db.transaction((tx) => {
+      tx
         .insert(schema.projects)
         .values({
           id: projectId,
@@ -169,7 +169,7 @@ export function projectRoutes(deps: ProjectDeps): Hono {
         })
         .run();
       for (const row of envInserts) {
-        await tx.insert(schema.environments).values(row).run();
+        tx.insert(schema.environments).values(row).run();
       }
     });
 

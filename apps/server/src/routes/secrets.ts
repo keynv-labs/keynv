@@ -350,8 +350,8 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const newId = newSecretId();
     const newVersion = prev.version + 1;
     const now = new Date().toISOString();
-    await deps.db.transaction(async (tx) => {
-      await tx
+    deps.db.transaction((tx) => {
+      tx
         .insert(schema.secrets)
         .values({
           id: newId,
@@ -365,7 +365,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
           created_by: user.id,
         })
         .run();
-      await tx
+      tx
         .update(schema.secrets)
         .set({ deleted_at: now })
         .where(eq(schema.secrets.id, prev.id))
