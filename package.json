@@ -16,6 +16,7 @@
     "dev:direct": "pnpm -r --parallel dev",
     "test": "pnpm -r test",
     "test:security": "pnpm -r test:security",
+    "version:sync": "node scripts/sync-version.mjs",
     "lint": "cross-env NODE_OPTIONS=--max-old-space-size=6144 biome check .",
     "lint:fix": "cross-env NODE_OPTIONS=--max-old-space-size=6144 biome check --write .",
     "format": "cross-env NODE_OPTIONS=--max-old-space-size=6144 biome format --write .",

@@ -137,11 +137,10 @@ jobs:
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install --frozen-lockfile
-      # Sync the published version with the git tag (tag is the source of
-      # truth). No commit, no tag — just rewrite package.json in place.
-      - name: Sync @keynv/cli version with tag
-        working-directory: apps/cli
-        run: npm version "${{ needs.prepare.outputs.version }}" --no-git-tag-version --allow-same-version
+      # Sync package versions with the git tag (tag is the source of truth).
+      # No commit, no tag — just rewrite package.json files in place for the build.
+      - name: Sync package versions with tag
+        run: pnpm version:sync "${{ needs.prepare.outputs.version }}"
       # Workspace deps must be built so tsup can bundle them.
       - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
       - run: pnpm --filter @keynv/cli build
