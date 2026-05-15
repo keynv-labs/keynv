@@ -184,34 +184,38 @@ export function authRoutes(deps: AuthDeps): Hono {
     },
   );
 
-  r.post('/cli/browser/start', async (c) => {
-    const body = await parseBody(c, BrowserStartBody, 'Invalid browser auth body.');
-    if ('errorResponse' in body) return body.errorResponse;
+  r.post(
+    '/cli/browser/start',
+    ipRateLimitMiddleware({ perMinute: deps.registerRateLimitPerMinute ?? 5 }),
+    async (c) => {
+      const body = await parseBody(c, BrowserStartBody, 'Invalid browser auth body.');
+      if ('errorResponse' in body) return body.errorResponse;
 
-    const deviceCode = newDeviceCode();
-    const userCode = newUserCode();
-    const expiresAt = new Date(Date.now() + BROWSER_AUTH_TTL_S * 1000).toISOString();
-    const verificationUri = new URL('/cli/authorize', deps.webUrl ?? new URL(c.req.url).origin);
+      const deviceCode = newDeviceCode();
+      const userCode = newUserCode();
+      const expiresAt = new Date(Date.now() + BROWSER_AUTH_TTL_S * 1000).toISOString();
+      const verificationUri = new URL('/cli/authorize', deps.webUrl ?? new URL(c.req.url).origin);
 
-    await deps.db.insert(schema.cli_auth_flows).values({
-      device_code_hash: hashCode(deviceCode),
-      user_code_hash: hashCode(normalizeUserCode(userCode)),
-      device_name: body.data.device_name ?? null,
-      expires_at: expiresAt,
-    });
+      await deps.db.insert(schema.cli_auth_flows).values({
+        device_code_hash: hashCode(deviceCode),
+        user_code_hash: hashCode(normalizeUserCode(userCode)),
+        device_name: body.data.device_name ?? null,
+        expires_at: expiresAt,
+      });
 
-    return c.json(
-      {
-        device_code: deviceCode,
-        user_code: userCode,
-        verification_uri: verificationUri.toString(),
-        verification_uri_complete: browserAuthorizeUrl(verificationUri.toString(), userCode),
-        expires_in: BROWSER_AUTH_TTL_S,
-        interval: BROWSER_AUTH_INTERVAL_S,
-      },
-      201,
-    );
-  });
+      return c.json(
+        {
+          device_code: deviceCode,
+          user_code: userCode,
+          verification_uri: verificationUri.toString(),
+          verification_uri_complete: browserAuthorizeUrl(verificationUri.toString(), userCode),
+          expires_in: BROWSER_AUTH_TTL_S,
+          interval: BROWSER_AUTH_INTERVAL_S,
+        },
+        201,
+      );
+    },
+  );
 
   r.post(
     '/cli/browser/poll',

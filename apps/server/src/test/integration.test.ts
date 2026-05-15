@@ -1324,6 +1324,30 @@ describe('Public registration — POST /v1/auth/register', () => {
 });
 
 describe('CLI browser auth — /v1/auth/cli/browser/*', () => {
+  it('rate-limits browser auth start by client IP', async () => {
+    const local = await makeHarness({ registerRateLimitPerMinute: 2 });
+    try {
+      const responses: Response[] = [];
+      for (let i = 0; i < 3; i++) {
+        responses.push(
+          await local.app.request('http://localhost/v1/auth/cli/browser/start', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ device_name: `test-terminal-${i}` }),
+          }),
+        );
+      }
+
+      expect(responses[0]?.status).toBe(201);
+      expect(responses[1]?.status).toBe(201);
+      expect(responses[2]?.status).toBe(429);
+      const body = (await responses[2]?.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('rate_limited');
+    } finally {
+      local.cleanup();
+    }
+  });
+
   it('starts pending, authorizes in the browser session, then returns a usable JWT pair', async () => {
     const start = await harness.app.request('http://localhost/v1/auth/cli/browser/start', {
       method: 'POST',

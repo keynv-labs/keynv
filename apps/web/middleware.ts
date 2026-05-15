@@ -39,7 +39,7 @@ const PUBLIC_PREFIXES = ['/docs/', '/changelog/'];
 const STATIC_OR_DISCOVERY = /\.[a-zA-Z0-9]+$/;
 
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
   if (
     PUBLIC_PATHS.has(pathname) ||
     PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) ||
@@ -54,7 +54,7 @@ export function middleware(req: NextRequest) {
   if (!session) {
     const origin = getOrigin(req);
     const url = new URL('/login', origin);
-    url.searchParams.set('next', pathname);
+    url.searchParams.set('next', `${pathname}${search}`);
     return NextResponse.redirect(url);
   }
   return NextResponse.next();
