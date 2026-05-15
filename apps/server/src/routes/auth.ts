@@ -33,6 +33,16 @@ interface AuthDeps {
    * per-user authed-route budget).
    */
   registerRateLimitPerMinute?: number;
+  /**
+   * Per-IP budget for POST /v1/auth/cli/browser/poll. The CLI polls
+   * this endpoint every ~5s while the user authorizes in their
+   * browser; a 5/min cap (the register default) trips inside the
+   * first 30 seconds and breaks login. Default 60/min so a 1s
+   * polling cadence still has headroom; the `start` endpoint stays
+   * on the tighter register budget because it's not a polling
+   * endpoint.
+   */
+  browserPollRateLimitPerMinute?: number;
 }
 
 const LoginBody = z.object({
@@ -205,7 +215,7 @@ export function authRoutes(deps: AuthDeps): Hono {
 
   r.post(
     '/cli/browser/poll',
-    ipRateLimitMiddleware({ perMinute: deps.registerRateLimitPerMinute ?? 5 }),
+    ipRateLimitMiddleware({ perMinute: deps.browserPollRateLimitPerMinute ?? 60 }),
     async (c) => {
       const body = await parseBody(c, BrowserPollBody, 'Invalid browser auth poll body.');
       if ('errorResponse' in body) return body.errorResponse;

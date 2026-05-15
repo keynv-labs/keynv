@@ -46,6 +46,12 @@ export interface AppDeps {
    */
   registerRateLimitPerMinute?: number;
   /**
+   * Per-IP budget for POST /v1/auth/cli/browser/poll. Defaults to
+   * 60/min so the CLI's device-code polling loop (5s cadence by
+   * default) has comfortable headroom across the auth window.
+   */
+  browserPollRateLimitPerMinute?: number;
+  /**
    * Optional pino logger. Defaults to a fresh instance with the same
    * redaction paths configured in lib/logger.ts. Tests pass a silent
    * logger to keep their output clean.

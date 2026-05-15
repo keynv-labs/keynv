@@ -44,6 +44,14 @@ const ServerEnv = z.object({
    */
   KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).default(5),
   /**
+   * Per-IP budget on the CLI device-code polling endpoint
+   * (POST /v1/auth/cli/browser/poll). Needs much more headroom than
+   * the register/login endpoints because the CLI polls every ~5s
+   * while the user authorizes in their browser. Default 60/min
+   * (5–10× a normal flow's poll count); set to 0 to disable.
+   */
+  KEYNV_BROWSER_POLL_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).default(60),
+  /**
    * Number of trusted reverse proxies in front of this server.
    * Controls which X-Forwarded-For entry is used to identify the
    * real client IP. With 1 trusted proxy (default), the second-to-

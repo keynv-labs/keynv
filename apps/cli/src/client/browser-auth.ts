@@ -84,7 +84,7 @@ export async function runBrowserAuth(serverUrl: string): Promise<Credentials> {
   }
 
   const deadline = Date.now() + start.expires_in * 1000;
-  const intervalMs = Math.max(1, start.interval) * 1000;
+  let intervalMs = Math.max(1, start.interval) * 1000;
   while (Date.now() < deadline) {
     await sleep(intervalMs);
     const pollRes = await fetch(new URL('/v1/auth/cli/browser/poll', serverUrl).toString(), {
@@ -93,7 +93,22 @@ export async function runBrowserAuth(serverUrl: string): Promise<Credentials> {
       body: JSON.stringify({ device_code: start.device_code }),
     });
 
+    // 202 Accepted — user hasn't approved yet; keep polling at current cadence.
     if (pollRes.status === 202) continue;
+
+    // 429 Too Many Requests — server is throttling. Treat as a transient
+    // slow_down signal (RFC 8628 §3.5): obey `Retry-After`, slow our own
+    // polling cadence, and keep waiting until the device-code expires.
+    // The body is drained so the underlying connection can be reused.
+    if (pollRes.status === 429) {
+      await pollRes.text().catch(() => '');
+      const retryAfterRaw = pollRes.headers.get('retry-after');
+      const retryAfterMs = parseRetryAfterMs(retryAfterRaw);
+      const nextInterval = Math.max(intervalMs * 2, retryAfterMs ?? 0, 5_000);
+      intervalMs = Math.min(nextInterval, 60_000);
+      continue;
+    }
+
     if (!pollRes.ok) {
       throw new BrowserAuthError(
         await errorMessage(pollRes, `Browser auth failed (${pollRes.status}).`),
@@ -115,4 +130,24 @@ export async function runBrowserAuth(serverUrl: string): Promise<Credentials> {
   }
 
   throw new BrowserAuthError('Browser auth timed out. Run `keynv` to try again.');
+}
+
+/**
+ * Parse an HTTP `Retry-After` header into milliseconds. Accepts the
+ * delta-seconds form (`30`) and the HTTP-date form per RFC 7231. Returns
+ * null when the header is missing or unparseable so the caller can fall
+ * back to a sane default.
+ */
+export function parseRetryAfterMs(header: string | null): number | null {
+  if (!header) return null;
+  const trimmed = header.trim();
+  if (trimmed === '') return null;
+  if (/^\d+$/.test(trimmed)) {
+    const seconds = Number.parseInt(trimmed, 10);
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+    return null;
+  }
+  const parsed = Date.parse(trimmed);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, parsed - Date.now());
 }
