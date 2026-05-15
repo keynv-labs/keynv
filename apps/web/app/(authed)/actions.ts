@@ -48,6 +48,14 @@ export async function createOrgAction(
       method: 'POST',
       body: { name: orgName },
     });
+    const { getSession, setSession } = await import('@/lib/session');
+    const session = await getSession();
+    if (session) {
+      session.active_org_id = result.id;
+      if (!session.org_ids) session.org_ids = [];
+      if (!session.org_ids.includes(result.id)) session.org_ids.push(result.id);
+      await setSession(session);
+    }
     return { org_id: result.id };
   } catch (err) {
     return { error: (err as { message?: string }).message || 'Failed to create org.' };

@@ -45,15 +45,9 @@ export function CreateOrgDialog({ children, onOpenChange }: CreateOrgDialogProps
       return;
     }
 
-    // Switch to the newly created org.
-    if (result.org_id) {
-      const { switchOrgAction } = await import('@/app/(authed)/actions');
-      await switchOrgAction(result.org_id);
-    }
-
     setOpen(false);
     setName('');
-    router.refresh();
+    router.push('/dashboard');
   };
 
   return (

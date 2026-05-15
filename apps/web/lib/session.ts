@@ -10,7 +10,7 @@ function getSecret(): string {
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
       'KEYNV_WEB_SESSION_SECRET must be set (min 32 chars) in production. ' +
-      'Generate one with: openssl rand -base64 48',
+        'Generate one with: openssl rand -base64 48',
     );
   }
   // Dev/build fallback — never use in production.
