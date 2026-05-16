@@ -30,6 +30,17 @@ export function securityHeaders(env: string = process.env.NODE_ENV ?? 'developme
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+    // HSTS is only meaningful over HTTPS. Operators running an
+    // HTTP-only internal deployment can override or strip this header
+    // upstream.
+    ...(isProd
+      ? [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+        ]
+      : []),
     {
       key: 'Content-Security-Policy',
       value: [

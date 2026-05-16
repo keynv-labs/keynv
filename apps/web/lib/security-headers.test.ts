@@ -32,4 +32,19 @@ describe('securityHeaders', () => {
     expect(keys).toContain('Referrer-Policy');
     expect(keys).toContain('Permissions-Policy');
   });
+
+  it('emits HSTS only in production', () => {
+    const prodKeys = securityHeaders('production').map((h) => h.key);
+    const devKeys = securityHeaders('development').map((h) => h.key);
+    expect(prodKeys).toContain('Strict-Transport-Security');
+    expect(devKeys).not.toContain('Strict-Transport-Security');
+  });
+
+  it('HSTS has a one-year max-age and includeSubDomains', () => {
+    const hsts = securityHeaders('production').find(
+      (h) => h.key === 'Strict-Transport-Security',
+    );
+    expect(hsts?.value).toMatch(/max-age=31536000/);
+    expect(hsts?.value).toMatch(/includeSubDomains/);
+  });
 });
