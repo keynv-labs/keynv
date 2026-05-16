@@ -5,7 +5,11 @@ import { requireCsrf, requireCsrfToken } from '@/lib/csrf';
 import { clearSession, getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
-export async function dismissOnboardingAction(): Promise<void> {
+export async function dismissOnboardingAction(csrfToken?: string | null): Promise<void> {
+  // Silent reject on missing/invalid CSRF — the call is fire-and-forget
+  // and an attacker forging it just leaves the user's onboarding in
+  // place, which is the safe default. No UI surface to error to.
+  if (requireCsrfToken(csrfToken)) return;
   try {
     await api('/v1/onboarding/dismiss', { method: 'POST' });
   } catch {
