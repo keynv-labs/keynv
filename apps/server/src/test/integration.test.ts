@@ -553,6 +553,72 @@ describe('B2 regression — cross-org access is denied', () => {
       h.cleanup();
     }
   });
+
+  // Regression for AUDIT-FINDINGS-2 H3: the non-admin path on
+  // GET /v1/projects ran without an org_id filter, so a developer in
+  // org A would load every org's project rows into the Node heap
+  // before the in-memory membership filter ran.
+  it("developer in org A sees only org-A projects via GET /v1/projects", async () => {
+    const h = await twoOrgHarness();
+    try {
+      // Add a developer to org A.
+      const devEmail = 'dev-a@team.test';
+      const devPassword = 'dev-a-password-12345';
+
+      const orgARes = await h.app.request('http://localhost/v1/projects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({
+          name: 'project-a',
+          environments: [{ name: 'dev', tier: 'non-production' }],
+        }),
+      });
+      const projectA = (await orgARes.json()) as { id: string };
+
+      // Owner B creates a project in org B — the rogue tenant.
+      const orgBRes = await h.app.request('http://localhost/v1/projects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenB}` },
+        body: JSON.stringify({
+          name: 'project-b',
+          environments: [{ name: 'dev', tier: 'non-production' }],
+        }),
+      });
+      const projectB = (await orgBRes.json()) as { id: string };
+
+      // Owner A invites the developer + grants them access to project-a.
+      const inviteRes = await h.app.request('http://localhost/v1/users', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({ email: devEmail, password: devPassword, org_role: 'developer' }),
+      });
+      expect(inviteRes.status).toBe(201);
+      const memberRes = await h.app.request(
+        `http://localhost/v1/projects/${projectA.id}/members`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+          body: JSON.stringify({ email: devEmail, role: 'developer' }),
+        },
+      );
+      expect(memberRes.status).toBe(201);
+
+      // Developer logs in and lists projects.
+      const devToken = await login(h.app, devEmail, devPassword);
+      const listRes = await h.app.request('http://localhost/v1/projects', {
+        headers: { authorization: `Bearer ${devToken}` },
+      });
+      expect(listRes.status).toBe(200);
+      const body = (await listRes.json()) as { projects: Array<{ id: string; name: string }> };
+
+      const ids = body.projects.map((p) => p.id);
+      expect(ids).toContain(projectA.id);
+      expect(ids).not.toContain(projectB.id);
+      expect(body.projects.every((p) => p.name !== 'project-b')).toBe(true);
+    } finally {
+      h.cleanup();
+    }
+  });
 });
 
 describe('User management — DELETE /v1/users/:id', () => {

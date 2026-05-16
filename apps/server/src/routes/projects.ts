@@ -99,10 +99,14 @@ export function projectRoutes(deps: ProjectDeps): Hono {
       // For non-admins, list only projects they have membership on.
       const memberProjectIds = user.memberships.map((m) => m.project_id);
       if (memberProjectIds.length === 0) return c.json({ projects: [] });
+      // Push org scoping into the query so multi-tenant deployments
+      // don't pull every org's projects into the Node heap before the
+      // in-memory membership filter runs. The membership filter stays
+      // as defence-in-depth.
       const rows = await deps.db
         .select()
         .from(schema.projects)
-        .where(isNull(schema.projects.deleted_at));
+        .where(and(eq(schema.projects.org_id, user.org_id), isNull(schema.projects.deleted_at)));
       const filtered = rows.filter((row) => memberProjectIds.includes(row.id));
       return c.json({
         projects: filtered.map((p) => ({ id: p.id, name: p.name, created_at: p.created_at })),
