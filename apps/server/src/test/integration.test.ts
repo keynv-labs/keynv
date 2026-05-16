@@ -1,4 +1,5 @@
 import { crypto } from '@keynv/core';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { hashPassword } from '../auth/password.js';
@@ -6,6 +7,7 @@ import { openDb } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { newOrgId, newUserId } from '../lib/id.js';
 import { makeLogger } from '../lib/logger.js';
+import { ensurePendingApproval } from '../routes/approvals.js';
 
 const SILENT_LOGGER = makeLogger('silent');
 
@@ -1169,6 +1171,71 @@ describe('Approvals — /v1/projects/:id/approvals', () => {
       },
     );
     expect(grant2.status).toBe(404);
+  });
+
+  // Regression for AUDIT-FINDINGS-2 H4: ensurePendingApproval used to
+  // do a SELECT then INSERT without atomicity. Two parallel reads of
+  // the same alias by the same developer could both pass the
+  // existence check and both insert a pending row, doubling the
+  // lead's queue.
+  it('parallel ensurePendingApproval calls collapse to a single pending row', async () => {
+    const { db, raw } = openDb({ path: ':memory:', migrate: true });
+    try {
+      const orgId = newOrgId();
+      const ownerId = newUserId();
+      const requesterId = newUserId();
+      await db.insert(schema.orgs).values({ id: orgId, name: 'acme' });
+      await db.insert(schema.users).values([
+        {
+          id: ownerId,
+          org_id: orgId,
+          email: 'owner@team.test',
+          password_hash: await hashPassword('owner-password-12345'),
+          org_role: 'owner',
+        },
+        {
+          id: requesterId,
+          org_id: orgId,
+          email: 'dev@team.test',
+          password_hash: await hashPassword('dev-password-12345'),
+          org_role: 'developer',
+        },
+      ]);
+      const projectId = 'p_test_race';
+      await db.insert(schema.projects).values({
+        id: projectId,
+        org_id: orgId,
+        name: 'race',
+        dek_wrapped: Buffer.from([0]),
+        dek_nonce: Buffer.from([0]),
+      });
+
+      const alias = '@race.prod.db_password';
+      const N = 8;
+      const results = await Promise.all(
+        Array.from({ length: N }, () =>
+          ensurePendingApproval({ db, projectId, alias, requesterUserId: requesterId }),
+        ),
+      );
+
+      const rows = await db
+        .select({ id: schema.approvals.id, status: schema.approvals.status })
+        .from(schema.approvals)
+        .where(eq(schema.approvals.project_id, projectId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.status).toBe('pending');
+
+      // Every caller must see the same winning id.
+      const ids = new Set(results.map((r) => r.id));
+      expect(ids.size).toBe(1);
+      expect(ids.has(rows[0]?.id ?? '')).toBe(true);
+
+      // Exactly one creator (the others took the conflict branch).
+      const createdCount = results.filter((r) => r.created).length;
+      expect(createdCount).toBe(1);
+    } finally {
+      raw.close();
+    }
   });
 });
 
