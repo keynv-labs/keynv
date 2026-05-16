@@ -160,7 +160,7 @@ export function userRoutes(deps: UserDeps): Hono {
     await deps.db
       .update(schema.users)
       .set({ org_role: parsed.data.org_role })
-      .where(eq(schema.users.id, targetId));
+      .where(and(eq(schema.users.id, targetId), eq(schema.users.org_id, user.org_id)));
 
     await audit(c, deps.db, 'user.role_changed', {
       target_user_id: targetId,
@@ -190,7 +190,9 @@ export function userRoutes(deps: UserDeps): Hono {
       return jsonError(c, 'rbac.denied', 'Owner cannot be removed via this endpoint.');
     }
 
-    await deps.db.delete(schema.users).where(eq(schema.users.id, targetId));
+    await deps.db
+      .delete(schema.users)
+      .where(and(eq(schema.users.id, targetId), eq(schema.users.org_id, user.org_id)));
 
     await audit(c, deps.db, 'user.removed', { target_user_id: targetId, email: target.email });
     return c.body(null, 204);

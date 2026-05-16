@@ -621,6 +621,52 @@ describe('B2 regression — cross-org access is denied', () => {
       h.cleanup();
     }
   });
+
+  // Regression for AUDIT-FINDINGS-2 H5: PATCH /v1/users/:id/org-role
+  // and DELETE /v1/users/:id mutated by id only. The SELECT correctly
+  // scoped to the caller's org so cross-org requests already 404, but
+  // a future concurrent org-move between SELECT and UPDATE could land
+  // the mutation on the wrong row. Including org_id in the WHERE
+  // closes that seam.
+  it('owner B cannot patch or delete a user that belongs to org A', async () => {
+    const h = await twoOrgHarness();
+    try {
+      const devEmail = 'dev-x@team.test';
+      const devPassword = 'dev-x-password-12345';
+      const inviteRes = await h.app.request('http://localhost/v1/users', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({ email: devEmail, password: devPassword, org_role: 'developer' }),
+      });
+      expect(inviteRes.status).toBe(201);
+      const dev = (await inviteRes.json()) as { id: string };
+
+      const patch = await h.app.request(`http://localhost/v1/users/${dev.id}/org-role`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenB}` },
+        body: JSON.stringify({ org_role: 'reader' }),
+      });
+      expect(patch.status).toBe(404);
+
+      const del = await h.app.request(`http://localhost/v1/users/${dev.id}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
+      expect(del.status).toBe(404);
+
+      // Owner A confirms the dev row is still intact and untouched.
+      const listA = await h.app.request('http://localhost/v1/users', {
+        headers: { authorization: `Bearer ${h.tokenA}` },
+      });
+      const aBody = (await listA.json()) as {
+        users: Array<{ id: string; org_role: string }>;
+      };
+      const stillDev = aBody.users.find((u) => u.id === dev.id);
+      expect(stillDev?.org_role).toBe('developer');
+    } finally {
+      h.cleanup();
+    }
+  });
 });
 
 describe('User management — DELETE /v1/users/:id', () => {
