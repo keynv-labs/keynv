@@ -44,7 +44,7 @@ import {
   hasExistingKeynvEnv,
   suggestedEnvForSuffix,
 } from '../../init/detect.js';
-import { classifyEntry, previewValue } from '../../init/heuristics.js';
+import { classifyEntry, maskedPreview, previewValue } from '../../init/heuristics.js';
 import { applyWraps, planScriptWrap } from '../../init/script-wrap.js';
 import { UserCancelled, unwrap } from '../helpers/cancel.js';
 import { listProjects } from '../helpers/pickProject.js';
@@ -258,7 +258,11 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     if (!g) {
       const c = classifyEntry(r.localKey, r.value);
       const hint = c.hint || (r.isAlias ? 'looks like an alias literal' : 'no signal');
-      const preview = r.isAlias ? r.value : previewValue(r.value, 28);
+      // Alias literals are safe to show verbatim; everything else is
+      // potentially a secret value and must be masked even in our own
+      // TUI (AGENTS.md hard rule #1 applies to the user's terminal,
+      // scrollback, and screen-share surfaces too).
+      const preview = r.isAlias ? previewValue(r.value, 40) : maskedPreview(r.value, hint);
       const envTag = distinctEnvs.length > 1 ? `[${r.envName}] ` : '';
       const renamedTag = r.localKey !== r.vaultKey ? ` -> vault:${r.vaultKey}` : '';
       g = {

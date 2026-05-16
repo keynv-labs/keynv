@@ -194,9 +194,34 @@ export function classifyEntry(name: string, value: string): ClassifyResult {
  * Render a tiny preview of a value safe to display in a checklist.
  * Long values are truncated; common secret-looking prefixes are kept
  * intact so the user recognizes them.
+ *
+ * Only safe to use for values the user is allowed to see verbatim —
+ * alias literals (`@project.env.key`), plain configuration strings,
+ * etc. For secrets, prefer `maskedPreview`.
  */
 export function previewValue(value: string, max = 40): string {
   if (value.length === 0) return '(empty)';
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1)}…`;
+}
+
+/**
+ * Render a preview that *never* leaks the value itself — for use in
+ * the TUI checklist when the entry is classified as a secret. We
+ * include enough metadata (length, hint, and a short stable digest)
+ * for the user to recognise duplicates and tell distinct secrets
+ * apart, but the raw bytes never reach the terminal / scrollback /
+ * any screencast surface.
+ *
+ * The digest is the first 4 hex chars of SHA-256 — 16 bits is enough
+ * for visual deduplication of a handful of entries while leaving the
+ * full key cryptographically infeasible to recover from the prefix.
+ */
+import { createHash } from 'node:crypto';
+
+export function maskedPreview(value: string, hint = 'secret'): string {
+  if (value.length === 0) return '(empty)';
+  const fingerprint = createHash('sha256').update(value).digest('hex').slice(0, 4);
+  const label = hint && hint.length > 0 ? hint : 'secret';
+  return `[••••] (${label}, ${value.length} chars, fp:${fingerprint})`;
 }
