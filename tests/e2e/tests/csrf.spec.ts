@@ -23,10 +23,7 @@ test.describe('CSRF guard', () => {
       el?.remove();
     });
 
-    await Promise.all([
-      page.waitForLoadState('networkidle'),
-      page.click('button[type="submit"]'),
-    ]);
+    await Promise.all([page.waitForLoadState('networkidle'), page.click('button[type="submit"]')]);
 
     // Action must keep the user on /register (or bounce them to it)
     // and the page must surface the "Security check failed" message.

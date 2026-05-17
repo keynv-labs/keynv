@@ -560,7 +560,7 @@ describe('B2 regression — cross-org access is denied', () => {
   // GET /v1/projects ran without an org_id filter, so a developer in
   // org A would load every org's project rows into the Node heap
   // before the in-memory membership filter ran.
-  it("developer in org A sees only org-A projects via GET /v1/projects", async () => {
+  it('developer in org A sees only org-A projects via GET /v1/projects', async () => {
     const h = await twoOrgHarness();
     try {
       // Add a developer to org A.
@@ -595,14 +595,11 @@ describe('B2 regression — cross-org access is denied', () => {
         body: JSON.stringify({ email: devEmail, password: devPassword, org_role: 'developer' }),
       });
       expect(inviteRes.status).toBe(201);
-      const memberRes = await h.app.request(
-        `http://localhost/v1/projects/${projectA.id}/members`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
-          body: JSON.stringify({ email: devEmail, role: 'developer' }),
-        },
-      );
+      const memberRes = await h.app.request(`http://localhost/v1/projects/${projectA.id}/members`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({ email: devEmail, role: 'developer' }),
+      });
       expect(memberRes.status).toBe(201);
 
       // Developer logs in and lists projects.

@@ -144,8 +144,7 @@ export function authRoutes(deps: AuthDeps): Hono {
 
       deps.db.transaction((tx) => {
         tx.insert(schema.orgs).values({ id: orgId, name: org_name }).run();
-        tx
-          .insert(schema.users)
+        tx.insert(schema.users)
           .values({
             id: userId,
             org_id: orgId,

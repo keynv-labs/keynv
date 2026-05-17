@@ -32,11 +32,7 @@ import type { ApiClient } from '../../client/http.js';
 import { parseEnvFile } from '../../exec/envFile.js';
 import { writeAiContext } from '../../init/ai-context.js';
 import { backupEnvFile } from '../../init/backup.js';
-import {
-  type ResolvedEntry,
-  type SourceEntry,
-  planVaultKeys,
-} from '../../init/collision.js';
+import { type ResolvedEntry, type SourceEntry, planVaultKeys } from '../../init/collision.js';
 import {
   type EnvFileHit,
   findEnvFilesRecursive,
@@ -329,14 +325,12 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
       const envGroups = choices.filter((g) => g.envName === env);
       const sec = envGroups.filter((g) => selected.has(g.composite)).length;
       const lit = envGroups.length - sec;
-      return `  ${env}: ${sec} secrets, ${lit} literals${env === defaultEnv ? ' (default — written to each app\'s .keynv.env)' : ''}`;
+      return `  ${env}: ${sec} secrets, ${lit} literals${env === defaultEnv ? " (default — written to each app's .keynv.env)" : ''}`;
     })
     .join('\n');
   // Distinct containingDirs that will receive a .keynv.env file.
   const writeDirs = [...new Set(plan.resolved.map((r) => r.source.containingDir))];
-  const writeDirsLines = writeDirs
-    .map((d) => `  ${relFromRoot(root.path, d)}`)
-    .join('\n');
+  const writeDirsLines = writeDirs.map((d) => `  ${relFromRoot(root.path, d)}`).join('\n');
   const renameLine =
     plan.renamed.length > 0
       ? `Renamed vault keys: ${plan.renamed.length} (to avoid cross-app collisions)`
@@ -347,7 +341,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     'Per-env breakdown:',
     perEnvCounts,
     `Script wraps:      ${scriptWrapSelection.length}`,
-    `.keynv.env files:  will be written under`,
+    '.keynv.env files:  will be written under',
     writeDirsLines,
     'Original .env files: rename to .env.backup after upload',
     renameLine,
@@ -379,9 +373,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   const groupsToUpload = choices.filter((g) => selected.has(g.composite));
   if (groupsToUpload.length > 0) {
     const s = spinner();
-    s.start(
-      `Uploading ${groupsToUpload.length} secret${groupsToUpload.length === 1 ? '' : 's'}`,
-    );
+    s.start(`Uploading ${groupsToUpload.length} secret${groupsToUpload.length === 1 ? '' : 's'}`);
     let i = 0;
     for (const g of groupsToUpload) {
       i++;

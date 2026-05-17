@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planVaultKeys, type SourceEntry } from './collision.js';
+import { type SourceEntry, planVaultKeys } from './collision.js';
 import type { EnvFileHit } from './detect.js';
 
 function fileHit(relativeDir: string, name = '.env'): EnvFileHit {
@@ -54,9 +54,7 @@ describe('planVaultKeys', () => {
       src(web, 'DATABASE_URL', 'postgres://web'),
     ]);
     expect(plan.renamed).toHaveLength(2);
-    const byRel = Object.fromEntries(
-      plan.resolved.map((r) => [r.source.relativeDir, r.vaultKey]),
-    );
+    const byRel = Object.fromEntries(plan.resolved.map((r) => [r.source.relativeDir, r.vaultKey]));
     expect(byRel['apps/api']).toBe('api-DATABASE_URL');
     expect(byRel['apps/web']).toBe('web-DATABASE_URL');
     expect(plan.merged).toEqual([]);
@@ -69,9 +67,7 @@ describe('planVaultKeys', () => {
       src(apps, 'DATABASE_URL', 'a'),
       src(services, 'DATABASE_URL', 'b'),
     ]);
-    const byRel = Object.fromEntries(
-      plan.resolved.map((r) => [r.source.relativeDir, r.vaultKey]),
-    );
+    const byRel = Object.fromEntries(plan.resolved.map((r) => [r.source.relativeDir, r.vaultKey]));
     expect(byRel['apps/api']).toBe('apps-api-DATABASE_URL');
     expect(byRel['services/api']).toBe('services-api-DATABASE_URL');
   });
@@ -79,13 +75,8 @@ describe('planVaultKeys', () => {
   it('uses "root" slug for files at the scan root colliding with a subdir file', () => {
     const r = fileHit('');
     const api = fileHit('apps/api');
-    const plan = planVaultKeys([
-      src(r, 'DATABASE_URL', 'one'),
-      src(api, 'DATABASE_URL', 'two'),
-    ]);
-    const byRel = Object.fromEntries(
-      plan.resolved.map((r) => [r.source.relativeDir, r.vaultKey]),
-    );
+    const plan = planVaultKeys([src(r, 'DATABASE_URL', 'one'), src(api, 'DATABASE_URL', 'two')]);
+    const byRel = Object.fromEntries(plan.resolved.map((r) => [r.source.relativeDir, r.vaultKey]));
     expect(byRel['']).toBe('root-DATABASE_URL');
     expect(byRel['apps/api']).toBe('api-DATABASE_URL');
   });

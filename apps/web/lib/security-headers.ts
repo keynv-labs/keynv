@@ -15,7 +15,9 @@ export interface SecurityHeader {
   value: string;
 }
 
-export function securityHeaders(env: string = process.env.NODE_ENV ?? 'development'): SecurityHeader[] {
+export function securityHeaders(
+  env: string = process.env.NODE_ENV ?? 'development',
+): SecurityHeader[] {
   const isProd = env === 'production';
 
   // Dev needs unsafe-eval for React Refresh / Fast Refresh; prod does

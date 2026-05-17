@@ -41,9 +41,7 @@ describe('securityHeaders', () => {
   });
 
   it('HSTS has a one-year max-age and includeSubDomains', () => {
-    const hsts = securityHeaders('production').find(
-      (h) => h.key === 'Strict-Transport-Security',
-    );
+    const hsts = securityHeaders('production').find((h) => h.key === 'Strict-Transport-Security');
     expect(hsts?.value).toMatch(/max-age=31536000/);
     expect(hsts?.value).toMatch(/includeSubDomains/);
   });
