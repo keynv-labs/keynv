@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Web open-redirect** (AUDIT-FINDINGS-2 H1) — login and register actions now route the `next` redirect target through `safeNext()`, which rejects protocol-relative authorities (`//evil.com`), backslash variants (`/\evil.com`), header-injection control characters, and any value whose origin doesn't match the current host.
+- **Web CSRF gap** (H2) — `dismissOnboardingAction` now requires a CSRF token via the existing `CsrfProvider` context; silent reject on missing/forged tokens keeps the onboarding checklist visible under attack.
+- **Server cross-org disclosure** (H3) — non-admin `GET /v1/projects` path now scopes the database query by `org_id` instead of pulling every org's project rows into Node memory before an in-memory membership filter.
+- **Server approvals race** (H4) — `ensurePendingApproval` now uses `INSERT ... ON CONFLICT DO NOTHING` against a partial UNIQUE index on `(project_id, alias, requester_user_id) WHERE status='pending'`, so concurrent reads of the same require-approval secret collapse to a single pending row instead of doubling the lead's queue. New migration `0008_approvals_unique_pending.sql` dedupes any pre-existing duplicates.
+- **Server user-mutation TOCTOU** (H5) — `PATCH /v1/users/:id/org-role` and `DELETE /v1/users/:id` now include `org_id` alongside `id` in their `WHERE` clauses, closing the seam future concurrent org-move code paths would have tripped on.
+- **Web CSP tightening** (M1) — production `script-src` no longer carries `'unsafe-eval'`; dev keeps it for React Refresh. `'unsafe-inline'` for scripts is tracked as a follow-up (needs a per-request nonce middleware).
+- **Web session sunset + HSTS** (M2) — legacy v1 (HMAC-only) session cookies are accepted until `2026-07-01T00:00:00Z` and rejected after, forcing a one-time re-login onto AES-256-GCM v2 cookies. Production responses now emit `Strict-Transport-Security: max-age=31536000; includeSubDomains`.
+- **CLI init TUI secret preview** (M3) — `keynv init`'s multiselect checklist no longer renders the first 27 characters of detected secrets. New `maskedPreview(value, hint)` shows `[••••] (hint, N chars, fp:XXXX)` where the four-hex fingerprint is the first four chars of SHA-256, enough for visual deduplication but cryptographically infeasible to invert.
+
+### Fixed
+- **Audit schema drift** (H6) — `POST /v1/users` (admin invite) was returning 500 because the audit payload included `org_id` but the strict `'user.invited'` schema in `@keynv/core` didn't accept it. Adding `org_id` to the schema unblocks invites; the user row was already being inserted before the audit append failed, so the previous behaviour left split-brain state in the audit chain.
+
+### Tests
+- New e2e specs at `tests/e2e/tests/csrf.spec.ts` (verifies the register form rejects submission with the CSRF input removed) and `tests/e2e/tests/security-headers.spec.ts` (verifies CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, and the production HSTS header).
+- New server regression tests: parallel `ensurePendingApproval` calls collapse to one row; developer in org A cannot see org B's projects via `GET /v1/projects`; owner B cannot patch or delete a user belonging to org A.
+- New unit tests: `safeNext` (9 cases), `maskedPreview` (5 cases), `securityHeaders` (5 cases), `decodeSession` v1 sunset (3 cases), `dismissOnboardingAction` CSRF gating (3 cases), `'user.invited'` audit schema happy path.
+
 ## [0.1.0-rc.21] — 2026-05-15
 
 ### Fixed
