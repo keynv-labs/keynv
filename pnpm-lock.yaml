@@ -59,6 +59,9 @@ importers:
       '@keynv/testers':
         specifier: workspace:*
         version: link:../../packages/testers
+      '@keynv/text-surfaces':
+        specifier: workspace:*
+        version: link:../../packages/text-surfaces
       clipanion:
         specifier: ^4.0.0-rc.4
         version: 4.0.0-rc.4(typanion@3.14.0)
@@ -289,6 +292,12 @@ importers:
       '@types/ssh2':
         specifier: ^1.15.1
         version: 1.15.5
+
+  packages/text-surfaces:
+    dependencies:
+      '@keynv/redactor':
+        specifier: workspace:*
+        version: link:../redactor
 
   tests/e2e:
     devDependencies:
