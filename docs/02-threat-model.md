@@ -2,7 +2,100 @@
 
 This document enumerates the threats keynv defends against and the mitigations we ship in each layer. Every code change touching the safety layer must reference this doc.
 
-## Scope
+The doc has two registers. The first section is the **runtime
+text-surface protection threat model** — narrow, honest, what the
+Phase A primitives (`keynv doctor`, `scrub`, `shell install`, `watch`,
+fingerprint registry) actually defend against. The second register is
+the **classic STRIDE walk-through** for the keynv server + CLI as a
+whole; it's deeper and more historical, kept because every audit cycle
+references it.
+
+If you're reasoning about a new Phase A feature, the runtime section
+above is your contract.
+
+## Runtime text-surface protection — in scope
+
+The narrow thing keynv addresses:
+
+- Raw secret values written to shell history (`~/.zsh_history`,
+  `~/.bash_history`, `~/.local/share/fish/fish_history`).
+- Raw secret values written to AI agent session transcripts
+  (Claude Code JSONL under `~/.claude/projects/<encoded-cwd>/`,
+  Cursor session storage).
+- Raw secret values printed to subprocess stdout/stderr that a human
+  or agent then reads, copies, or pastes into the next message.
+- Raw secret values appearing in CI logs that get downloaded / linked
+  / shared.
+- **Retention of past leaks**: a Claude Code session three months old
+  still contains the secret in plain JSONL. `keynv doctor` finds it,
+  `keynv scrub` rewrites it atomically with a backup.
+- Over-permissioned agent secret access (Phase B —
+  capability-scoped tokens via `keynv.use_secret` / `keynv.run`).
+- Forensic gap on "which agent used which secret when" — addressed by
+  the audit chain (`keynv audit list`) and the watcher's local audit
+  log at `~/.local/share/keynv/watcher.log`.
+
+## Runtime text-surface protection — out of scope
+
+Documented loudly. keynv does **not** defend against:
+
+- A compromised kernel, root user, or OS-level keychain breach.
+- Memory scraping. The watcher and CLI run as userland processes; we
+  cannot seal the JS heap.
+- Hardware compromise, CPU side-channels, nation-state attacks.
+- The legitimate API call. If your code uses `@stripe.secret`
+  correctly and Stripe logs the request, that's Stripe's problem.
+- A subprocess that you authorize, which then writes the resolved
+  secret to a file on disk. Sandboxing is the only general fix and
+  it's explicitly not in keynv's roadmap.
+- Screenshots already in the OS clipboard or a recording app.
+- A secret an agent has already transmitted off-machine *before* the
+  watcher's debounce window elapses.
+
+## The race window
+
+The real-time watcher has an honest race condition. The sequence of
+events when a Claude Code session writes a secret to its JSONL
+transcript:
+
+```
+t=0          Claude Code appends the JSONL line containing the secret
+t=1ms        chokidar fires `change` (or `add` for a new session)
+t=50ms       per-file debouncer schedules a rewrite
+t=~1050ms    rewrite begins (1s debounce by default)
+t=~1060ms    rewrite completes; the JSONL line now reads <REDACTED:…>
+```
+
+For roughly one second, the file on disk contains the raw secret. In
+that window:
+
+- An agent re-reading the file would see it.
+- A backup tool snapshotting the file would capture it.
+- A side-channel observer (process memory, fs trace) would observe
+  it.
+
+**Scrubbing does not solve this gap.** The two-layer design exists
+because of it:
+
+1. **Alias-only resolution** (`keynv exec`, future `keynv.run`) keeps
+   the secret out of the surface in the first place.
+2. **Surface scrubbing** catches the cases where alias discipline
+   fails (`cat .env`, an error message with a header, a stack trace).
+
+Both layers are required. Either alone is insufficient. The Phase B
+`keynv.run` MCP tool is the long-term answer to closing this window —
+agents receive *redacted* output, never raw values needing
+post-scrubbing.
+
+## Classic STRIDE — server, CLI, and audit chain
+
+The threat model below predates the Phase A text-surface protection
+runtime. It enumerates the threats keynv's *storage and server
+primitives* defend against — encryption envelope, audit chain, RBAC,
+session sealing, etc. Every audit-findings cycle references this
+section.
+
+## Scope (server-side)
 
 In scope:
 - AI coding agents (Claude Code, OpenCode, Cursor, Codex CLI, Aider, Continue) reading or leaking secrets via tools.
