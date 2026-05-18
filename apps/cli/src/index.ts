@@ -1,5 +1,6 @@
 import { Builtins, Cli } from 'clipanion';
 import { AuditListCommand, AuditVerifyCommand } from './commands/audit.js';
+import { DoctorCommand } from './commands/doctor.js';
 import { ExecCommand } from './commands/exec.js';
 import { InitCommand } from './commands/init.js';
 import { LoginCommand, LogoutCommand, WhoamiCommand } from './commands/login.js';
@@ -11,6 +12,7 @@ import {
   ProjectListCommand,
 } from './commands/project.js';
 import { RedactCommand, RedactStreamCommand } from './commands/redact.js';
+import { ScrubCommand } from './commands/scrub.js';
 import {
   SecretCreateCommand,
   SecretDeleteCommand,
@@ -19,6 +21,11 @@ import {
   SecretRotateCommand,
 } from './commands/secret.js';
 import { ServerInitCommand } from './commands/server.js';
+import {
+  ShellInstallCommand,
+  ShellStatusCommand,
+  ShellUninstallCommand,
+} from './commands/shell.js';
 import { TestCommand } from './commands/test.js';
 import { fmtError } from './ui/format.js';
 import { VERSION } from './version.js';
@@ -59,6 +66,11 @@ cli.register(ExecCommand);
 cli.register(InitCommand);
 cli.register(RedactCommand);
 cli.register(RedactStreamCommand);
+cli.register(DoctorCommand);
+cli.register(ScrubCommand);
+cli.register(ShellInstallCommand);
+cli.register(ShellUninstallCommand);
+cli.register(ShellStatusCommand);
 
 cli.register(TestCommand);
 cli.register(ServerInitCommand);

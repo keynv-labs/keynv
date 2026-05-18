@@ -46,6 +46,7 @@
     "@keynv/rbac": "workspace:*",
     "@keynv/redactor": "workspace:*",
     "@keynv/testers": "workspace:*",
+    "@keynv/text-surfaces": "workspace:*",
     "clipanion": "^4.0.0-rc.4",
     "typanion": "^3.14.0",
     "tsup": "^8.3.5",
