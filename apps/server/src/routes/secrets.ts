@@ -293,7 +293,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
       }),
     );
 
-    deps.db.transaction((tx) => {
+    await deps.db.transaction((tx) => {
       for (const row of sealedRows) {
         tx.insert(schema.secrets)
           .values({
@@ -539,7 +539,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const nextRotationAt = prev.rotation_interval_days
       ? new Date(Date.now() + prev.rotation_interval_days * 24 * 60 * 60 * 1000).toISOString()
       : null;
-    deps.db.transaction((tx) => {
+    await deps.db.transaction((tx) => {
       tx.insert(schema.secrets)
         .values({
           id: newId,
