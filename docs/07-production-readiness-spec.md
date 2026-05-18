@@ -354,6 +354,10 @@ breaking changes.
 
 ## Workstream 9 — Enterprise Roadmap Tracking
 
+Implementation note: deferred features are now tracked with individual scope
+statements, status, and OSS/commercial delivery notes in
+[`roadmap.md`](./roadmap.md#enterprise-feature-tracking).
+
 ### Problem
 
 Several enterprise features are correctly deferred to Phase 6, but they need

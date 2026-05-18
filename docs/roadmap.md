@@ -121,6 +121,7 @@ Decision points (locked):
 8. API compatibility: **implemented for `v0.2.0` docs + health capabilities** with CLI feature checks for newly-added endpoints.
 9. Plaintext memory hardening: **implemented for `v0.2.0` critical crypto paths** with byte-oriented secret APIs, server-side buffer zeroing, and documented JSON/CLI string boundaries.
 10. Rotation automation: **implemented for `v0.2.0`** with rotation interval metadata, PATCH `/rotation` endpoint, rotation due/overdue discovery via `GET /rotations`, and `secret set-rotation` + `secret rotations` CLI commands.
+11. Enterprise feature tracking: **deferred features tracked in Phase 6** with individual scope, status, and OSS/commercial delivery notes; v0.2 hardening does not block on these features.
 
 ## Phase 6 — Commercial tier + keynv Cloud · NOT STARTED
 
@@ -139,3 +140,116 @@ secrets · 7-day audit retention), Pro tier (the commercial modules above
 
 The honest line today: **keynv Cloud isn't built yet.** Self-host is the
 only working path. The Cloud option is what Phase 6 ships.
+
+### Enterprise feature tracking
+
+Each deferred feature below has a scope statement, status, and notes about
+OSS vs commercial delivery. These are candidate GitHub issues.
+
+#### SSO/SAML/OIDC adapters
+
+- **Scope**: pluggable SSO for self-host deployments. SAML 2.0 SP-initiated,
+  OIDC code flow with PKCE. Configurable role mapping (claims → RBAC roles).
+  Optional SCIM provisioning for managed member lists.
+- **Status**: NOT STARTED — commercial module.
+- **OSS vs commercial**: core `POST /v1/auth/login` (email/password) and
+  `POST /v1/auth/refresh` remain OSS. SSO adapters ship as commercial
+  self-host module (`packages/ee/auth-sso/`). keynv Cloud Pro+ includes
+  managed SSO.
+- **Dependencies**: RBAC already supports project/org-level roles. Needs
+  org-level SSO config CRUD endpoints.
+
+#### HSM/KMS integration
+
+- **Scope**: delegate master KEK to AWS KMS, GCP KMS, or HashiCorp Vault
+  Transit. Server unwraps DEKs via KMS decrypt call at startup. Support
+  automatic key rotation via KMS-native mechanisms.
+- **Status**: NOT STARTED — commercial module.
+- **OSS vs commercial**: OSS keeps file-based `master.key`. KMS adapter
+  ships as commercial self-host module (`packages/ee/kms/`). Managed KMS
+  included in keynv Cloud Pro+.
+- **Dependencies**: refactor `apps/server/src/kek/load.ts` to KMS interface;
+  design KMS credential bootstrap flow.
+
+#### Multi-step and multi-party approvals
+
+- **Scope**: configurable approval chains (N of M quorum, ordered steps,
+  auto-expiry). Per-environment or per-secret approval tiers. Audit log
+  tracks each approve/deny step with full RBAC context.
+- **Status**: NOT STARTED — commercial module.
+- **OSS vs commercial**: OSS keeps single-step owner/admin/lead approvals
+  (already implemented in `apps/server/src/routes/approvals.ts`). Multi-step
+  chains ship as commercial self-host module (`packages/ee/approvals/`).
+- **Dependencies**: expand approval schema to chains; notification system
+  for pending approvals.
+
+#### SIEM forwarding and audit retention
+
+- **Scope**: stream audit events to SIEM via HTTPS webhook or syslog (RFC
+  5424). Configurable retention policies (auto-delete audit rows after N
+  days). Batched delivery with exponential backoff.
+- **Status**: NOT STARTED — commercial module.
+- **OSS vs commercial**: OSS keeps in-DB audit with manual query (already
+  implemented). SIEM forwarding ships as commercial self-host module.
+  keynv Cloud Pro+ includes configurable audit retention.
+- **Dependencies**: audit table already supports event_type/payload filter;
+  needs delivery worker queue.
+
+#### PostgreSQL adapter
+
+- **Scope**: drop-in Postgres backend for deployments >50 users. Drizzle ORM
+  already supports Postgres dialect. Needs connection pooling, migration
+  runner, and Litestream→pg_dump/pgBackRest backup guidance.
+- **Status**: NOT STARTED — commercial module.
+- **OSS vs commercial**: OSS ships SQLite + Litestream (current default).
+  Postgres adapter ships as commercial self-host module
+  (`packages/ee/postgres/`). keynv Cloud uses managed Postgres internally.
+- **Dependencies**: abstract DB interface in `apps/server/src/db/`;
+  Postgres-specific migration subdirectory; pool config.
+
+#### Data residency and multi-region
+
+- **Scope**: deploy keynv server in a specific region; keep secrets/audit
+  data within that boundary. Guidance for multi-region read replicas (SQLite
+  or Postgres). keynv Cloud Enterprise supports dedicated region deployment.
+- **Status**: NOT STARTED — OSS guidance + Cloud Enterprise feature.
+- **OSS vs commercial**: OSS self-hosters control their own region by
+  deploying the server where they want. Commercial adds multi-region
+  replication and Cloud managed region selection.
+- **Dependencies**: Litestream already supports S3-compatible region
+  selection; Postgres adapter needed for read replicas.
+
+#### Break-glass access
+
+- **Scope**: emergency access workflow for when normal approval path is
+  blocked. Requires multi-party witness (2 of N) with auto-expiring
+  temporary access grant. Full audit trail including witness identities.
+  Optional dead-man's-switch for disaster scenarios.
+- **Status**: NOT STARTED — commercial module.
+- **OSS vs commercial**: OSS relies on manual approval bypass via RBAC
+  (owner/admin can read any secret). Break-glass ships as commercial
+  self-host module. keynv Cloud Enterprise includes managed break-glass.
+- **Dependencies**: multi-party approvals; temporary credential bootstrap.
+
+#### Python and Go SDKs
+
+- **Scope**: official client libraries wrapping the keynv API with idiomatic
+  patterns. Python: context-manager based `with keynv.secret(...)`. Go:
+  `defer`-friendly `secret.Get(...)`. Both include in-process redaction,
+  cached CLI auth tokens, and MCP integration helpers.
+- **Status**: NOT STARTED — open-source (Apache 2.0).
+- **OSS vs commercial**: SDKs are OSS. Commercial modules may ship SDK
+  extensions for commercial-only endpoints.
+- **Dependencies**: stable `/v1` API; CLI auth token format documented.
+
+#### keynv Cloud (managed SaaS)
+
+- **Scope**: multi-tenant SaaS with free/Pro/Enterprise tiers. Free: 1 org,
+  3 projects, 5 members. Pro: SSO, KMS, audit retention, batch operations.
+  Enterprise: dedicated infra, SLA, on-call, data residency, SOC2 compliance
+  reports.
+- **Status**: NOT STARTED — Phase 6 deliverable.
+- **OSS vs commercial**: OSS self-host is and remains the primary path.
+  Cloud is additive; self-host continues to receive all OSS features.
+- **Dependencies**: all commercial modules above; billing/entitlement
+  service; tenant isolation design; managed infrastructure automation.
