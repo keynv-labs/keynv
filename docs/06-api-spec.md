@@ -153,6 +153,48 @@ Server generates a DEK, wraps it with the master KEK, persists.
 
 Returns project metadata (no secret values, no DEK material).
 
+Response 200:
+```json
+{
+  "id": "p_...",
+  "name": "billing",
+  "created_at": "2026-05-18T12:00:00.000Z",
+  "environments": [
+    { "id": "env_...", "name": "dev", "tier": "non-production", "require_approval": false },
+    { "id": "env_...", "name": "prod", "tier": "production", "require_approval": true }
+  ]
+}
+```
+
+#### `POST /v1/projects/:id/environments` (`environment.create`)
+
+Adds an environment to an existing project. Owner/Admin can add environments; project leads
+can add environments for projects where they have the lead role.
+
+```json
+{
+  "name": "staging",
+  "tier": "non-production",
+  "require_approval": false
+}
+```
+
+Response 201:
+```json
+{
+  "id": "env_...",
+  "name": "staging",
+  "tier": "non-production",
+  "require_approval": false
+}
+```
+
+Errors:
+
+- `project.not_found` when the project does not exist or is deleted.
+- `environment.already_exists` when the environment name already exists on the project.
+- `validation.failed` when name, tier, or approval fields fail validation.
+
 #### `DELETE /v1/projects/:id` (Owner/Admin)
 
 Soft-delete (Phase 1) — secrets and DEK marked deleted, retained in audit. Hard-delete is a Phase 4 admin operation.
@@ -203,6 +245,42 @@ Response 201:
   "created_at": "2026-..."
 }
 ```
+
+#### `POST /v1/projects/:id/secrets/batch` (secret.create)
+
+Atomically creates multiple secrets. The server validates the full batch before writing any rows and persists the batch in one transaction.
+
+```json
+{
+  "secrets": [
+    { "env": "dev", "key": "db_password", "value": "...plaintext..." }
+  ]
+}
+```
+
+Response 201:
+```json
+{
+  "created": [
+    { "alias": "@billing.dev.db_password", "version": 1 }
+  ]
+}
+```
+
+Validation failure response 400:
+```json
+{
+  "error": {
+    "code": "secret.batch_invalid",
+    "message": "Batch contains invalid or duplicate secrets.",
+    "details": [
+      { "index": 0, "code": "secret.already_exists", "env": "dev", "key": "db_password" }
+    ]
+  }
+}
+```
+
+Errors that occur inside the batch validation write zero secrets. Item-level detail codes include `validation.failed`, `environment.not_found`, `secret.duplicate_in_batch`, and `secret.already_exists`.
 
 #### `GET /v1/projects/:id/secrets`
 
@@ -313,13 +391,92 @@ Implicit when a developer's `secret.read` triggers approval. Response 202 with `
 #### `POST /v1/approvals/:id/grant` (Owner/Admin/Lead)
 #### `POST /v1/approvals/:id/deny`  (Owner/Admin/Lead)
 
-### Health
+### Health and metrics
 
 #### `GET /v1/health` (no auth)
 
+Compatibility endpoint for basic API health. It checks database readiness and
+returns capability flags used by the web client.
+
 ```json
-{ "ok": true, "version": "0.5.0", "db": "ok", "litestream": "lag_s: 0.4" }
+{
+  "ok": true,
+  "version": "0.5.0",
+  "db": "ok",
+  "capabilities": {
+    "public_registration": false,
+    "api": {
+      "current": "v1",
+      "supported": ["v1"],
+      "stability": "pre-1.0",
+      "min_cli_version": "0.1.0-rc.21"
+    },
+    "features": {
+      "batch_secret_create": true,
+      "environment_management": true,
+      "health_probes": true,
+      "prometheus_metrics": true
+    }
+  }
+}
 ```
+
+Clients should treat missing feature flags as `false` and check them before
+using recently-added endpoints when practical.
+
+#### `GET /v1/health/live` (no auth)
+
+Liveness probe for process supervisors and Kubernetes. It does not check
+downstream dependencies; a running process returns 200.
+
+```json
+{ "ok": true, "status": "live", "version": "0.5.0" }
+```
+
+#### `GET /v1/health/ready` (no auth)
+
+Readiness probe for load balancers and orchestrators. It checks database access
+and returns 503 when the server should not receive traffic.
+
+```json
+{
+  "ok": true,
+  "version": "0.5.0",
+  "db": "ok",
+  "capabilities": {
+    "public_registration": false,
+    "api": {
+      "current": "v1",
+      "supported": ["v1"],
+      "stability": "pre-1.0",
+      "min_cli_version": "0.1.0-rc.21"
+    },
+    "features": {
+      "batch_secret_create": true,
+      "environment_management": true,
+      "health_probes": true,
+      "prometheus_metrics": true
+    }
+  }
+}
+```
+
+#### `GET /metrics` (no auth)
+
+Prometheus text exposition endpoint. Labels intentionally avoid user emails,
+secret aliases, raw paths, or project/environment/secret names.
+
+Included metric families:
+
+- `keynv_http_requests_total{method,route,status_class}`
+- `keynv_http_errors_total{method,route,status_class}`
+- `keynv_http_request_duration_seconds_bucket|sum|count{method,route,status_class}`
+- `keynv_domain_events_total{event}` for `secret_read`, `secret_write`,
+  `audit_append`, `approval_grant`, `approval_denial`, and
+  `rate_limit_rejection`
+
+Route labels use normalized templates such as
+`/v1/projects/:projectId/secrets/:env/:key`, never the concrete path.
 
 ## MCP API (`keynv-mcp`)
 
@@ -395,7 +552,16 @@ Every request and response goes through a zod schema declared in `packages/core/
 
 ## Versioning
 
-`/v1` is the only stable namespace. `/v2` will require a new specification doc; the server may serve both for an overlap period.
+`/v1` is the only stable namespace. `/v2` will require a new specification doc;
+the server may serve both for an overlap period. The detailed CLI/server skew,
+capability-discovery, and deprecation policy is maintained in
+[`api-compatibility.md`](./api-compatibility.md).
+
+Before `v1.0.0`, release-candidate APIs may change, but breaking changes must be
+called out in release notes. After `v1.0.0`, additive `/v1` changes are allowed;
+breaking changes require either a new namespace or a `/v1` compatibility shim for
+at least one minor release. Deprecated `/v1` behavior receives at least 90 days
+notice before removal.
 
 MCP tool names are versioned by name (`keynv.use_secret_v2`) when breaking changes are needed; we never silently change semantics.
 
@@ -408,6 +574,7 @@ MCP tool names are versioned by name (`keynv.use_secret_v2`) when breaking chang
 | `auth.token_revoked` | 401 | "Token has been revoked." |
 | `rbac.denied` | 403 | "Permission denied." (carries `required_role` + `your_role` for context) |
 | `rbac.approval_required` | 202 | "Production access requires approval." (returns `request_id`) |
+| `secret.batch_invalid` | 400 | "Batch contains invalid or duplicate secrets." |
 | `secret.not_found` | 404 | "No secret matching alias." |
 | `secret.invalid_alias` | 400 | "Invalid alias format." |
 | `tester.unsupported` | 400 | "Unsupported tester type." |

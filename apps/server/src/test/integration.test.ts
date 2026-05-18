@@ -339,6 +339,147 @@ describe('Phase 1 acceptance flow', () => {
   });
 });
 
+describe('POST /v1/projects/:id/secrets/batch', () => {
+  async function createBatchProject(token: string): Promise<string> {
+    const res = await harness.app.request('http://localhost/v1/projects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        name: 'batch-demo',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { id: string };
+    return body.id;
+  }
+
+  async function listSecretAliases(token: string, projectId: string): Promise<string[]> {
+    const res = await harness.app.request(`http://localhost/v1/projects/${projectId}/secrets`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { secrets: Array<{ alias: string }> };
+    return body.secrets.map((secret) => secret.alias).sort();
+  }
+
+  it('creates multiple secrets atomically', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createBatchProject(token);
+
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/batch`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          secrets: [
+            { env: 'dev', key: 'API_TOKEN', value: 'token-value' },
+            { env: 'dev', key: 'DB_PASSWORD', value: 'db-value' },
+          ],
+        }),
+      },
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { created: Array<{ alias: string; version: number }> };
+    expect(body.created).toEqual([
+      { alias: '@batch-demo.dev.API_TOKEN', version: 1 },
+      { alias: '@batch-demo.dev.DB_PASSWORD', version: 1 },
+    ]);
+    expect(await listSecretAliases(token, projectId)).toEqual([
+      '@batch-demo.dev.API_TOKEN',
+      '@batch-demo.dev.DB_PASSWORD',
+    ]);
+  });
+
+  it('rejects duplicate keys in the request without writing secrets', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createBatchProject(token);
+
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/batch`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          secrets: [
+            { env: 'dev', key: 'API_TOKEN', value: 'first' },
+            { env: 'dev', key: 'API_TOKEN', value: 'second' },
+          ],
+        }),
+      },
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as {
+      error: { code: string; details: Array<{ code: string }> };
+    };
+    expect(body.error.code).toBe('secret.batch_invalid');
+    expect(body.error.details[0]?.code).toBe('secret.duplicate_in_batch');
+    expect(await listSecretAliases(token, projectId)).toEqual([]);
+  });
+
+  it('rejects missing environments without writing secrets', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createBatchProject(token);
+
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/batch`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          secrets: [
+            { env: 'dev', key: 'API_TOKEN', value: 'token-value' },
+            { env: 'staging', key: 'DB_PASSWORD', value: 'db-value' },
+          ],
+        }),
+      },
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as {
+      error: { code: string; details: Array<{ code: string }> };
+    };
+    expect(body.error.code).toBe('secret.batch_invalid');
+    expect(body.error.details[0]?.code).toBe('environment.not_found');
+    expect(await listSecretAliases(token, projectId)).toEqual([]);
+  });
+
+  it('rejects existing active secrets without writing new batch secrets', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createBatchProject(token);
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/secrets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ env: 'dev', key: 'API_TOKEN', value: 'existing' }),
+    });
+
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/batch`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          secrets: [
+            { env: 'dev', key: 'API_TOKEN', value: 'new-value' },
+            { env: 'dev', key: 'DB_PASSWORD', value: 'db-value' },
+          ],
+        }),
+      },
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as {
+      error: { code: string; details: Array<{ code: string }> };
+    };
+    expect(body.error.code).toBe('secret.batch_invalid');
+    expect(body.error.details[0]?.code).toBe('secret.already_exists');
+    expect(await listSecretAliases(token, projectId)).toEqual(['@batch-demo.dev.API_TOKEN']);
+  });
+});
+
 describe('Clean user walkthrough', () => {
   it('registers, creates a second org, switches active org, creates a project, and resolves a secret', async () => {
     const local = await makeHarness({ publicRegistrationEnabled: true });
@@ -1132,6 +1273,11 @@ describe('Rate limit — closes Phase 5 audit Finding A1', () => {
       expect(responses[3]?.headers.get('retry-after')).toMatch(/^\d+$/);
       expect(responses[3]?.headers.get('x-ratelimit-limit')).toBe('3');
       expect(responses[3]?.headers.get('x-ratelimit-remaining')).toBe('0');
+
+      const metrics = await local.app.request('http://localhost/metrics');
+      expect(await metrics.text()).toContain(
+        'keynv_domain_events_total{event="rate_limit_rejection"} 2',
+      );
     } finally {
       local.cleanup();
     }
@@ -1446,9 +1592,25 @@ describe('Health — capabilities', () => {
     try {
       const res = await off.app.request('http://localhost/v1/health');
       const body = (await res.json()) as {
-        capabilities: { public_registration: boolean };
+        capabilities: {
+          public_registration: boolean;
+          api: { current: string; supported: string[]; stability: string; min_cli_version: string };
+          features: Record<string, boolean>;
+        };
       };
       expect(body.capabilities.public_registration).toBe(false);
+      expect(body.capabilities.api).toEqual({
+        current: 'v1',
+        supported: ['v1'],
+        stability: 'pre-1.0',
+        min_cli_version: '0.1.0-rc.21',
+      });
+      expect(body.capabilities.features).toMatchObject({
+        batch_secret_create: true,
+        environment_management: true,
+        health_probes: true,
+        prometheus_metrics: true,
+      });
     } finally {
       off.cleanup();
     }
@@ -1463,6 +1625,74 @@ describe('Health — capabilities', () => {
     } finally {
       on.cleanup();
     }
+  });
+
+  it('exposes separate liveness and readiness probes', async () => {
+    const live = await harness.app.request('http://localhost/v1/health/live');
+    expect(live.status).toBe(200);
+    const liveBody = (await live.json()) as { ok: boolean; status: string; version: string };
+    expect(liveBody).toEqual({ ok: true, status: 'live', version: 'test' });
+
+    const ready = await harness.app.request('http://localhost/v1/health/ready');
+    expect(ready.status).toBe(200);
+    const readyBody = (await ready.json()) as { ok: boolean; db: string };
+    expect(readyBody.ok).toBe(true);
+    expect(readyBody.db).toBe('ok');
+  });
+
+  it('exposes Prometheus metrics with normalized HTTP labels', async () => {
+    await harness.app.request('http://localhost/v1/health');
+
+    const res = await harness.app.request('http://localhost/metrics');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/plain');
+    const body = await res.text();
+
+    expect(body).toContain('# TYPE keynv_http_requests_total counter');
+    expect(body).toContain(
+      'keynv_http_requests_total{method="GET",route="/v1/health",status_class="2xx"}',
+    );
+    expect(body).toContain('# TYPE keynv_http_request_duration_seconds histogram');
+  });
+
+  it('records domain metrics without exposing secret names or user emails', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectRes = await harness.app.request('http://localhost/v1/projects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        name: 'observability-demo',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = (await projectRes.json()) as { id: string };
+
+    const createSecret = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ env: 'dev', key: 'API_TOKEN', value: 'secret-value' }),
+      },
+    );
+    expect(createSecret.status).toBe(201);
+
+    const readSecret = await harness.app.request(
+      `http://localhost/v1/projects/${project.id}/secrets/dev/API_TOKEN`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(readSecret.status).toBe(200);
+
+    const metrics = await harness.app.request('http://localhost/metrics');
+    const body = await metrics.text();
+    expect(body).toContain('keynv_domain_events_total{event="audit_append"}');
+    expect(body).toContain('keynv_domain_events_total{event="secret_write"}');
+    expect(body).toContain('keynv_domain_events_total{event="secret_read"}');
+    expect(body).toContain('route="/v1/projects/:projectId/secrets/:env/:key"');
+    expect(body).not.toContain('API_TOKEN');
+    expect(body).not.toContain('observability-demo');
+    expect(body).not.toContain(harness.ownerEmail);
   });
 });
 

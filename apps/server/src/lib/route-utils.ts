@@ -5,6 +5,7 @@ import { type AppendArgs, appendAudit } from '../audit/append.js';
 import type { AuthedUser } from '../auth/middleware.js';
 import { readAgent } from './agent.js';
 import { jsonError } from './errors.js';
+import { recordAuditDomainEvents } from './metrics.js';
 
 export async function parseBody<T extends z.ZodTypeAny>(
   c: Context,
@@ -47,4 +48,5 @@ export async function audit(
     event_type,
     payload,
   });
+  recordAuditDomainEvents(c, event_type);
 }

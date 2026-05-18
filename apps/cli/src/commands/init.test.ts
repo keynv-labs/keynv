@@ -1,11 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -100,12 +93,21 @@ describe('InitCommand non-interactive mode', () => {
       writeFileSync(join('node_modules', 'some-pkg', '.env'), 'IGNORED=yes\n');
 
       const request = vi.fn().mockImplementation((path: string, init?: { method?: string }) => {
+        if (path === '/v1/health') {
+          return Promise.resolve({
+            version: '0.2.0',
+            capabilities: { features: { batch_secret_create: true } },
+          });
+        }
         if (path === '/v1/projects' && (!init || init.method === undefined)) {
           // GET list: pretend project doesn't exist yet so we hit the create path.
           return Promise.resolve({ projects: [] });
         }
         if (path === '/v1/projects' && init?.method === 'POST') {
           return Promise.resolve({ id: 'p_test', name: 'glmcore' });
+        }
+        if (path === '/v1/projects/p_test/secrets/batch') {
+          return Promise.resolve({ created: [] });
         }
         return Promise.resolve({});
       });
@@ -166,8 +168,17 @@ describe('InitCommand non-interactive mode', () => {
       writeFileSync('.env', 'API_TOKEN=secret-value\n');
 
       const request = vi.fn().mockImplementation((path: string) => {
+        if (path === '/v1/health') {
+          return Promise.resolve({
+            version: '0.2.0',
+            capabilities: { features: { batch_secret_create: true } },
+          });
+        }
         if (path === '/v1/projects') {
           return Promise.resolve({ projects: [{ id: 'p_test', name: 'billing' }] });
+        }
+        if (path === '/v1/projects/p_test/secrets/batch') {
+          return Promise.resolve({ created: [] });
         }
         return Promise.resolve({});
       });
@@ -190,6 +201,71 @@ describe('InitCommand non-interactive mode', () => {
 
       expect(result).toBe(0);
       expect(readFileSync('.keynv.env', 'utf8')).toContain('API_TOKEN=@billing.dev.API_TOKEN');
+    } finally {
+      process.chdir(cwd);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not write .keynv.env when batch upload fails', async () => {
+    const cwd = process.cwd();
+    const dir = mkdtempSync(join(tmpdir(), 'keynv-init-batch-fail-'));
+    try {
+      process.chdir(dir);
+      writeFileSync('.env', 'API_TOKEN=secret-value\n');
+
+      const request = vi.fn().mockImplementation((path: string) => {
+        if (path === '/v1/health') {
+          return Promise.resolve({
+            version: '0.2.0',
+            capabilities: { features: { batch_secret_create: true } },
+          });
+        }
+        if (path === '/v1/projects') {
+          return Promise.resolve({ projects: [{ id: 'p_test', name: 'billing' }] });
+        }
+        if (path === '/v1/projects/p_test') {
+          return Promise.resolve({ environments: [{ name: 'dev' }] });
+        }
+        if (path === '/v1/projects/p_test/secrets/batch') {
+          return Promise.reject(
+            Object.assign(new Error('Batch contains invalid or duplicate secrets.'), {
+              details: [
+                {
+                  index: 0,
+                  code: 'secret.already_exists',
+                  env: 'dev',
+                  key: 'API_TOKEN',
+                },
+              ],
+            }),
+          );
+        }
+        return Promise.resolve({});
+      });
+      const command = new InitCommand();
+      command.envFile = '.env';
+      command.project = 'billing';
+      command.env = 'dev';
+      command.noScripts = true;
+      command.secret = [];
+      command.dryRun = false;
+      command.yes = false;
+      const stderrWrite = vi.fn();
+      Object.assign(command, {
+        context: {
+          stdout: { write: vi.fn() },
+          stderr: { write: stderrWrite },
+        },
+      });
+
+      const result = await command.runNonInteractive({ request } as unknown as ApiClient);
+
+      expect(result).toBe(1);
+      expect(existsSync('.keynv.env')).toBe(false);
+      expect(stderrWrite).toHaveBeenCalledWith(
+        '  failed: [0] dev/API_TOKEN: secret.already_exists\n',
+      );
     } finally {
       process.chdir(cwd);
       rmSync(dir, { recursive: true, force: true });

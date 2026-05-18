@@ -18,6 +18,7 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import { jsonError } from './errors.js';
 import { clientIp } from './ip.js';
+import { recordDomainEvent } from './metrics.js';
 
 interface Bucket {
   count: number;
@@ -98,6 +99,7 @@ export function rateLimitMiddleware(deps: RateLimitDeps): MiddlewareHandler {
     const user = c.var.user;
     if (!user) return next();
     if (!limiter.consume(c, user.id)) {
+      recordDomainEvent(c, 'rate_limit_rejection');
       const reset = c.res.headers.get('Retry-After') ?? '60';
       return jsonError(c, 'rate_limited', `Too many requests. Retry in ${reset}s.`);
     }
@@ -117,6 +119,7 @@ export function ipRateLimitMiddleware(deps: RateLimitDeps): MiddlewareHandler {
     if (deps.perMinute <= 0) return next();
     const ip = clientIp(c);
     if (!limiter.consume(c, ip)) {
+      recordDomainEvent(c, 'rate_limit_rejection');
       const reset = c.res.headers.get('Retry-After') ?? '60';
       return jsonError(c, 'rate_limited', `Too many requests. Retry in ${reset}s.`);
     }

@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import type { Db } from './db/index.js';
 import { jsonError } from './lib/errors.js';
 import { type Logger, makeLogger } from './lib/logger.js';
+import { type MetricsRegistry, createMetricsRegistry, metricsMiddleware } from './lib/metrics.js';
 import { approvalRoutes, orgApprovalRoutes } from './routes/approvals.js';
 import { auditRoutes } from './routes/audit.js';
 import { authRoutes } from './routes/auth.js';
@@ -57,11 +58,16 @@ export interface AppDeps {
    * logger to keep their output clean.
    */
   logger?: Logger;
+  /** Optional metrics registry; tests can inject one to isolate counters. */
+  metrics?: MetricsRegistry;
 }
 
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
   const logger = deps.logger ?? makeLogger(process.env['KEYNV_LOG_LEVEL'] ?? 'info');
+  const metrics = deps.metrics ?? createMetricsRegistry();
+
+  app.use('*', metricsMiddleware(metrics));
 
   app.use('*', async (c, next) => {
     await next();
@@ -100,6 +106,10 @@ export function createApp(deps: AppDeps): Hono {
       publicRegistrationEnabled: deps.publicRegistrationEnabled ?? false,
     }),
   );
+  app.get('/metrics', (c) => {
+    c.header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    return c.text(metrics.render());
+  });
   app.route('/v1/auth', authRoutes(deps));
   app.route('/v1/whoami', whoamiRoute(deps));
   app.route('/v1/users', userRoutes(deps));

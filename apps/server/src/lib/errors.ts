@@ -15,6 +15,7 @@ export type ErrorCode =
   | 'project.already_exists'
   | 'environment.not_found'
   | 'environment.already_exists'
+  | 'secret.batch_invalid'
   | 'secret.not_found'
   | 'secret.already_exists'
   | 'secret.invalid_alias'
@@ -38,6 +39,7 @@ const STATUS_BY_CODE = {
   'project.already_exists': 409,
   'environment.not_found': 404,
   'environment.already_exists': 409,
+  'secret.batch_invalid': 400,
   'secret.not_found': 404,
   'secret.already_exists': 409,
   'secret.invalid_alias': 400,
@@ -54,14 +56,14 @@ const STATUS_BY_CODE = {
 export interface ApiError {
   readonly code: ErrorCode;
   readonly message: string;
-  readonly details?: Record<string, unknown>;
+  readonly details?: unknown;
 }
 
 export function jsonError(
   c: Context,
   code: ErrorCode,
   message: string,
-  details?: Record<string, unknown>,
+  details?: unknown,
 ) {
   const body: { error: ApiError } = {
     error: { code, message, ...(details ? { details } : {}) },

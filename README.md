@@ -211,7 +211,9 @@ may change without backwards-compatibility shims.
 | [Threat model](./docs/02-threat-model.md) | What we defend against |
 | [Architecture](./docs/01-architecture.md) | Components, data flow, trust boundaries |
 | [Encryption design](./docs/05-encryption-design.md) | KEK / DEK split, libsodium primitives |
+| [Backup/restore runbook](./docs/backup-restore-runbook.md) | RPO/RTO, restore drills, KEK loss handling |
 | [API spec](./docs/06-api-spec.md) | HTTP endpoints |
+| [API compatibility](./docs/api-compatibility.md) | CLI/server skew, feature flags, deprecation policy |
 | [Roadmap](./docs/roadmap.md) | Phase status + active slice tracker |
 | [Coolify deploy](./deploy/COOLIFY.md) | 15-min self-host walkthrough |
 | [`CLAUDE.md`](./CLAUDE.md) | Working rules for humans + AI agents in this repo |

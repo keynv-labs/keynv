@@ -1,5 +1,6 @@
 import { Builtins, Cli } from 'clipanion';
 import { AuditListCommand, AuditVerifyCommand } from './commands/audit.js';
+import { EnvAddCommand, EnvListCommand } from './commands/env.js';
 import { ExecCommand } from './commands/exec.js';
 import { InitCommand } from './commands/init.js';
 import { LoginCommand, LogoutCommand, WhoamiCommand } from './commands/login.js';
@@ -41,6 +42,9 @@ cli.register(ProjectCreateCommand);
 cli.register(ProjectListCommand);
 cli.register(ProjectDescribeCommand);
 cli.register(ProjectDeleteCommand);
+
+cli.register(EnvListCommand);
+cli.register(EnvAddCommand);
 
 cli.register(SecretCreateCommand);
 cli.register(SecretGetCommand);

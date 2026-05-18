@@ -25,6 +25,18 @@ const CreateSecretBody = z.object({
   value: validation.secretValue,
 });
 
+const CreateSecretBatchBody = z.object({
+  secrets: z.array(CreateSecretBody).min(1),
+});
+
+interface SecretBatchErrorDetail {
+  index?: number;
+  code: string;
+  env?: string;
+  key?: string;
+  message?: string;
+}
+
 const RotateSecretBody = z.object({
   new_value: validation.secretValue,
 });
@@ -33,6 +45,21 @@ const TestBody = z.object({
   tester: testerEnum,
   target: z.record(z.string(), z.unknown()),
 });
+
+const secretTextEncoder = new TextEncoder();
+const secretTextDecoder = new TextDecoder('utf-8', { fatal: true });
+
+async function encryptSecretValue(
+  value: string,
+  dek: Uint8Array,
+): Promise<{ ciphertext: Uint8Array; nonce: Uint8Array }> {
+  const plaintext = secretTextEncoder.encode(value);
+  try {
+    return await crypto.encryptSecretBytes(plaintext, dek);
+  } finally {
+    crypto.zero(plaintext);
+  }
+}
 
 async function loadProjectDek(
   db: Db,
@@ -105,7 +132,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
       return jsonError(c, 'secret.already_exists', 'Secret already exists. Use rotate to update.');
     }
 
-    const sealed = await crypto.encryptSecret(secretValue, loaded.dek);
+    const sealed = await encryptSecretValue(secretValue, loaded.dek);
     const id = newSecretId();
     await deps.db.insert(schema.secrets).values({
       id,
@@ -129,6 +156,171 @@ export function secretRoutes(deps: SecretDeps): Hono {
       {
         alias: `@${loaded.project.name}.${env.name}.${secretKey}`,
         version: 1,
+      },
+      201,
+    );
+  });
+
+  r.post('/:projectId/secrets/batch', async (c) => {
+    const projectId = c.req.param('projectId');
+    const g = guard(c, 'secret.create', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+
+    const raw = await c.req.json().catch(() => ({}));
+    const parsed = CreateSecretBatchBody.safeParse(raw);
+    if (!parsed.success) {
+      const details = parsed.error.issues.map((issue): SecretBatchErrorDetail => {
+        const index = typeof issue.path[1] === 'number' ? issue.path[1] : undefined;
+        return {
+          ...(index !== undefined ? { index } : {}),
+          code: 'validation.failed',
+          message: issue.message,
+        };
+      });
+      return jsonError(
+        c,
+        'secret.batch_invalid',
+        'Batch contains invalid or duplicate secrets.',
+        details,
+      );
+    }
+
+    const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
+    if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
+
+    const duplicateDetails: SecretBatchErrorDetail[] = [];
+    const seen = new Set<string>();
+    parsed.data.secrets.forEach((item, index) => {
+      const composite = `${item.env}|${item.key}`;
+      if (seen.has(composite)) {
+        duplicateDetails.push({
+          index,
+          code: 'secret.duplicate_in_batch',
+          env: item.env,
+          key: item.key,
+          message: 'Duplicate secret in batch.',
+        });
+        return;
+      }
+      seen.add(composite);
+    });
+    if (duplicateDetails.length > 0) {
+      return jsonError(
+        c,
+        'secret.batch_invalid',
+        'Batch contains invalid or duplicate secrets.',
+        duplicateDetails,
+      );
+    }
+
+    const envRows = await deps.db
+      .select()
+      .from(schema.environments)
+      .where(eq(schema.environments.project_id, projectId));
+    const envByName = new Map(envRows.map((env) => [env.name, env]));
+    const envNameById = new Map(envRows.map((env) => [env.id, env.name]));
+
+    const missingEnvDetails: SecretBatchErrorDetail[] = [];
+    parsed.data.secrets.forEach((item, index) => {
+      if (!envByName.has(item.env)) {
+        missingEnvDetails.push({
+          index,
+          code: 'environment.not_found',
+          env: item.env,
+          key: item.key,
+          message: 'Environment not found.',
+        });
+      }
+    });
+    if (missingEnvDetails.length > 0) {
+      return jsonError(
+        c,
+        'secret.batch_invalid',
+        'Batch contains invalid or duplicate secrets.',
+        missingEnvDetails,
+      );
+    }
+
+    const activeRows = await deps.db
+      .select({ key: schema.secrets.key, environment_id: schema.secrets.environment_id })
+      .from(schema.secrets)
+      .where(and(eq(schema.secrets.project_id, projectId), isNull(schema.secrets.deleted_at)));
+    const activeAliases = new Set(
+      activeRows.map((row) => `${envNameById.get(row.environment_id) ?? ''}|${row.key}`),
+    );
+    const existingDetails: SecretBatchErrorDetail[] = [];
+    parsed.data.secrets.forEach((item, index) => {
+      if (activeAliases.has(`${item.env}|${item.key}`)) {
+        existingDetails.push({
+          index,
+          code: 'secret.already_exists',
+          env: item.env,
+          key: item.key,
+          message: 'Secret already exists. Use rotate to update.',
+        });
+      }
+    });
+    if (existingDetails.length > 0) {
+      return jsonError(
+        c,
+        'secret.batch_invalid',
+        'Batch contains invalid or duplicate secrets.',
+        existingDetails,
+      );
+    }
+
+    const sealedRows = await Promise.all(
+      parsed.data.secrets.map(async (item) => {
+        const env = envByName.get(item.env);
+        if (!env) throw new Error('validated environment missing');
+        const sealed = await encryptSecretValue(item.value, loaded.dek);
+        return {
+          id: newSecretId(),
+          project_id: projectId,
+          environment_id: env.id,
+          key: item.key,
+          ciphertext: Buffer.from(sealed.ciphertext),
+          nonce: Buffer.from(sealed.nonce),
+          version: 1,
+          created_by: user.id,
+          env: item.env,
+        };
+      }),
+    );
+
+    deps.db.transaction((tx) => {
+      for (const row of sealedRows) {
+        tx.insert(schema.secrets)
+          .values({
+            id: row.id,
+            project_id: row.project_id,
+            environment_id: row.environment_id,
+            key: row.key,
+            ciphertext: row.ciphertext,
+            nonce: row.nonce,
+            version: row.version,
+            created_by: row.created_by,
+          })
+          .run();
+      }
+    });
+
+    for (const row of sealedRows) {
+      await audit(c, deps.db, 'secret.created', {
+        project_id: projectId,
+        env: row.env,
+        key: row.key,
+        version: row.version,
+      });
+    }
+
+    return c.json(
+      {
+        created: sealedRows.map((row) => ({
+          alias: `@${loaded.project.name}.${row.env}.${row.key}`,
+          version: row.version,
+        })),
       },
       201,
     );
@@ -264,12 +456,13 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
     if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    const value = await crypto.decryptSecret(
+    const value = await crypto.withDecryptedSecretBytes(
       {
         ciphertext: new Uint8Array(secret.ciphertext),
         nonce: new Uint8Array(secret.nonce),
       },
       loaded.dek,
+      (plaintext) => secretTextDecoder.decode(plaintext),
     );
 
     await audit(c, deps.db, 'secret.read.allowed', { alias, version: secret.version });
@@ -335,7 +528,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
     if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    const sealed = await crypto.encryptSecret(body.data.new_value, loaded.dek);
+    const sealed = await encryptSecretValue(body.data.new_value, loaded.dek);
     const newId = newSecretId();
     const newVersion = prev.version + 1;
     const now = new Date().toISOString();
@@ -523,24 +716,24 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const loaded = await loadProjectDek(deps.db, projectId, user.org_id, deps.getKek());
     if (!loaded) return jsonError(c, 'project.not_found', 'Project not found.');
 
-    const value = await crypto.decryptSecret(
-      {
-        ciphertext: new Uint8Array(secret.ciphertext),
-        nonce: new Uint8Array(secret.nonce),
-      },
-      loaded.dek,
-    );
-
     const tester = findTester(body.data.tester);
     if (!tester) {
       return jsonError(c, 'validation.failed', `Unknown tester type: ${body.data.tester}`);
     }
 
-    const result = await runTest({
-      tester,
-      secret: { alias, value },
-      target: body.data.target,
-    });
+    const result = await crypto.withDecryptedSecretBytes(
+      {
+        ciphertext: new Uint8Array(secret.ciphertext),
+        nonce: new Uint8Array(secret.nonce),
+      },
+      loaded.dek,
+      async (plaintext) =>
+        runTest({
+          tester,
+          secret: { alias, value: secretTextDecoder.decode(plaintext) },
+          target: body.data.target,
+        }),
+    );
 
     await audit(c, deps.db, 'secret.test.invoked', {
       alias,

@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { reference } from '@keynv/core';
 import { Command, Option } from 'clipanion';
+import { requireServerFeature } from '../client/compat.js';
 import { ApiClient } from '../client/http.js';
 import { parseEnvFile } from '../exec/envFile.js';
 import { writeAiContext } from '../init/ai-context.js';
@@ -68,6 +69,45 @@ function envBodyFor(name: string): {
     tier: isProd ? 'production' : 'non-production',
     require_approval: isProd,
   };
+}
+
+interface BatchCreateSecretResponse {
+  created: Array<{ alias: string; version: number }>;
+}
+
+interface BatchErrorDetail {
+  index?: number;
+  code?: string;
+  env?: string;
+  key?: string;
+  message?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function getErrorDetails(error: unknown): unknown {
+  return isRecord(error) ? error['details'] : undefined;
+}
+
+function formatBatchErrorDetails(details: unknown): string[] {
+  if (!Array.isArray(details)) return [];
+  return details.map((detail) => {
+    if (!isRecord(detail)) return String(detail);
+    const item: BatchErrorDetail = {
+      ...(typeof detail['index'] === 'number' ? { index: detail['index'] } : {}),
+      ...(typeof detail['code'] === 'string' ? { code: detail['code'] } : {}),
+      ...(typeof detail['env'] === 'string' ? { env: detail['env'] } : {}),
+      ...(typeof detail['key'] === 'string' ? { key: detail['key'] } : {}),
+      ...(typeof detail['message'] === 'string' ? { message: detail['message'] } : {}),
+    };
+    const index = item.index === undefined ? '?' : String(item.index);
+    const target =
+      item.env && item.key ? `${item.env}/${item.key}` : (item.key ?? item.env ?? 'item');
+    const code = item.code ?? 'error';
+    return `[${index}] ${target}: ${code}${item.message ? ` (${item.message})` : ''}`;
+  });
 }
 
 function writeKeynvEnvMappings(
@@ -402,6 +442,13 @@ any prompts.
         }>(`/v1/projects/${projectId}`);
         const existing = new Set(detail.environments.map((e) => e.name));
         const missing = distinctEnvs.filter((e) => !existing.has(e));
+        if (missing.length > 0) {
+          await requireServerFeature(
+            client,
+            'environment_management',
+            'add environments during init',
+          );
+        }
         for (const env of missing) {
           await client.request(`/v1/projects/${projectId}/environments`, {
             method: 'POST',
@@ -446,8 +493,14 @@ any prompts.
       }
     }
 
-    let uploaded = 0;
     const failed: Array<{ name: string; reason: string }> = [];
+    const batch: Array<{
+      composite: string;
+      alias: string;
+      envName: string;
+      vaultKey: string;
+      value: string;
+    }> = [];
     for (const [composite, g] of secretGroupMap) {
       const alias = reference.buildAlias({
         project: projectName,
@@ -458,27 +511,57 @@ any prompts.
         failed.push({ name: g.vaultKey, reason: `invalid alias key: ${g.vaultKey}` });
         continue;
       }
+      batch.push({
+        composite,
+        alias: alias.literal,
+        envName: g.envName,
+        vaultKey: g.vaultKey,
+        value: g.value,
+      });
+    }
+    if (failed.length > 0) {
+      this.context.stdout.write(
+        `keynv: uploaded 0/${secretGroupMap.size} secret(s) to ${projectName}.\n`,
+      );
+      for (const f of failed) this.context.stderr.write(`  failed: ${f.name} — ${f.reason}\n`);
+      return 1;
+    }
+
+    let uploaded = 0;
+    if (batch.length > 0) {
       try {
-        await client.request(`/v1/projects/${projectId}/secrets`, {
-          method: 'POST',
-          body: { env: g.envName, key: g.vaultKey, value: g.value },
-        });
-        aliasByGroup.set(composite, alias.literal);
-        uploaded++;
+        await requireServerFeature(client, 'batch_secret_create', 'upload secrets atomically');
+        const result = await client.request<BatchCreateSecretResponse>(
+          `/v1/projects/${projectId}/secrets/batch`,
+          {
+            method: 'POST',
+            body: {
+              secrets: batch.map((item) => ({
+                env: item.envName,
+                key: item.vaultKey,
+                value: item.value,
+              })),
+            },
+          },
+        );
+        for (const item of batch) aliasByGroup.set(item.composite, item.alias);
+        uploaded = result.created.length;
       } catch (err) {
-        failed.push({
-          name: g.vaultKey,
-          reason: err instanceof Error ? err.message : String(err),
-        });
+        this.context.stdout.write(
+          `keynv: uploaded 0/${secretGroupMap.size} secret(s) to ${projectName}.\n`,
+        );
+        this.context.stderr.write(
+          `keynv: batch upload failed: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
+        for (const line of formatBatchErrorDetails(getErrorDetails(err))) {
+          this.context.stderr.write(`  failed: ${line}\n`);
+        }
+        return 1;
       }
     }
     this.context.stdout.write(
       `keynv: uploaded ${uploaded}/${secretGroupMap.size} secret(s) to ${projectName}.\n`,
     );
-    if (failed.length > 0) {
-      for (const f of failed) this.context.stderr.write(`  failed: ${f.name} — ${f.reason}\n`);
-      return 1;
-    }
 
     // Pick a default env for the bare `.keynv.env` filename (others get `.keynv.<env>.env`).
     const defaultEnv = distinctEnvs.includes('dev') ? 'dev' : (distinctEnvs[0] as string);
@@ -567,8 +650,8 @@ any prompts.
     envName: string,
     secrets: Array<{ name: string; value: string; aliasKey: string }>,
   ): Promise<number> {
-    let uploaded = 0;
     const failed: Array<{ name: string; reason: string }> = [];
+    const batch: Array<{ name: string; key: string; value: string }> = [];
     for (const s of secrets) {
       const alias = reference.buildAlias({
         project: projectName,
@@ -579,23 +662,47 @@ any prompts.
         failed.push({ name: s.name, reason: `invalid alias key: ${s.aliasKey}` });
         continue;
       }
-      try {
-        await client.request(`/v1/projects/${projectId}/secrets`, {
-          method: 'POST',
-          body: { env: envName, key: s.aliasKey, value: s.value },
-        });
-        uploaded++;
-      } catch (err) {
-        failed.push({ name: s.name, reason: err instanceof Error ? err.message : String(err) });
-      }
+      batch.push({ name: s.name, key: s.aliasKey, value: s.value });
     }
-    this.context.stdout.write(
-      `keynv: uploaded ${uploaded}/${secrets.length} secret(s) to ${projectName}.${envName}\n`,
-    );
     if (failed.length > 0) {
+      this.context.stdout.write(
+        `keynv: uploaded 0/${secrets.length} secret(s) to ${projectName}.${envName}\n`,
+      );
       for (const f of failed) this.context.stderr.write(`  failed: ${f.name} — ${f.reason}\n`);
       return 1;
     }
+
+    let uploaded = 0;
+    if (batch.length > 0) {
+      try {
+        await requireServerFeature(client, 'batch_secret_create', 'upload secrets atomically');
+        const result = await client.request<BatchCreateSecretResponse>(
+          `/v1/projects/${projectId}/secrets/batch`,
+          {
+            method: 'POST',
+            body: {
+              secrets: batch.map((item) => ({ env: envName, key: item.key, value: item.value })),
+            },
+          },
+        );
+        uploaded = result.created.length;
+      } catch (err) {
+        this.context.stdout.write(
+          `keynv: uploaded 0/${secrets.length} secret(s) to ${projectName}.${envName}\n`,
+        );
+        this.context.stderr.write(
+          `keynv: batch upload failed: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
+        for (const line of formatBatchErrorDetails(getErrorDetails(err))) {
+          this.context.stderr.write(`  failed: ${line}\n`);
+        }
+        return 1;
+      }
+    }
+
+    this.context.stdout.write(
+      `keynv: uploaded ${uploaded}/${secrets.length} secret(s) to ${projectName}.${envName}\n`,
+    );
     return 0;
   }
 }
