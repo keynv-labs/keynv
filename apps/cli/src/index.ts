@@ -27,6 +27,7 @@ import {
   ShellUninstallCommand,
 } from './commands/shell.js';
 import { TestCommand } from './commands/test.js';
+import { WatchStartCommand, WatchStatusCommand, WatchStopCommand } from './commands/watch.js';
 import { fmtError } from './ui/format.js';
 import { VERSION } from './version.js';
 
@@ -71,6 +72,10 @@ cli.register(ScrubCommand);
 cli.register(ShellInstallCommand);
 cli.register(ShellUninstallCommand);
 cli.register(ShellStatusCommand);
+
+cli.register(WatchStartCommand);
+cli.register(WatchStopCommand);
+cli.register(WatchStatusCommand);
 
 cli.register(TestCommand);
 cli.register(ServerInitCommand);
