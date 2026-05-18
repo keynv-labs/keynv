@@ -319,7 +319,7 @@ Cache TTL defaults to 5 minutes. `keynv exec` may operate offline if the cache i
 | Server unreachable, cache fresh | `keynv exec` succeeds (offline). |
 | Server unreachable, cache stale | `keynv exec` fails fast with an explicit "stale cache, server unreachable" error. No fallback to clear-text storage. |
 | OS keychain locked | CLI prompts for OS keychain unlock; if denied, fail. |
-| SQLite WAL corruption | Litestream restore from S3 / B2 (RPO ~1s). Runbook lives in [`deploy/README.md`](../deploy/README.md) under "Disaster recovery". |
+| SQLite WAL corruption | Litestream restore from S3 / B2 (RPO ~1s). Runbook lives in [`backup-restore-runbook.md`](./backup-restore-runbook.md). |
 | Master KEK lost | All wrapped DEKs are unrecoverable. The KEK is held by the org owner; lost-KEK recovery requires re-keying every secret manually from a backup snapshot taken before the loss. |
 | Audit hash chain broken | `keynv audit verify` flags the break point. The CLI refuses to write further until an admin acknowledges (forks the chain). |
 

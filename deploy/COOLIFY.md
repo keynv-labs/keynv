@@ -326,6 +326,11 @@ Two options, both add later:
 > DB. The whole encryption story depends on those being separated. Your
 > password manager copy from Step 6 is enough.
 
+Before relying on either option, run the full restore drill in
+[`docs/backup-restore-runbook.md`](../docs/backup-restore-runbook.md). The
+runbook covers RPO/RTO targets, smoke-secret validation without printing the
+secret value, and the master-key loss decision tree.
+
 ---
 
 ## Troubleshooting

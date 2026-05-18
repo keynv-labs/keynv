@@ -50,7 +50,7 @@ We do **not** use:
 - **Storage (MVP)**: written to `/etc/keynv/master.key` with mode `0400`, owned by the keynv service user. Loaded into memory at startup; zeroed on shutdown.
 - **Storage (Phase 6 commercial)**: backed by AWS KMS / GCP KMS / Vault Transit. The on-disk file is replaced by a wrapper config pointing at the KMS key.
 - **Backup**: the bootstrap output prints a one-time recovery code (the KEK in armored form). The Owner is instructed to store it in a separate password manager. Loss of both the on-disk file and the recovery code = **all data unrecoverable**. (We make this explicit in onboarding; no silent recovery.)
-- **Rotation**: `keynv kek rotate` — generates a new KEK, decrypts and re-encrypts every project DEK with the new KEK, atomically swaps the on-disk file. Cost is O(projects), not O(secrets), because secrets are wrapped by DEKs not the KEK directly.
+- **Rotation**: online KEK rotation is planned but not implemented in the OSS CLI/server yet. The intended design is to generate a new KEK, decrypt and re-encrypt every project DEK with the new KEK, and atomically swap the on-disk file. Cost is O(projects), not O(secrets), because secrets are wrapped by DEKs not the KEK directly. Until this ships, suspected KEK exposure is handled by rebuilding the deployment and re-entering rotated upstream credentials.
 
 ### Per-project DEK lifecycle
 
@@ -107,8 +107,10 @@ We do **not** rely on argv hiding for security against root-level adversaries. T
 ## Memory hygiene
 
 - **Unwrapped keys** (KEK, DEKs) live in `Uint8Array` / `Buffer` and are zeroed (`buf.fill(0)` or libsodium's `memzero`) before being garbage-collected. Server-side, an unwrapped DEK exists only for the duration of a single secret read/write; it is not pooled.
-- **Plaintext secret values**: today, secret values flow through V8-managed strings inside route handlers and CLI commands. JS strings are immutable; we cannot guarantee zero-on-discard for them. Their lifetime is the request handler (server) or the local variable scope of the resolving function (CLI). This is a documented compromise — see "Threats we don't fully mitigate" — and reflects an explicit trade-off between code clarity and the marginal safety of `Uint8Array`-end-to-end. A future refactor (Phase 6 commercial hardening) may move the value path to `Uint8Array` with explicit zeroing.
-- The privileged subprocess inherits its env at exec-time; once the process exits, the kernel reclaims its memory. Subprocesses are short-lived by design.
+- **Plaintext secret values in crypto paths**: `packages/core` exposes byte-oriented `encryptSecretBytes` / `decryptSecretBytes` APIs and `withDecryptedSecretBytes`, which zeroes decrypted plaintext in a `finally` block after callback use. Server create, batch create, read, rotate, and tester flows use these byte APIs for the encryption/decryption boundary.
+- **Remaining string boundaries**: JSON request bodies, JSON responses, CLI command arguments, and tester integrations still require V8-managed strings at the delivery boundary. JS strings are immutable; we cannot guarantee zero-on-discard for those copies. The mitigation is to convert to `Uint8Array` immediately before crypto operations, zero encoded/decrypted buffers after use, avoid caching plaintext, and keep request-scoped lifetime short.
+- **CLI credential cache**: the encrypted credential cache now encrypts/decrypts raw credential bytes instead of converting through UTF-8 strings. Returned credential bytes are owned by the caller and must be scoped tightly.
+- **Subprocess delivery**: resolved alias values are still strings when constructing argv/env for `keynv exec`, because Node's `spawn()` API accepts strings. After the subprocess exits, the CLI clears its resolved-alias, injected-env, and redactor-literal references. The child process memory is reclaimed by the kernel when it exits. Subprocesses are short-lived by design.
 
 ## Backup and restore
 
@@ -116,6 +118,7 @@ We do **not** rely on argv hiding for security against root-level adversaries. T
 - The replicated file contains only ciphertext + wrapped DEKs. Without the master KEK (held by the org Owner separately), the backup is useless to an attacker.
 - Restore: `litestream restore -o keynv.db <s3-url>` then `keynv-server start`. Master KEK is loaded as usual.
 - Backups are **encrypted at the application layer** (libsodium-wrapped). We do not require S3-side encryption (though recommend it as defense in depth).
+- The operator runbook for RPO/RTO, restore drills, KEK loss, and post-restore validation is [`backup-restore-runbook.md`](./backup-restore-runbook.md).
 
 ## Threats we don't fully mitigate
 
@@ -129,6 +132,6 @@ We do **not** rely on argv hiding for security against root-level adversaries. T
 - **Property tests** (`fast-check`): roundtrip — `decrypt(encrypt(x, k), k) === x` for arbitrary `x`, `k`.
 - **Negative tests**: tampered ciphertext, wrong key, wrong nonce → all raise authentication error.
 - **Audit-chain tests**: 100K-row synthetic chain verifies; tampering with row N breaks verification at exactly N.
-- **Memory zero tests**: `process.memoryUsage()`-based heuristic + manual review of sensitive paths.
+- **Memory zero tests**: unit tests cover byte-oriented secret roundtrips and verify `withDecryptedSecretBytes` zeroes the decrypted buffer on both success and error paths. Manual review is still required for JSON/CLI string boundaries.
 
 The crypto code is contained in `packages/core/src/crypto/`. Changes there require approval from at least two maintainers (Phase 5+).

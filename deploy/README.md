@@ -112,28 +112,43 @@ keynv-server listening on http://localhost:8080
 
 ## Disaster recovery
 
-If `keynv.db` is lost or corrupted but you have Litestream replicas in S3:
+The production runbook lives in
+[`docs/backup-restore-runbook.md`](../docs/backup-restore-runbook.md). It
+defines RPO/RTO targets, restore drills, KEK loss handling, and post-restore
+validation.
+
+Quick restore path if `keynv.db` is lost or corrupted but you have Litestream
+replicas in S3:
 
 ```bash
 # 1. stop the stack
 docker compose down
 
-# 2. restore from Litestream into the named volume
+# 2. remove stale SQLite files from the volume
+docker run --rm -v keynv_keynv-data:/data alpine:3.20 \
+  sh -lc 'rm -f /data/keynv.db /data/keynv.db-wal /data/keynv.db-shm'
+
+# 3. restore from Litestream into the named volume
 docker run --rm \
   -v keynv_keynv-data:/data \
+  -v "${PWD}/deploy/litestream.yml:/etc/litestream.yml:ro" \
   -e LITESTREAM_ACCESS_KEY_ID -e LITESTREAM_SECRET_ACCESS_KEY \
   -e LITESTREAM_BUCKET -e LITESTREAM_ENDPOINT -e LITESTREAM_REGION \
   litestream/litestream:0.3.13 \
   restore -config /etc/litestream.yml -o /data/keynv.db /data/keynv.db
 
-# 3. start back up
+# 4. start back up
 docker compose up -d
+
+# 5. validate before reopening writes
+curl -fsS https://api.example.com/v1/health/ready
+keynv audit verify
 ```
 
 > [!IMPORTANT]
 > `master.key` is **not** replicated by Litestream — that's deliberate.
 > Lose the key, lose the data. Keep your off-host backup current
-> before the next rotation.
+> and store it separately from the DB backup.
 
 ---
 

@@ -52,9 +52,28 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
+  security-gate:
+    name: security gate
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Audit dependencies
+        run: pnpm audit --audit-level moderate
+
   cli-binaries:
     name: cli (${{ matrix.target }})
-    needs: prepare
+    needs: [prepare, security-gate]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -64,7 +83,7 @@ jobs:
             os: macos-14
             artifact: keynv-darwin-arm64
           - target: bun-darwin-x64
-            os: macos-13
+            os: macos-15-intel
             artifact: keynv-darwin-x64
           - target: bun-linux-x64
             os: ubuntu-latest
@@ -122,7 +141,7 @@ jobs:
 
   npm-publish:
     name: npm (@keynv/cli)
-    needs: prepare
+    needs: [prepare, security-gate]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -182,7 +201,7 @@ jobs:
 
   docker-image:
     name: docker (multi-arch)
-    needs: prepare
+    needs: [prepare, security-gate]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -206,7 +225,8 @@ jobs:
             type=semver,pattern={{version}},value=${{ needs.prepare.outputs.tag }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.prepare.outputs.tag }}
             type=raw,value=latest,enable=${{ needs.prepare.outputs.prerelease == 'false' }}
-      - uses: docker/build-push-action@v6
+      - id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/server/Dockerfile
@@ -214,8 +234,30 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign Docker image
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${IMAGE_DIGEST}"
+      - name: Generate Docker SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: keynv-server-image.spdx.json
+          upload-artifact: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: keynv-server-image-sbom
+          path: keynv-server-image.spdx.json
+          retention-days: 1
+          if-no-files-found: error
 
   release:
     name: github release
@@ -230,15 +272,34 @@ jobs:
           path: dist-release
           merge-multiple: true
           # Skip the docker provenance artifact (keynv-labs~keynv~*.dockerbuild)
-          # uploaded by docker/build-push-action; we only want CLI binaries.
+          # uploaded by docker/build-push-action; keep CLI binaries and SBOMs.
           pattern: keynv-*-*
+      - name: Generate source SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist-release/keynv-source.spdx.json
+          upload-artifact: false
       - name: Compute SHA256SUMS
         working-directory: dist-release
         run: |
           set -euo pipefail
-          # Sort for deterministic ordering across re-runs.
+          # Sort for deterministic ordering across re-runs. Signatures are
+          # generated after this step and intentionally excluded.
           ls keynv-* | sort | xargs sha256sum > SHA256SUMS
           cat SHA256SUMS
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign release artifacts
+        working-directory: dist-release
+        run: |
+          set -euo pipefail
+          for file in keynv-* SHA256SUMS; do
+            cosign sign-blob --yes \
+              --output-signature "${file}.sig" \
+              --output-certificate "${file}.pem" \
+              "$file"
+          done
       - name: Extract release notes from CHANGELOG
         id: notes
         run: |
@@ -273,3 +334,5 @@ jobs:
           files: |
             dist-release/keynv-*
             dist-release/SHA256SUMS
+            dist-release/SHA256SUMS.sig
+            dist-release/SHA256SUMS.pem
