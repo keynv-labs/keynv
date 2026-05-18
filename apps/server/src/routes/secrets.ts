@@ -1,7 +1,7 @@
 import { crypto, validation } from '@keynv/core';
 import { authorize } from '@keynv/rbac';
 import { findTester, runTest, testerEnum } from '@keynv/testers';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, lte } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Db } from '../db/index.js';
@@ -39,6 +39,10 @@ interface SecretBatchErrorDetail {
 
 const RotateSecretBody = z.object({
   new_value: validation.secretValue,
+});
+
+const UpdateRotationBody = z.object({
+  interval_days: z.number().int().min(1).max(365).optional(),
 });
 
 const TestBody = z.object({
@@ -532,6 +536,9 @@ export function secretRoutes(deps: SecretDeps): Hono {
     const newId = newSecretId();
     const newVersion = prev.version + 1;
     const now = new Date().toISOString();
+    const nextRotationAt = prev.rotation_interval_days
+      ? new Date(Date.now() + prev.rotation_interval_days * 24 * 60 * 60 * 1000).toISOString()
+      : null;
     deps.db.transaction((tx) => {
       tx.insert(schema.secrets)
         .values({
@@ -544,6 +551,8 @@ export function secretRoutes(deps: SecretDeps): Hono {
           version: newVersion,
           prev_version_id: prev.id,
           created_by: user.id,
+          rotated_at: now,
+          next_rotation_at: nextRotationAt,
         })
         .run();
       tx.update(schema.secrets)
@@ -563,6 +572,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
     return c.json({
       alias: `@${projectRow.name}.${envName}.${keyName}`,
       version: newVersion,
+      next_rotation_at: nextRotationAt,
     });
   });
 
@@ -618,6 +628,147 @@ export function secretRoutes(deps: SecretDeps): Hono {
       key: keyName,
     });
     return c.body(null, 204);
+  });
+
+  r.patch('/:projectId/secrets/:env/:key/rotation', async (c) => {
+    const projectId = c.req.param('projectId');
+    const envName = c.req.param('env');
+    const keyName = c.req.param('key');
+
+    const g = guard(c, 'secret.rotate', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+
+    const body = await parseBody(c, UpdateRotationBody, 'Invalid rotation body.');
+    if ('errorResponse' in body) return body.errorResponse;
+
+    const projectRows = await deps.db
+      .select({ name: schema.projects.name })
+      .from(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
+      .limit(1);
+    const projectRow = projectRows[0];
+    if (!projectRow) return jsonError(c, 'project.not_found', 'Project not found.');
+
+    const envRows = await deps.db
+      .select()
+      .from(schema.environments)
+      .where(
+        and(eq(schema.environments.project_id, projectId), eq(schema.environments.name, envName)),
+      )
+      .limit(1);
+    const env = envRows[0];
+    if (!env) return jsonError(c, 'environment.not_found', 'Environment not found.');
+
+    const secretRows = await deps.db
+      .select()
+      .from(schema.secrets)
+      .where(
+        and(
+          eq(schema.secrets.project_id, projectId),
+          eq(schema.secrets.environment_id, env.id),
+          eq(schema.secrets.key, keyName),
+          isNull(schema.secrets.deleted_at),
+        ),
+      )
+      .orderBy(desc(schema.secrets.version))
+      .limit(1);
+    const secret = secretRows[0];
+    if (!secret) return jsonError(c, 'secret.not_found', 'Secret not found.');
+
+    const update: Partial<typeof schema.secrets.$inferInsert> = {};
+    if (body.data.interval_days !== undefined) {
+      update.rotation_interval_days = body.data.interval_days;
+      update.next_rotation_at = new Date(
+        Date.now() + body.data.interval_days * 24 * 60 * 60 * 1000,
+      ).toISOString();
+    }
+
+    await deps.db
+      .update(schema.secrets)
+      .set(update)
+      .where(eq(schema.secrets.id, secret.id));
+
+    await audit(c, deps.db, 'rotation.policy_changed', {
+      project_id: projectId,
+      env: envName,
+      key: keyName,
+      interval_days: body.data.interval_days,
+    });
+
+    return c.json({
+      alias: `@${projectRow.name}.${envName}.${keyName}`,
+      interval_days: update.rotation_interval_days ?? secret.rotation_interval_days,
+      next_rotation_at: update.next_rotation_at ?? secret.next_rotation_at,
+    });
+  });
+
+  r.get('/:projectId/secrets/rotations', async (c) => {
+    const projectId = c.req.param('projectId');
+
+    const g = guard(c, 'secret.read', { project_id: projectId });
+    if ('errorResponse' in g) return g.errorResponse;
+    const user = g.user;
+
+    const projectRows = await deps.db
+      .select({ name: schema.projects.name })
+      .from(schema.projects)
+      .where(
+        and(
+          eq(schema.projects.id, projectId),
+          eq(schema.projects.org_id, user.org_id),
+          isNull(schema.projects.deleted_at),
+        ),
+      )
+      .limit(1);
+    if (!projectRows[0]) return jsonError(c, 'project.not_found', 'Project not found.');
+
+    const now = new Date().toISOString();
+    const { due, overdue } = c.req.query();
+    const conditions = [
+      eq(schema.secrets.project_id, projectId),
+      isNull(schema.secrets.deleted_at),
+      isNotNull(schema.secrets.next_rotation_at),
+    ];
+
+    if (due === 'true') {
+      conditions.push(lte(schema.secrets.next_rotation_at, now));
+    } else if (overdue === 'true') {
+      conditions.push(lte(schema.secrets.next_rotation_at, now));
+    }
+
+    const rows = await deps.db
+      .select({
+        id: schema.secrets.id,
+        env: schema.environments.name,
+        key: schema.secrets.key,
+        version: schema.secrets.version,
+        rotation_interval_days: schema.secrets.rotation_interval_days,
+        rotated_at: schema.secrets.rotated_at,
+        next_rotation_at: schema.secrets.next_rotation_at,
+      })
+      .from(schema.secrets)
+      .innerJoin(schema.environments, eq(schema.secrets.environment_id, schema.environments.id))
+      .where(and(...conditions))
+      .orderBy(asc(schema.secrets.next_rotation_at));
+
+    const projectName = projectRows[0].name;
+    const result = rows.map((row) => ({
+      alias: `@${projectName}.${row.env}.${row.key}`,
+      version: row.version,
+      rotation_interval_days: row.rotation_interval_days,
+      rotated_at: row.rotated_at,
+      next_rotation_at: row.next_rotation_at,
+      status: row.next_rotation_at != null && row.next_rotation_at <= now ? 'due' : 'upcoming',
+    }));
+
+    return c.json({ secrets: result });
   });
 
   r.post('/:projectId/secrets/:env/:key/test', async (c) => {

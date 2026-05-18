@@ -325,3 +325,117 @@ export class SecretDeleteCommand extends Command {
     }
   }
 }
+
+export class SecretSetRotationCommand extends Command {
+  static override paths = [['secret', 'set-rotation']];
+  static override usage = Command.Usage({
+    description: 'Configure rotation interval for a secret.',
+    examples: [['$0 secret set-rotation @billing.dev.db_password --interval 90', '']],
+  });
+  alias = Option.String({ required: false });
+  interval = Option.String('--interval', { required: true });
+
+  async execute(): Promise<number> {
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
+
+      let alias = this.alias;
+      if (!alias) {
+        if (!isInteractive()) return missingAlias(this.context.stderr);
+        try {
+          alias = (await pickAliasInteractive(client)) ?? undefined;
+        } catch (err) {
+          if (err instanceof UserCancelled) return 130;
+          throw err;
+        }
+        if (!alias) return 1;
+      }
+
+      const parsed = reference.parseAlias(alias);
+      if (!parsed) {
+        this.context.stderr.write(`keynv: invalid alias '${alias}'.\n  ${ALIAS_FORMAT_HINT}\n`);
+        return 1;
+      }
+
+      const intervalDays = Number(this.interval);
+      if (!Number.isInteger(intervalDays) || intervalDays < 1 || intervalDays > 365) {
+        this.context.stderr.write('keynv: --interval must be an integer between 1 and 365.\n');
+        return 1;
+      }
+
+      const projectId = await resolveProjectId(client, parsed.project);
+      const data = await client.request<{
+        alias: string;
+        interval_days: number | null;
+        next_rotation_at: string | null;
+      }>(
+        `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}/rotation`,
+        { method: 'PATCH', body: { interval_days: intervalDays } },
+      );
+      this.context.stdout.write(
+        `rotation policy for ${data.alias}: interval=${data.interval_days}d, next=${data.next_rotation_at ?? 'TBD'}\n`,
+      );
+      return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
+    }
+  }
+}
+
+export class SecretRotationsCommand extends Command {
+  static override paths = [['secret', 'rotations']];
+  static override usage = Command.Usage({
+    description: 'List secrets due for rotation.',
+    examples: [
+      ['$0 secret rotations --project billing', ''],
+      ['$0 secret rotations --project billing --due', ''],
+    ],
+  });
+  project = Option.String('--project', { required: true });
+  due = Option.Boolean('--due', false);
+  overdue = Option.Boolean('--overdue', false);
+  json = Option.Boolean('--json', false);
+
+  async execute(): Promise<number> {
+    try {
+      const client = new ApiClient();
+      await client.ensureHydrated();
+
+      const projectId = await resolveProjectId(client, this.project);
+      const params = new URLSearchParams();
+      if (this.due) params.set('due', 'true');
+      if (this.overdue) params.set('overdue', 'true');
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const data = await client.request<{
+        secrets: Array<{
+          alias: string;
+          version: number;
+          rotation_interval_days: number | null;
+          rotated_at: string | null;
+          next_rotation_at: string | null;
+          status: string;
+        }>;
+      }>(`/v1/projects/${projectId}/secrets/rotations${query}`);
+
+      if (this.json === true) {
+        this.context.stdout.write(JSON.stringify(data, null, 2) + '\n');
+        return 0;
+      }
+
+      if (data.secrets.length === 0) {
+        this.context.stdout.write('no secrets due for rotation\n');
+        return 0;
+      }
+
+      for (const s of data.secrets) {
+        this.context.stdout.write(
+          `${s.alias}  v${s.version}  next=${s.next_rotation_at ?? 'N/A'}  status=${s.status}\n`,
+        );
+      }
+      return 0;
+    } catch (err) {
+      return handleExecError(this.context.stderr, err);
+    }
+  }
+}

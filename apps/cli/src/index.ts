@@ -18,6 +18,8 @@ import {
   SecretGetCommand,
   SecretListCommand,
   SecretRotateCommand,
+  SecretRotationsCommand,
+  SecretSetRotationCommand,
 } from './commands/secret.js';
 import { ServerInitCommand } from './commands/server.js';
 import { TestCommand } from './commands/test.js';
@@ -51,6 +53,8 @@ cli.register(SecretGetCommand);
 cli.register(SecretListCommand);
 cli.register(SecretRotateCommand);
 cli.register(SecretDeleteCommand);
+cli.register(SecretSetRotationCommand);
+cli.register(SecretRotationsCommand);
 
 cli.register(MemberAddCommand);
 cli.register(MemberRemoveCommand);

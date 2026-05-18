@@ -336,6 +336,64 @@ commercial feature so consumers (k8s pods, CI runners) can refresh
 before the old value is invalidated. Until that ships, callers must
 ensure consumers re-fetch synchronously after a rotate.
 
+Response includes `next_rotation_at` when a rotation interval is configured:
+
+```json
+{
+  "alias": "@billing.prod.db_password",
+  "version": 2,
+  "next_rotation_at": "2026-08-17T12:00:00.000Z"
+}
+```
+
+#### `PATCH /v1/projects/:id/secrets/:env/:key/rotation` (secret.rotate)
+
+Configures a rotation interval for an existing secret without changing its
+value. Accepts `interval_days` (1–365). When set the server computes
+`next_rotation_at` from `now() + interval_days`.
+
+```json
+{ "interval_days": 30 }
+```
+
+Response:
+
+```json
+{
+  "alias": "@billing.prod.db_password",
+  "interval_days": 30,
+  "next_rotation_at": "2026-06-17T12:00:00.000Z"
+}
+```
+
+Errors: `secret.not_found`, `validation.failed`.
+
+#### `GET /v1/projects/:id/secrets/rotations` (secret.read)
+
+Returns secrets that have a rotation interval configured. Accepts optional
+query parameters:
+
+- `?due=true` — filters to secrets where `next_rotation_at <= now`.
+- `?overdue=true` — alias for due.
+
+Results include a `status` field: `"due"` when overdue, `"upcoming"` when
+still within the window.
+
+```json
+{
+  "secrets": [
+    {
+      "alias": "@billing.prod.db_password",
+      "version": 3,
+      "rotation_interval_days": 90,
+      "rotated_at": "2026-05-01T12:00:00.000Z",
+      "next_rotation_at": "2026-07-30T12:00:00.000Z",
+      "status": "upcoming"
+    }
+  ]
+}
+```
+
 #### `DELETE /v1/projects/:id/secrets/:env/:key` (secret.delete)
 
 Soft-deletes; audit retains.

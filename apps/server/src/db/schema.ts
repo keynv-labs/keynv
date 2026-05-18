@@ -110,6 +110,9 @@ export const secrets = sqliteTable(
     created_by: text('created_by').references(() => users.id),
     created_at: text('created_at').notNull().default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
     deleted_at: text('deleted_at'),
+    rotation_interval_days: integer('rotation_interval_days'),
+    rotated_at: text('rotated_at'),
+    next_rotation_at: text('next_rotation_at'),
   },
   (t) => ({
     alias_unique: unique('secrets_alias_unique').on(

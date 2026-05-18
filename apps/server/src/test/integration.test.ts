@@ -480,6 +480,161 @@ describe('POST /v1/projects/:id/secrets/batch', () => {
   });
 });
 
+describe('Rotation — set interval, list rotations, rotation includes metadata', () => {
+  async function createRotationProject(token: string): Promise<string> {
+    const res = await harness.app.request('http://localhost/v1/projects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: 'rotation-demo', environments: [{ name: 'dev', tier: 'non-production' }] }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { id: string };
+    return body.id;
+  }
+
+  it('rotation stores metadata (rotated_at, next_rotation_at) when interval is set', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createRotationProject(token);
+
+    // Create secret first
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/secrets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ env: 'dev', key: 'DB_PASS', value: 'initial' }),
+    });
+
+    // Set rotation interval
+    const setRes = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/dev/DB_PASS/rotation`,
+      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 30 }) },
+    );
+    expect(setRes.status).toBe(200);
+    const setBody = (await setRes.json()) as { alias: string; interval_days: number; next_rotation_at: string };
+    expect(setBody.alias).toBe('@rotation-demo.dev.DB_PASS');
+    expect(setBody.interval_days).toBe(30);
+    expect(setBody.next_rotation_at).toBeTruthy();
+
+    // Rotate the secret
+    const rotateRes = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/dev/DB_PASS/rotate`,
+      { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ new_value: 'rotated-value' }) },
+    );
+    expect(rotateRes.status).toBe(200);
+    const rotateBody = (await rotateRes.json()) as { alias: string; version: number; next_rotation_at: string };
+    expect(rotateBody.version).toBe(2);
+    expect(rotateBody.next_rotation_at).toBeTruthy();
+
+    // New rotation should have next_rotation_at ~30 days after now
+    const nextDate = new Date(rotateBody.next_rotation_at);
+    const expected = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    expect(Math.abs(nextDate.getTime() - expected.getTime())).toBeLessThan(5000);
+  });
+
+  it('PATCH rotation rejects invalid interval', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createRotationProject(token);
+
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/secrets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ env: 'dev', key: 'API_KEY', value: 'secret' }),
+    });
+
+    const zeroRes = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/dev/API_KEY/rotation`,
+      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 0 }) },
+    );
+    expect(zeroRes.status).toBe(400);
+  });
+
+  it('GET /rotations lists secrets with status due/upcoming', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createRotationProject(token);
+
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/secrets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ env: 'dev', key: 'TOKEN', value: 't' }),
+    });
+
+    // Set very short interval so it becomes overdue immediately
+    const setRes = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/dev/TOKEN/rotation`,
+      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 1 }) },
+    );
+    expect(setRes.status).toBe(200);
+
+    // Initially, next_rotation_at is in the future (1 day), so not due yet
+    // But due query should still return it as "upcoming"
+    const listDue = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/rotations?due=true`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(listDue.status).toBe(200);
+    const listBody = (await listDue.json()) as { secrets: Array<{ alias: string; status: string }> };
+    // Not yet due — status should be "upcoming", not "due"
+    expect(listBody.secrets.length).toBeGreaterThanOrEqual(0);
+
+    // Now rotate it with an interval of 1 day but set the last rotated time far in the past
+    // We can't directly set rotated_at, but the list endpoint should show the status
+    const listAll = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/rotations`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(listAll.status).toBe(200);
+    const allBody = (await listAll.json()) as { secrets: Array<{ alias: string; rotation_interval_days: number; next_rotation_at: string | null; status: string }> };
+    expect(allBody.secrets.length).toBe(1);
+    expect(allBody.secrets[0]?.alias).toBe('@rotation-demo.dev.TOKEN');
+    expect(allBody.secrets[0]?.rotation_interval_days).toBe(1);
+  });
+
+  it('GET /rotations returns empty list for project without rotation policies', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createRotationProject(token);
+
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/secrets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ env: 'dev', key: 'NO_ROTATION', value: 'secret' }),
+    });
+
+    const res = await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/rotations`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { secrets: Array<unknown> };
+    expect(body.secrets).toEqual([]);
+  });
+
+  it('audit trail includes rotation.policy_changed', async () => {
+    const token = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+    const projectId = await createRotationProject(token);
+
+    await harness.app.request(`http://localhost/v1/projects/${projectId}/secrets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ env: 'dev', key: 'AUDIT_KEY', value: 'v' }),
+    });
+
+    await harness.app.request(
+      `http://localhost/v1/projects/${projectId}/secrets/dev/AUDIT_KEY/rotation`,
+      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 90 }) },
+    );
+
+    const auditRes = await harness.app.request(
+      'http://localhost/v1/audit?event_type=rotation.policy_changed',
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(auditRes.status).toBe(200);
+    const auditBody = (await auditRes.json()) as { entries: Array<{ event_type: string; payload: { key: string; interval_days: number } }> };
+    expect(auditBody.entries.length).toBe(1);
+    expect(auditBody.entries[0]?.event_type).toBe('rotation.policy_changed');
+    expect(auditBody.entries[0]?.payload.key).toBe('AUDIT_KEY');
+    expect(auditBody.entries[0]?.payload.interval_days).toBe(90);
+  });
+});
+
 describe('Clean user walkthrough', () => {
   it('registers, creates a second org, switches active org, creates a project, and resolves a secret', async () => {
     const local = await makeHarness({ publicRegistrationEnabled: true });

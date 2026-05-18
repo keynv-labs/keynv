@@ -35,6 +35,7 @@ export type AuditEventType =
   | 'approval.requested'
   | 'approval.granted'
   | 'approval.denied'
+  | 'rotation.policy_changed'
   | 'org.created'
   | 'org.updated';
 

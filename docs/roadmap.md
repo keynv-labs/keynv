@@ -120,6 +120,7 @@ Decision points (locked):
 7. Backup/DR maturity: **implemented for `v0.2.0` docs** with RPO/RTO, restore drills, KEK loss handling, and post-restore validation.
 8. API compatibility: **implemented for `v0.2.0` docs + health capabilities** with CLI feature checks for newly-added endpoints.
 9. Plaintext memory hardening: **implemented for `v0.2.0` critical crypto paths** with byte-oriented secret APIs, server-side buffer zeroing, and documented JSON/CLI string boundaries.
+10. Rotation automation: **implemented for `v0.2.0`** with rotation interval metadata, PATCH `/rotation` endpoint, rotation due/overdue discovery via `GET /rotations`, and `secret set-rotation` + `secret rotations` CLI commands.
 
 ## Phase 6 — Commercial tier + keynv Cloud · NOT STARTED
 

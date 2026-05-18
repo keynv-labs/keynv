@@ -286,6 +286,11 @@ failure-mode checklists.
 
 ## Workstream 7 — Rotation Automation
 
+Implementation note: interval metadata, due/overdue discovery, and policy
+management are now implemented. See
+[`06-api-spec.md`](./06-api-spec.md#patch-v1projectsidsecretsenvkeyrotation-secretrotate)
+for endpoint details.
+
 ### Problem
 
 Secret rotation is currently manual. Users can rotate individual secrets, but
