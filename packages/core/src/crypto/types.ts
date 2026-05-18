@@ -18,8 +18,9 @@ export interface WrappedKey {
 }
 
 /**
- * An encrypted secret value. Produced by `encryptSecret(value, dek)` and
- * stored in the `secrets.ciphertext` / `secrets.nonce` columns.
+ * An encrypted secret value. Produced by `encryptSecretBytes(value, dek)` or
+ * the string compatibility wrapper `encryptSecret(value, dek)`, and stored in
+ * the `secrets.ciphertext` / `secrets.nonce` columns.
  */
 export interface SealedSecret {
   readonly ciphertext: Uint8Array;

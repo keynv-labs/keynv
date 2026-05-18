@@ -112,11 +112,14 @@ Pre-public-launch hardening. Active streams in priority order:
 Decision points (locked):
 
 1. First public release: **`v0.1.0`** (pre-1.0 signal, breaking changes possible at minor).
-2. Signed binaries (cosign): **deferred to `v0.2.0`**. Ship `0.1.0` with checksums.
+2. Signed binaries (cosign): **implemented for `v0.2.0` release pipeline**. `0.1.0` shipped with checksums only.
 3. Helm chart: **drop from automated release**; keep `deploy/helm/keynv` in tree.
 4. External pentest: **deferred** (default = no). Rely on semgrep + snyk + codeql + manual walkthrough.
 5. Docs: **GitHub MD only** for `0.1.0`. No standalone docs site.
 6. OpenAPI: **`docs/06-api-spec.md` stays as source of truth.** No `zod-to-openapi` dep.
+7. Backup/DR maturity: **implemented for `v0.2.0` docs** with RPO/RTO, restore drills, KEK loss handling, and post-restore validation.
+8. API compatibility: **implemented for `v0.2.0` docs + health capabilities** with CLI feature checks for newly-added endpoints.
+9. Plaintext memory hardening: **implemented for `v0.2.0` critical crypto paths** with byte-oriented secret APIs, server-side buffer zeroing, and documented JSON/CLI string boundaries.
 
 ## Phase 6 — Commercial tier + keynv Cloud · NOT STARTED
 

@@ -64,8 +64,11 @@ async function loadFromEncryptedStore(): Promise<Credentials | null> {
   if (!key) return null;
 
   try {
-    const plain = await crypto.decryptSecret({ ciphertext, nonce }, key);
-    return JSON.parse(plain) as Credentials;
+    return await crypto.withDecryptedSecretBytes(
+      { ciphertext, nonce },
+      key,
+      (plain) => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(plain)) as Credentials,
+    );
   } catch {
     return null;
   }

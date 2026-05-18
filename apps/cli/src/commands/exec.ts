@@ -247,6 +247,10 @@ spelled \`--from\` to avoid the collision.)
       const message = err instanceof Error ? err.message : String(err);
       this.context.stderr.write(`keynv: failed to spawn '${substCommand}': ${message}\n`);
       return 127;
+    } finally {
+      for (const item of resolved) item.value = '';
+      for (const key of Object.keys(injectedEnv)) injectedEnv[key] = '';
+      substArgs.fill('');
     }
   }
 }

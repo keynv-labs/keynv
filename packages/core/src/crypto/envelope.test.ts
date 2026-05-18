@@ -4,9 +4,12 @@ import {
   KEY_BYTES,
   NONCE_BYTES,
   decryptSecret,
+  decryptSecretBytes,
   encryptSecret,
+  encryptSecretBytes,
   generateKey,
   unwrapDek,
+  withDecryptedSecretBytes,
   wrapDek,
 } from './index.js';
 
@@ -80,6 +83,52 @@ describe('wrapDek / unwrapDek', () => {
 });
 
 describe('encryptSecret / decryptSecret', () => {
+  it('round-trips raw byte inputs without requiring a JS string', async () => {
+    const dek = await generateKey();
+    const value = new Uint8Array([0, 1, 2, 3, 255]);
+    const sealed = await encryptSecretBytes(value, dek);
+    const plaintext = await decryptSecretBytes(sealed, dek);
+
+    expect(Buffer.from(plaintext).equals(Buffer.from(value))).toBe(true);
+  });
+
+  it('zeroes decrypted bytes after the callback completes', async () => {
+    const dek = await generateKey();
+    const value = new TextEncoder().encode('short-lived secret');
+    const sealed = await encryptSecretBytes(value, dek);
+    const captured: Uint8Array[] = [];
+
+    const result = await withDecryptedSecretBytes(sealed, dek, (plaintext) => {
+      captured.push(plaintext);
+      return new TextDecoder('utf-8', { fatal: true }).decode(plaintext);
+    });
+
+    expect(result).toBe('short-lived secret');
+    const capturedBytes = captured[0];
+    expect(capturedBytes).toBeDefined();
+    if (!capturedBytes) throw new Error('expected decrypted plaintext buffer');
+    expect(Array.from(capturedBytes)).toEqual(new Array(capturedBytes.length).fill(0));
+  });
+
+  it('zeroes decrypted bytes even when the callback throws', async () => {
+    const dek = await generateKey();
+    const value = new TextEncoder().encode('throwing secret');
+    const sealed = await encryptSecretBytes(value, dek);
+    const captured: Uint8Array[] = [];
+
+    await expect(
+      withDecryptedSecretBytes(sealed, dek, (plaintext) => {
+        captured.push(plaintext);
+        throw new Error('boom');
+      }),
+    ).rejects.toThrow('boom');
+
+    const capturedBytes = captured[0];
+    expect(capturedBytes).toBeDefined();
+    if (!capturedBytes) throw new Error('expected decrypted plaintext buffer');
+    expect(Array.from(capturedBytes)).toEqual(new Array(capturedBytes.length).fill(0));
+  });
+
   it('round-trips an ASCII string', async () => {
     const dek = await generateKey();
     const sealed = await encryptSecret('hello world', dek);

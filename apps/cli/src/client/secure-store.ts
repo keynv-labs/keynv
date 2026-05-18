@@ -77,7 +77,7 @@ async function loadOrCreateFileKey(): Promise<Uint8Array> {
 
 export async function saveCredentialsBlob(plaintext: Uint8Array): Promise<string> {
   const key = await loadOrCreateKey();
-  const sealed = await crypto.encryptSecret(Buffer.from(plaintext).toString('utf8'), key);
+  const sealed = await crypto.encryptSecretBytes(plaintext, key);
   const path = defaultPath();
   if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   // [version=1][nonce 24][ciphertext]
@@ -112,8 +112,7 @@ export async function loadCredentialsBlob(): Promise<Uint8Array | null> {
 
   const key = await loadOrCreateKey();
   try {
-    const plain = await crypto.decryptSecret({ ciphertext, nonce }, key);
-    return new TextEncoder().encode(plain);
+    return await crypto.decryptSecretBytes({ ciphertext, nonce }, key);
   } catch {
     // Tampered or wrong key — caller treats as "no creds, please re-login".
     return null;

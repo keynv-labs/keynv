@@ -186,10 +186,12 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
   return new Promise<SpawnResult>((resolve, reject) => {
     child.on('error', (err) => {
       if (timer) clearTimeout(timer);
+      clearSensitiveReferences(env, literals);
       reject(err);
     });
     child.on('close', (code, signal) => {
       if (timer) clearTimeout(timer);
+      clearSensitiveReferences(env, literals);
       resolve({
         exitCode: code ?? 0,
         signal,
@@ -197,6 +199,11 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
       });
     });
   });
+}
+
+function clearSensitiveReferences(env: Record<string, string>, literals: string[]): void {
+  for (const key of Object.keys(env)) env[key] = '';
+  literals.fill('');
 }
 
 /**

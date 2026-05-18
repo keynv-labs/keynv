@@ -116,7 +116,8 @@ This is where keynv earns its keep. Every layer addresses one or more disclosure
 - `keynv exec` keeps real values out of agent process tree. A scanner inside agent process finds nothing.
 - MCP server returns reference tokens, not values. Token interception is useless without the resolution context (60-second window, bound to subprocess pid).
 - OS keychain stores the cache KEK; reading `~/.keynv/cache.db` raw yields ciphertext.
-- *Limitation*: a sufficiently-privileged compromise (root, ptrace) on the dev machine can attach to the privileged subprocess. We do not mitigate that.
+- Crypto paths use `Uint8Array` secret buffers where practical and zero decrypted buffers after use. JSON request/response bodies, CLI arguments, and tester integrations still create V8-managed strings that cannot be reliably wiped.
+- *Limitation*: a sufficiently-privileged compromise (root, ptrace) on the dev machine can attach to the privileged subprocess or server while plaintext is in flight. We reduce plaintext lifetime but do not mitigate root-level memory inspection.
 
 #### 7. Curious developer reads secret via CLI
 
