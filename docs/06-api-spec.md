@@ -248,7 +248,7 @@ Response 201:
 
 #### `POST /v1/projects/:id/secrets/batch` (secret.create)
 
-Atomically creates multiple secrets. The server validates the full batch before writing any rows and persists the batch in one transaction.
+Atomically creates multiple secrets. The server validates the full batch before writing any rows and persists the batch in one transaction. Maximum 50 secrets per batch.
 
 ```json
 {

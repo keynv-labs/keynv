@@ -527,6 +527,11 @@ any prompts.
       return 1;
     }
 
+    if (batch.length > 50) {
+      this.context.stderr.write(`keynv: batch too large (${batch.length} secrets; max 50).\n`);
+      return 1;
+    }
+
     let uploaded = 0;
     if (batch.length > 0) {
       try {
@@ -669,6 +674,11 @@ any prompts.
         `keynv: uploaded 0/${secrets.length} secret(s) to ${projectName}.${envName}\n`,
       );
       for (const f of failed) this.context.stderr.write(`  failed: ${f.name} — ${f.reason}\n`);
+      return 1;
+    }
+
+    if (batch.length > 50) {
+      this.context.stderr.write(`keynv: batch too large (${batch.length} secrets; max 50).\n`);
       return 1;
     }
 

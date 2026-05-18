@@ -26,7 +26,7 @@ const CreateSecretBody = z.object({
 });
 
 const CreateSecretBatchBody = z.object({
-  secrets: z.array(CreateSecretBody).min(1),
+  secrets: z.array(CreateSecretBody).min(1).max(50),
 });
 
 interface SecretBatchErrorDetail {
