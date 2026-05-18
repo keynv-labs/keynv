@@ -3,6 +3,8 @@ import { claudeCodeProjectsDir, cursorLogsDir, rewriteFile } from '@keynv/text-s
 import chokidar from 'chokidar';
 import { VERSION } from '../version.js';
 import { logEvent } from './audit-log.js';
+import { FingerprintRegistry } from './registry.js';
+import { type RpcServer, startRpcServer } from './rpc.js';
 import { type WatcherStatus, removePidfile, writePidfile, writeStatus } from './state.js';
 
 const DEFAULT_DEBOUNCE_MS = 1000;
@@ -44,6 +46,8 @@ export interface WatcherHandle {
   stop(reason?: string): Promise<void>;
   /** Current in-memory counters (also flushed to disk every 10s). */
   snapshot(): WatcherStatus;
+  /** The fingerprint registry — exposed for tests to assert state. */
+  readonly registry: FingerprintRegistry;
 }
 
 /**
@@ -84,6 +88,23 @@ export async function runWatcher(options: WatcherOptions = {}): Promise<WatcherH
   let lastRewriteAt: string | null = null;
   let lastError: { ts: string; message: string } | undefined;
   const debouncers = new Map<string, NodeJS.Timeout>();
+  const registry = new FingerprintRegistry();
+
+  // RPC server is optional — tests skip it via skipStateFiles.
+  let rpcServer: RpcServer | null = null;
+  if (!options.skipStateFiles) {
+    try {
+      rpcServer = await startRpcServer(registry);
+    } catch (err) {
+      // Don't fail boot if the socket can't bind — the watcher still
+      // delivers value via regex matching even without resolution-event
+      // registration.
+      lastError = {
+        ts: new Date().toISOString(),
+        message: `rpc-bind-failed: ${(err as Error).message}`,
+      };
+    }
+  }
 
   if (!options.skipStateFiles) {
     await writePidfile(process.pid);
@@ -105,9 +126,14 @@ export async function runWatcher(options: WatcherOptions = {}): Promise<WatcherH
     const t = setTimeout(async () => {
       debouncers.delete(path);
       try {
+        // Hand the live registry contents to the redactor as literals
+        // so we catch resolved values even when their format doesn't
+        // match any pattern-bank entry.
+        const literals = registry.values();
         const result = await rewriteFile(path, {
           includeActive: true,
           backup: false,
+          ...(literals.length > 0 ? { scanOptions: { literals } } : {}),
         });
         const ts = new Date().toISOString();
         if (result.skipped) {
@@ -218,6 +244,13 @@ export async function runWatcher(options: WatcherOptions = {}): Promise<WatcherH
     if (flushTimer) clearInterval(flushTimer);
     for (const t of debouncers.values()) clearTimeout(t);
     debouncers.clear();
+    if (rpcServer) {
+      try {
+        await rpcServer.close();
+      } catch {
+        // best-effort
+      }
+    }
     await watcher.close();
     if (!options.skipStateFiles) {
       try {
@@ -239,6 +272,7 @@ export async function runWatcher(options: WatcherOptions = {}): Promise<WatcherH
     ready: readyPromise,
     stop,
     snapshot: buildSnapshot,
+    registry,
   };
 }
 

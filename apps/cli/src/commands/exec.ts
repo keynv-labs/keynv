@@ -166,6 +166,17 @@ spelled \`--from\` to avoid the collision.)
       return 1;
     }
 
+    // Tell the watcher daemon (if running) about every value we just
+    // resolved so its real-time scrubber can treat them as literals,
+    // even when the value's format doesn't match any pattern-bank
+    // regex (custom in-house tokens, opaque UUIDs etc.). Fire-and-
+    // wait with a tight timeout — the watcher is local, ~1ms typical;
+    // a missing watcher returns null and we move on silently.
+    if (resolved.length > 0) {
+      const { registerValueWithWatcher } = await import('../watcher/rpc.js');
+      await Promise.all(resolved.map((r) => registerValueWithWatcher(r.value).catch(() => null)));
+    }
+
     // Substituted argv.
     const substArgs = args.map((a) => substitute(a, resolved));
     const substCommand = substitute(command, resolved);
