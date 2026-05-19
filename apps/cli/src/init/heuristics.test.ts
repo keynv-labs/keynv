@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyEntry, previewValue } from './heuristics.js';
+import { classifyEntry, maskedPreview, previewValue } from './heuristics.js';
 
 describe('classifyEntry — framework-managed (skip)', () => {
   it('skips NODE_ENV regardless of value (framework sets this itself)', () => {
@@ -136,5 +136,41 @@ describe('previewValue', () => {
 
   it('truncates long values with ellipsis', () => {
     expect(previewValue('a'.repeat(50), 10)).toBe(`${'a'.repeat(9)}…`);
+  });
+});
+
+describe('maskedPreview', () => {
+  it('never leaks any substring of the input longer than 3 chars', () => {
+    // High-entropy value with no natural-language fragments so we can
+    // safely assert that no slice of length >= 4 appears in the
+    // rendered label (the hint and boilerplate are pure ASCII English).
+    const value = 'Qx7zM2pV9wR4kL8nB3hT6yC1dF5aJ0gS';
+    const out = maskedPreview(value, 'opaque');
+    for (let i = 0; i + 4 <= value.length; i++) {
+      const slice = value.slice(i, i + 4);
+      expect(out).not.toContain(slice);
+    }
+  });
+
+  it('includes the supplied hint and the value length', () => {
+    const out = maskedPreview('s'.repeat(32), 'OpenAI API key');
+    expect(out).toContain('OpenAI API key');
+    expect(out).toContain('32 chars');
+  });
+
+  it('returns (empty) for empty', () => {
+    expect(maskedPreview('')).toBe('(empty)');
+  });
+
+  it('is stable across calls for the same value (fingerprint matches)', () => {
+    const a = maskedPreview('abc123');
+    const b = maskedPreview('abc123');
+    expect(a).toBe(b);
+  });
+
+  it('differs for different values (fingerprint diverges)', () => {
+    const a = maskedPreview('abc123');
+    const b = maskedPreview('def456');
+    expect(a).not.toBe(b);
   });
 });

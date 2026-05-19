@@ -1,0 +1,54 @@
+import { describe, expect, it } from 'vitest';
+import { safeNext } from './safe-next';
+
+const NUL = String.fromCharCode(0);
+const CR = String.fromCharCode(13);
+const LF = String.fromCharCode(10);
+const DEL = String.fromCharCode(127);
+
+describe('safeNext', () => {
+  it('passes a plain relative path through', () => {
+    expect(safeNext('/dashboard')).toBe('/dashboard');
+  });
+
+  it('preserves query and hash on safe paths', () => {
+    expect(safeNext('/projects/abc?tab=secrets#last')).toBe('/projects/abc?tab=secrets#last');
+  });
+
+  it('falls back on protocol-relative authorities', () => {
+    expect(safeNext('//evil.com')).toBe('/dashboard');
+    expect(safeNext('//evil.com/path')).toBe('/dashboard');
+  });
+
+  it('falls back on backslash-prefixed authorities', () => {
+    expect(safeNext('/\\evil.com')).toBe('/dashboard');
+    expect(safeNext('/\\\\evil.com')).toBe('/dashboard');
+  });
+
+  it('falls back on absolute URLs', () => {
+    expect(safeNext('https://evil.com')).toBe('/dashboard');
+    expect(safeNext('http://evil.com/dashboard')).toBe('/dashboard');
+  });
+
+  it('falls back on dangerous schemes', () => {
+    expect(safeNext('javascript:alert(1)')).toBe('/dashboard');
+    expect(safeNext('data:text/html,evil')).toBe('/dashboard');
+  });
+
+  it('falls back on empty, missing, or non-string values', () => {
+    expect(safeNext('')).toBe('/dashboard');
+    expect(safeNext(undefined)).toBe('/dashboard');
+    expect(safeNext(null)).toBe('/dashboard');
+  });
+
+  it('falls back on header-injection control characters', () => {
+    expect(safeNext(`/dashboard${CR}${LF}Location: //evil.com`)).toBe('/dashboard');
+    expect(safeNext(`/dashboard${NUL}`)).toBe('/dashboard');
+    expect(safeNext(`/dashboard${DEL}`)).toBe('/dashboard');
+  });
+
+  it('honours a custom fallback', () => {
+    expect(safeNext('//evil.com', '/login')).toBe('/login');
+    expect(safeNext(undefined, '/login')).toBe('/login');
+  });
+});

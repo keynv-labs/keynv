@@ -3,6 +3,7 @@
 import { type ActionState, parseOr } from '@/lib/action-result';
 import { type ApiError, api } from '@/lib/api';
 import { requireCsrf } from '@/lib/csrf';
+import { safeNext } from '@/lib/safe-next';
 import { email, orgName, passwordMin12 } from '@/lib/schemas';
 import { setSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
@@ -74,6 +75,5 @@ export async function registerAction(
     access_expires_at: new Date(Date.now() + response.expires_in * 1000).toISOString(),
   });
 
-  const next = parsed.data.next?.startsWith('/') ? parsed.data.next : '/dashboard';
-  redirect(next);
+  redirect(safeNext(parsed.data.next));
 }

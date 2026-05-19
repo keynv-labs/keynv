@@ -1,5 +1,6 @@
+import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { type Session, decodeSession, encodeSession } from './session';
+import { SESSION_V1_SUNSET_MS, type Session, decodeSession, encodeSession } from './session';
 
 const SESSION: Session = {
   user_id: 'user_123',
@@ -36,5 +37,30 @@ describe('session sealing', () => {
     parts[2] = `${ciphertext.startsWith('a') ? 'b' : 'a'}${ciphertext.slice(1)}`;
 
     expect(decodeSession(parts.join('.'))).toBeNull();
+  });
+});
+
+describe('legacy v1 session sunset', () => {
+  function makeV1(): string {
+    const secret = 'dev-session-secret-32chars-minimum-length';
+    const payload = JSON.stringify(SESSION);
+    const mac = createHmac('sha256', secret).update(payload, 'utf8').digest('hex');
+    return `${payload}.${mac}`;
+  }
+
+  it('still accepts v1 cookies before the sunset', () => {
+    const before = SESSION_V1_SUNSET_MS - 1;
+    expect(decodeSession(makeV1(), before)).toEqual(SESSION);
+  });
+
+  it('rejects v1 cookies once the sunset has passed', () => {
+    const after = SESSION_V1_SUNSET_MS + 1;
+    expect(decodeSession(makeV1(), after)).toBeNull();
+  });
+
+  it('continues to accept v2 cookies after the sunset', () => {
+    const after = SESSION_V1_SUNSET_MS + 1;
+    const v2 = encodeSession(SESSION);
+    expect(decodeSession(v2, after)).toEqual(SESSION);
   });
 });

@@ -1,0 +1,203 @@
+import { copyFile, open, readFile, rename, stat, unlink } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { type RedactOptions, redact } from '@keynv/redactor';
+import type { RewriteFileResult, RewriteOptions, ScanOptions } from './types.js';
+
+/**
+ * How recently the file's mtime must NOT have advanced for us to feel
+ * safe rewriting it. Claude Code and similar tools append to JSONL
+ * session files as they stream, so a file touched in the last
+ * `ACTIVE_WRITE_WINDOW_MS` is likely still being written to. Skip
+ * with a clear `skipReason` unless the caller passes
+ * `RewriteOptions.includeActive: true`.
+ *
+ * 10s is conservative — long enough to catch most live streams,
+ * short enough that closed sessions are processed normally.
+ */
+const ACTIVE_WRITE_WINDOW_MS = 10_000;
+
+/** Match-the-same prefix list scan.ts uses; keeps rewrite + scan consistent. */
+const SURFACE_ENTROPY_EXCLUDE_PREFIXES: ReadonlyArray<string> = [
+  'sha1-',
+  'sha256:',
+  'sha256-',
+  'sha384-',
+  'sha512-',
+  '/',
+  './',
+  '../',
+  '~/',
+  'http://',
+  'https://',
+  'file://',
+];
+
+/**
+ * Atomically rewrite `path` so that every secret-shaped substring is
+ * replaced with the redaction token. Semantics:
+ *
+ *  1. Read file.
+ *  2. Run the redactor against its contents (same options as scan, so
+ *     match counts match what `keynv doctor` reported).
+ *  3. If no matches → no-op (file untouched), return matchCount: 0.
+ *  4. Write a `${path}.keynv.bak.<ts>` backup (unless backup: false).
+ *  5. Write the redacted content to `${path}.keynv.tmp.<ts>`, fsync,
+ *     `rename` over the original. POSIX-atomic on the same filesystem.
+ *
+ * JSONL safety: the default redaction token `<REDACTED:foo>` contains
+ * only characters valid inside a JSON string, and the pattern bank's
+ * regexes never include `"` in a match. So JSONL files (Claude Code
+ * transcripts) survive raw-text rewrite as valid JSONL.
+ */
+export async function rewriteFile(
+  path: string,
+  options: RewriteOptions = {},
+): Promise<RewriteFileResult> {
+  let mtimeMs = 0;
+  try {
+    const st = await stat(path);
+    mtimeMs = st.mtimeMs;
+  } catch (err) {
+    return {
+      path,
+      matchCount: 0,
+      bytesWritten: 0,
+      skipped: true,
+      skipReason: (err as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'stat-failed',
+    };
+  }
+
+  if (!options.includeActive && Date.now() - mtimeMs < ACTIVE_WRITE_WINDOW_MS) {
+    return {
+      path,
+      matchCount: 0,
+      bytesWritten: 0,
+      skipped: true,
+      skipReason: 'actively-written (pass --include-active to override)',
+    };
+  }
+
+  let raw: string;
+  try {
+    raw = await readFile(path, 'utf8');
+  } catch (err) {
+    return {
+      path,
+      matchCount: 0,
+      bytesWritten: 0,
+      skipped: true,
+      skipReason: `read-failed: ${(err as Error).message}`,
+    };
+  }
+
+  const scanOpts: ScanOptions = options.scanOptions ?? {};
+  const redactOpts: RedactOptions = {
+    entropy:
+      scanOpts.entropy === false
+        ? { enabled: false }
+        : { excludePrefixes: SURFACE_ENTROPY_EXCLUDE_PREFIXES },
+  };
+  if (scanOpts.literals && scanOpts.literals.length > 0) {
+    redactOpts.literals = scanOpts.literals;
+  }
+
+  const result = redact(raw, redactOpts);
+  if (result.matches.length === 0) {
+    return {
+      path,
+      matchCount: 0,
+      bytesWritten: 0,
+    };
+  }
+
+  // Custom replacement token? Re-render the redaction with the user's
+  // chosen string instead of `<REDACTED:foo>`. We do this by replacing
+  // every match site right-to-left in the original `raw`.
+  const replacement = options.replacement;
+  const redactedText =
+    replacement === undefined
+      ? result.text
+      : (() => {
+          // Sort by start ascending; we already have non-overlapping matches.
+          const matches = [...result.matches].sort((a, b) => a.start - b.start);
+          let out = raw;
+          for (let i = matches.length - 1; i >= 0; i--) {
+            const m = matches[i];
+            if (!m) continue;
+            out = out.slice(0, m.start) + replacement + out.slice(m.end);
+          }
+          return out;
+        })();
+
+  if (options.dryRun) {
+    return {
+      path,
+      matchCount: result.matches.length,
+      bytesWritten: 0,
+    };
+  }
+
+  const ts = isoCompact(new Date());
+  const backupPath = options.backup === false ? undefined : `${path}.keynv.bak.${ts}`;
+  if (backupPath !== undefined) {
+    try {
+      await copyFile(path, backupPath);
+    } catch (err) {
+      return {
+        path,
+        matchCount: result.matches.length,
+        bytesWritten: 0,
+        skipped: true,
+        skipReason: `backup-failed: ${(err as Error).message}`,
+      };
+    }
+  }
+
+  const tmpPath = join(dirname(path), `.keynv.tmp.${ts}.${process.pid}`);
+  try {
+    const fh = await open(tmpPath, 'w', 0o600);
+    try {
+      await fh.writeFile(redactedText, 'utf8');
+      await fh.sync();
+    } finally {
+      await fh.close();
+    }
+    await rename(tmpPath, path);
+  } catch (err) {
+    // Clean up the temp file on failure; leave backup in place so the
+    // user can recover.
+    try {
+      await unlink(tmpPath);
+    } catch {
+      // ignore
+    }
+    return {
+      path,
+      matchCount: result.matches.length,
+      bytesWritten: 0,
+      skipped: true,
+      skipReason: `write-failed: ${(err as Error).message}`,
+    };
+  }
+
+  const written = Buffer.byteLength(redactedText, 'utf8');
+  return {
+    path,
+    matchCount: result.matches.length,
+    bytesWritten: written,
+    ...(backupPath !== undefined ? { backupPath } : {}),
+  };
+}
+
+function isoCompact(d: Date): string {
+  // Filesystem-safe stamp: 20260518T194913Z
+  return `${d.toISOString().replace(/[-:]/g, '').replace(/\..+$/, 'Z')}`;
+}
+
+/** Convenience for surfaces that have a single file path. */
+export async function rewriteSingleFile(
+  path: string,
+  options: RewriteOptions,
+): Promise<RewriteFileResult> {
+  return rewriteFile(path, options);
+}

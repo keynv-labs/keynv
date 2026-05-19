@@ -1,4 +1,5 @@
 import { crypto } from '@keynv/core';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { hashPassword } from '../auth/password.js';
@@ -6,6 +7,7 @@ import { openDb } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { newOrgId, newUserId } from '../lib/id.js';
 import { makeLogger } from '../lib/logger.js';
+import { ensurePendingApproval } from '../routes/approvals.js';
 
 const SILENT_LOGGER = makeLogger('silent');
 
@@ -849,6 +851,115 @@ describe('B2 regression — cross-org access is denied', () => {
       h.cleanup();
     }
   });
+
+  // Regression for AUDIT-FINDINGS-2 H3: the non-admin path on
+  // GET /v1/projects ran without an org_id filter, so a developer in
+  // org A would load every org's project rows into the Node heap
+  // before the in-memory membership filter ran.
+  it('developer in org A sees only org-A projects via GET /v1/projects', async () => {
+    const h = await twoOrgHarness();
+    try {
+      // Add a developer to org A.
+      const devEmail = 'dev-a@team.test';
+      const devPassword = 'dev-a-password-12345';
+
+      const orgARes = await h.app.request('http://localhost/v1/projects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({
+          name: 'project-a',
+          environments: [{ name: 'dev', tier: 'non-production' }],
+        }),
+      });
+      const projectA = (await orgARes.json()) as { id: string };
+
+      // Owner B creates a project in org B — the rogue tenant.
+      const orgBRes = await h.app.request('http://localhost/v1/projects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenB}` },
+        body: JSON.stringify({
+          name: 'project-b',
+          environments: [{ name: 'dev', tier: 'non-production' }],
+        }),
+      });
+      const projectB = (await orgBRes.json()) as { id: string };
+
+      // Owner A invites the developer + grants them access to project-a.
+      const inviteRes = await h.app.request('http://localhost/v1/users', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({ email: devEmail, password: devPassword, org_role: 'developer' }),
+      });
+      expect(inviteRes.status).toBe(201);
+      const memberRes = await h.app.request(`http://localhost/v1/projects/${projectA.id}/members`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({ email: devEmail, role: 'developer' }),
+      });
+      expect(memberRes.status).toBe(201);
+
+      // Developer logs in and lists projects.
+      const devToken = await login(h.app, devEmail, devPassword);
+      const listRes = await h.app.request('http://localhost/v1/projects', {
+        headers: { authorization: `Bearer ${devToken}` },
+      });
+      expect(listRes.status).toBe(200);
+      const body = (await listRes.json()) as { projects: Array<{ id: string; name: string }> };
+
+      const ids = body.projects.map((p) => p.id);
+      expect(ids).toContain(projectA.id);
+      expect(ids).not.toContain(projectB.id);
+      expect(body.projects.every((p) => p.name !== 'project-b')).toBe(true);
+    } finally {
+      h.cleanup();
+    }
+  });
+
+  // Regression for AUDIT-FINDINGS-2 H5: PATCH /v1/users/:id/org-role
+  // and DELETE /v1/users/:id mutated by id only. The SELECT correctly
+  // scoped to the caller's org so cross-org requests already 404, but
+  // a future concurrent org-move between SELECT and UPDATE could land
+  // the mutation on the wrong row. Including org_id in the WHERE
+  // closes that seam.
+  it('owner B cannot patch or delete a user that belongs to org A', async () => {
+    const h = await twoOrgHarness();
+    try {
+      const devEmail = 'dev-x@team.test';
+      const devPassword = 'dev-x-password-12345';
+      const inviteRes = await h.app.request('http://localhost/v1/users', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({ email: devEmail, password: devPassword, org_role: 'developer' }),
+      });
+      expect(inviteRes.status).toBe(201);
+      const dev = (await inviteRes.json()) as { id: string };
+
+      const patch = await h.app.request(`http://localhost/v1/users/${dev.id}/org-role`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenB}` },
+        body: JSON.stringify({ org_role: 'reader' }),
+      });
+      expect(patch.status).toBe(404);
+
+      const del = await h.app.request(`http://localhost/v1/users/${dev.id}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
+      expect(del.status).toBe(404);
+
+      // Owner A confirms the dev row is still intact and untouched.
+      const listA = await h.app.request('http://localhost/v1/users', {
+        headers: { authorization: `Bearer ${h.tokenA}` },
+      });
+      const aBody = (await listA.json()) as {
+        users: Array<{ id: string; org_role: string }>;
+      };
+      const stillDev = aBody.users.find((u) => u.id === dev.id);
+      expect(stillDev?.org_role).toBe('developer');
+    } finally {
+      h.cleanup();
+    }
+  });
 });
 
 describe('User management — DELETE /v1/users/:id', () => {
@@ -1399,6 +1510,71 @@ describe('Approvals — /v1/projects/:id/approvals', () => {
       },
     );
     expect(grant2.status).toBe(404);
+  });
+
+  // Regression for AUDIT-FINDINGS-2 H4: ensurePendingApproval used to
+  // do a SELECT then INSERT without atomicity. Two parallel reads of
+  // the same alias by the same developer could both pass the
+  // existence check and both insert a pending row, doubling the
+  // lead's queue.
+  it('parallel ensurePendingApproval calls collapse to a single pending row', async () => {
+    const { db, raw } = openDb({ path: ':memory:', migrate: true });
+    try {
+      const orgId = newOrgId();
+      const ownerId = newUserId();
+      const requesterId = newUserId();
+      await db.insert(schema.orgs).values({ id: orgId, name: 'acme' });
+      await db.insert(schema.users).values([
+        {
+          id: ownerId,
+          org_id: orgId,
+          email: 'owner@team.test',
+          password_hash: await hashPassword('owner-password-12345'),
+          org_role: 'owner',
+        },
+        {
+          id: requesterId,
+          org_id: orgId,
+          email: 'dev@team.test',
+          password_hash: await hashPassword('dev-password-12345'),
+          org_role: 'developer',
+        },
+      ]);
+      const projectId = 'p_test_race';
+      await db.insert(schema.projects).values({
+        id: projectId,
+        org_id: orgId,
+        name: 'race',
+        dek_wrapped: Buffer.from([0]),
+        dek_nonce: Buffer.from([0]),
+      });
+
+      const alias = '@race.prod.db_password';
+      const N = 8;
+      const results = await Promise.all(
+        Array.from({ length: N }, () =>
+          ensurePendingApproval({ db, projectId, alias, requesterUserId: requesterId }),
+        ),
+      );
+
+      const rows = await db
+        .select({ id: schema.approvals.id, status: schema.approvals.status })
+        .from(schema.approvals)
+        .where(eq(schema.approvals.project_id, projectId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.status).toBe('pending');
+
+      // Every caller must see the same winning id.
+      const ids = new Set(results.map((r) => r.id));
+      expect(ids.size).toBe(1);
+      expect(ids.has(rows[0]?.id ?? '')).toBe(true);
+
+      // Exactly one creator (the others took the conflict branch).
+      const createdCount = results.filter((r) => r.created).length;
+      expect(createdCount).toBe(1);
+    } finally {
+      raw.close();
+    }
   });
 });
 

@@ -249,10 +249,11 @@ describe('findEnvFilesRecursive', () => {
     mkdirSync(join(root, 'apps', 'api'), { recursive: true });
     writeFileSync(join(root, 'apps', 'api', '.env'), '');
     expect(findEnvFilesRecursive(root, { maxDepth: 1 }).map((h) => h.relativeDir)).toEqual(['']);
-    expect(findEnvFilesRecursive(root, { maxDepth: 5 }).map((h) => h.relativeDir).sort()).toEqual([
-      '',
-      'apps/api',
-    ]);
+    expect(
+      findEnvFilesRecursive(root, { maxDepth: 5 })
+        .map((h) => h.relativeDir)
+        .sort(),
+    ).toEqual(['', 'apps/api']);
   });
 
   it('excludes .keynv.env and .keynv.<env>.env (own outputs) everywhere', () => {

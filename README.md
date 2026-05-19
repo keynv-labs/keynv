@@ -1,63 +1,67 @@
 # keynv
 
-> Self-hosted secrets manager with an AI-safety layer. Aliases instead of
-> values; AI agents never see real credentials.
+> Runtime text-surface protection for AI coding workflows.
 
-Store your team's API keys, database passwords, and SSH credentials in one
-encrypted vault. Reference them everywhere by alias (`@billing.prod.db_password`)
-instead of raw values. Roles, audit log, and a CLI that injects the real values
-into a privileged subprocess your AI agent's process tree can't read.
+Your AI agent's transcripts, your shell history, and your terminal
+output are leaking secrets right now. keynv keeps them out, in real
+time, on your machine. No cloud. No re-architecting how you work.
 
 ```text
-your code:           keynv exec -- mysql -p@billing.prod.db_password
-                                       │
-                                       ▼
-the AI agent sees:   "@billing.prod.db_password" (just the alias literal)
-the database sees:   the actual password (decrypted in a privileged subprocess)
+$ keynv doctor
+
+  !  zsh history                 5 likely secrets across 1 file
+  !  Claude Code transcripts     62,306 likely secrets across 73 files
+  ·  Cursor logs                 clean
+
+  Total: 62,311 likely secrets across 74 files.
+
+  Top patterns:
+    aws-access-key-id       90
+    openai-api-key          81
+    github-pat-classic      59
+    jwt                     59
+    slack-webhook           45
+    stripe-live-secret-key  34
+    postgres-uri            515
+    ...
 ```
 
-> [!NOTE]
-> **Two paths in.** Self-host today, or use **keynv Cloud** when it lands.
-> Both run the same code; only the operations layer differs.
+That's one developer machine on a normal workday. Vendor-prefixed token
+leaks are common, postgres URIs with credentials are extremely common,
+and almost every AI agent session has at least one. The same machine
+would pass any storage-era secret-manager audit clean.
+
+keynv finds the leaks. Then it fixes them — atomically, with backups —
+and stops new ones happening.
+
+```bash
+keynv scrub               # retroactively clean what doctor found
+keynv shell install       # prevent new leaks from landing in shell history
+keynv watch start         # scrub live AI agent sessions in real time
+keynv exec -- npm run dev # agents reference aliases; real values stay in a subprocess they can't see
+```
+
+See [`docs/00-vision.md`](./docs/00-vision.md) for the long form;
+[`docs/02-threat-model.md`](./docs/02-threat-model.md) for what keynv
+defends against and what it explicitly doesn't.
 
 ---
 
-## Two paths
+## What keynv is not
 
-|                       | Self-host (available)                   | keynv Cloud (coming)                  |
-| --------------------- | --------------------------------------- | ------------------------------------- |
-| **Deploy**            | Coolify / Docker / k8s — 15 min          | sign-up flow                           |
-| **Cost**              | $0 (you pay your own infra)              | $0 free tier · Pro tier above          |
-| **Limits**            | none                                     | Free: 3 projects × 3 envs × 5 members |
-| **Audit retention**   | infinite (your DB)                       | 7 days free · 90 days Pro              |
-| **SSO / Approvals**   | Phase 6 commercial module                | Pro tier                               |
-| **Secret rotation**   | Phase 6 commercial module                | Pro tier                               |
-| **Data sovereignty**  | full (your machine)                      | shared infra (Pro: dedicated option)   |
-| **Updates**           | manual `git pull` / Coolify auto-deploy  | rolling, automatic                     |
+These categories already have mature incumbents. keynv does not compete
+with them:
 
-> [!IMPORTANT]
-> **keynv Cloud isn't built yet.** Self-host is the only working path
-> today; the Cloud option is what Phase 6 ships. The table above is the
-> committed plan, not a marketing fiction — see
-> [`docs/roadmap.md`](./docs/roadmap.md) for the actual delivery state.
+- ❌ Vault / Doppler / Infisical / 1Password alternative
+- ❌ ".env replacement"
+- ❌ Secrets manager
+- ❌ Enterprise SSO / SCIM / federation
+- ❌ Compliance theatre
 
----
-
-## Why it exists
-
-Developers leak credentials constantly — `.env` files committed to repos, keys
-left in shell history, tokens in tool outputs. AI agents made this worse:
-every command, every file, every diff is shipped to a vendor's logs. In 2024
-GitHub had **23.7M hardcoded secrets** pushed (+25% YoY). Existing vaults
-(HashiCorp, Doppler, Infisical, 1Password) are mature but none were designed
-around AI agents being permanent residents in your terminal.
-
-keynv's wager: if your code only references `@aliases`, and resolution happens
-inside a process the agent can't see, the agent literally cannot leak the
-value — even if it tries.
-
-Read [`docs/02-threat-model.md`](./docs/02-threat-model.md) for the full
-attack-surface analysis.
+If your problem is "where do I store the secret," those tools solved
+that already. keynv plugs in next to them (or to its own local SQLite
+vault). Storage is an implementation detail. Runtime text-surface
+protection is the product.
 
 ---
 
@@ -82,56 +86,112 @@ Five-row, project-scoped permission matrix. Lives in `packages/rbac`.
 | **Developer** | Read assigned secrets via alias; no UI access to plaintext values |
 | **Reader** | Read-only on metadata; can't resolve values |
 
-### Two products in one
+### Two primitives, one job
 
-Same vault, two surfaces:
+**1. Alias-first resolution.** Developers and agents reference
+`@prod.database.url`. The runtime resolves the alias to the real
+value ephemerally — inside a privileged subprocess your AI agent's
+process tree cannot read. Output through the redactor. Audit trail
+per resolution event.
 
-- **Team secrets manager** — encrypted SQLite vault, RBAC, append-only
-  hash-chained audit, CLI for daily ops, web UI for team leads.
-- **AI-safety layer** — `keynv exec` shell wrapper, `keynv-mcp` MCP server,
-  output redactor, TUI-guided agent onboarding.
+```text
+your code:           keynv exec -- mysql -p@billing.prod.db_password
+                                       │
+                                       ▼
+the AI agent sees:   "@billing.prod.db_password" (just the alias literal)
+the database sees:   the actual password (decrypted in a privileged subprocess)
+```
 
-You decide how aggressively to lock each agent. They share the vault.
+**2. Text-surface scrubbing.** Every text surface where a secret
+could leak — shell history files, Claude Code session JSONL, Cursor
+logs, terminal stdout, CI output — is monitored, scrubbed, or
+pre-empted. Five commands cover the lifecycle:
+
+| Command | What it does |
+|---|---|
+| `keynv doctor` | Read-only retro scan; counts likely leaks across all known surfaces |
+| `keynv scrub` | Atomic in-place rewrite with `.keynv.bak.<ts>` backups |
+| `keynv shell install` | Preventive zsh/bash/fish history hook (pure regex, no per-command subprocess) |
+| `keynv watch start` | Real-time chokidar daemon — scrubs live AI agent sessions on the fly |
+| `keynv exec` | Alias resolution + automatically registers values with the running watcher so even custom-format secrets get caught |
+
+The two layers compose. The alias half catches secrets before they
+enter a surface. The scrubbing half catches the ones that slip through
+(`cat .env`, a stack trace with a header, a copied error message).
 
 ---
 
 ## Quick start
 
-### Self-host
+### 1. Find out where you're leaking
+
+```bash
+npm install -g @keynv/cli
+keynv doctor
+```
+
+Scan only — nothing is rewritten, no network calls. Match previews are
+bounded to 3 characters; raw values never appear in the output.
+
+### 2. Clean what's already there
+
+```bash
+keynv scrub --dry-run     # preview the plan
+keynv scrub               # interactive confirm; atomic + backups
+```
+
+Files mtime'd in the last 10 seconds are skipped by default (likely
+being actively written by a live AI session); pass `--include-active`
+to override.
+
+### 3. Prevent new leaks
+
+```bash
+keynv shell install       # marked block goes in your ~/.zshrc / ~/.bashrc
+keynv shell status        # show what's installed where
+keynv shell uninstall     # cleanly remove
+```
+
+The hook scrubs secret-shaped substrings before each command lands in
+`~/.zsh_history`. POSIX-ERE regex (no per-command subprocess unless a
+match fires). Pattern bank mirrors `@keynv/redactor`'s vendor-prefixed
+tokens (AWS, GCP, GitHub, Stripe, JWT, Slack, OpenAI, Anthropic) plus
+credential-bearing URIs.
+
+### 4. Run the real-time watcher
+
+```bash
+keynv watch start         # foreground; Ctrl-C to stop
+keynv watch status        # pid, surfaces, scrub counts
+keynv watch stop          # SIGTERM → SIGKILL escalation after 15s
+```
+
+The watcher subscribes to `~/.claude/projects/**/*.jsonl` (Claude Code
+transcripts) and `~/Library/Application Support/Cursor/logs/**/*.log`
+(Cursor) via chokidar, debounces writes at 1 second, and atomically
+rewrites matched substrings. Lifecycle and per-event audit lands in
+`~/.local/share/keynv/watcher.log`.
+
+### 5. Use aliases in your daily workflow
+
+The self-host server + vault gives you alias storage. Initial setup:
 
 - [Coolify walkthrough (recommended)](deploy/COOLIFY.md) — 15 minutes
 - [Docker Compose guide](deploy/README.md)
 
-Once deployed, verify your server is up:
+Once deployed:
 
 ```bash
 curl https://api.keynv.example.com/v1/health
-# → {"ok":true,"version":"0.1.0",...}
-```
-
-Install the CLI and open the TUI:
-
-```bash
-npm install -g @keynv/cli
-# or: pnpm add -g @keynv/cli
-keynv
-```
-
-The first run lets you choose keynv.dev or your self-hosted API URL, opens your
-browser, stores the session in the OS keychain, then asks whether to set up the
-current project.
-
-From the menu you create projects, add environments, and load secrets without
-memorizing subcommands.
-
-If you prefer scripts or CI, the same things still work as one-shots:
-
-```bash
+keynv login               # browser flow; session lands in OS keychain
 keynv project create demo
 keynv secret create @demo.dev.api_key --value 'whatever'
 ```
 
-> Prefer a standalone binary over Node? Each release also publishes
+Or use the menu — running `keynv` with no args in an interactive
+terminal opens a TUI that walks through the same operations.
+
+> Prefer a standalone binary over Node? Each release publishes
 > `keynv-{darwin,linux,windows}-{arm64,x64}` archives at
 > [GitHub Releases](https://github.com/keynv-labs/keynv/releases) with
 > SHA256SUMS for verification.
@@ -181,10 +241,6 @@ In `package.json` it disappears into the script:
 > in the loop. `next dev` works fine; for production builds either
 > pin `next@15` or wait for the upstream fix.
 
-### keynv Cloud
-
-Star this repo to be notified when sign-up opens. Phase 6 deliverable.
-
 ---
 
 ## Status
@@ -193,14 +249,20 @@ Star this repo to be notified when sign-up opens. Phase 6 deliverable.
 |---|---|---|
 | 0 | Discovery + spike measurements | done |
 | 1 | Core vault: server, CLI, RBAC, audit, encryption | done |
-| 2 | AI safety layer: `keynv exec`, `keynv-mcp`, redactor, installers | done |
+| 2 | Alias resolution: `keynv exec`, `keynv-mcp`, redactor, installers | done |
 | 3 | Connection testers: postgres, mysql, redis, ssh, http, AWS, GCP | done |
 | 4 | Web UI for team leads (Next.js 15) | in progress (slice 9 of ~11) |
-| 5 | Hardening + public OSS release | not started |
-| 6 | Commercial tier + keynv Cloud | not started |
+| A | **Runtime text-surface protection — primitives** (`doctor`, `scrub`, `shell install`, `watch`, fingerprint registry) | **done** |
+| B | MCP capability tokens + `keynv.run` agent-bound subprocess execution | not started |
+| C | First-class agent integrations (Claude Code skill, Cursor extension) | not started |
 
-Versioning is unstable until Phase 5 ships — schemas, APIs, and config formats
+Versioning is unstable pre-1.0 — schemas, APIs, and config formats
 may change without backwards-compatibility shims.
+
+> A self-hosted Cloud option may exist later as a commercial
+> deliverable. The OSS path is local-first and the only supported
+> deployment for now. See [`docs/00-vision.md`](./docs/00-vision.md)
+> for the positioning.
 
 ---
 
@@ -208,7 +270,9 @@ may change without backwards-compatibility shims.
 
 | | |
 |---|---|
-| [Threat model](./docs/02-threat-model.md) | What we defend against |
+| [Vision](./docs/00-vision.md) | What keynv is, what it's not, where it goes |
+| [Threat model](./docs/02-threat-model.md) | What we defend against, what we explicitly don't |
+| [Text surfaces](./docs/03-text-surfaces.md) | The `TextSurface` contract, rewrite semantics, race window |
 | [Architecture](./docs/01-architecture.md) | Components, data flow, trust boundaries |
 | [Encryption design](./docs/05-encryption-design.md) | KEK / DEK split, libsodium primitives |
 | [Backup/restore runbook](./docs/backup-restore-runbook.md) | RPO/RTO, restore drills, KEK loss handling |

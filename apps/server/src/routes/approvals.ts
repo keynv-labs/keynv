@@ -343,6 +343,10 @@ export async function findActiveGrant(args: {
  * isn't already one. Returns the pre-existing or newly-created row id.
  * Idempotent — repeated reads from the same developer don't create
  * duplicate pending rows in the lead's queue.
+ *
+ * Race-safe via the partial UNIQUE index added in migration 0008.
+ * Concurrent inserts collapse into one row at the database; we then
+ * read the winning row id back so all callers agree on the same id.
  */
 export async function ensurePendingApproval(args: {
   db: Db;
@@ -350,6 +354,24 @@ export async function ensurePendingApproval(args: {
   alias: string;
   requesterUserId: string;
 }): Promise<{ id: string; created: boolean }> {
+  const id = newApprovalId();
+  const inserted = await args.db
+    .insert(schema.approvals)
+    .values({
+      id,
+      project_id: args.projectId,
+      alias: args.alias,
+      requester_user_id: args.requesterUserId,
+      status: 'pending',
+    })
+    .onConflictDoNothing()
+    .returning({ id: schema.approvals.id });
+  if (inserted[0]?.id === id) {
+    return { id, created: true };
+  }
+
+  // Conflict path: another writer (or a prior request) already has a
+  // pending row for this triple. Read it so callers see the winner's id.
   const existing = await args.db
     .select({ id: schema.approvals.id })
     .from(schema.approvals)
@@ -362,15 +384,18 @@ export async function ensurePendingApproval(args: {
       ),
     )
     .limit(1);
-  if (existing[0]) return { id: existing[0].id, created: false };
-
-  const id = newApprovalId();
-  await args.db.insert(schema.approvals).values({
-    id,
-    project_id: args.projectId,
-    alias: args.alias,
-    requester_user_id: args.requesterUserId,
-    status: 'pending',
-  });
-  return { id, created: true };
+  if (!existing[0]) {
+    // Should be unreachable: the conflict implies a pending row exists.
+    // If a concurrent grant/deny flipped it out of pending between the
+    // INSERT and SELECT, fall back to inserting fresh.
+    await args.db.insert(schema.approvals).values({
+      id,
+      project_id: args.projectId,
+      alias: args.alias,
+      requester_user_id: args.requesterUserId,
+      status: 'pending',
+    });
+    return { id, created: true };
+  }
+  return { id: existing[0].id, created: false };
 }

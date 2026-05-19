@@ -1,6 +1,7 @@
 'use client';
 
 import { dismissOnboardingAction } from '@/app/(authed)/actions';
+import { useCsrfToken } from '@/components/security/csrf-field';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import {
@@ -29,6 +30,7 @@ interface StepDef {
 }
 
 export function OnboardingChecklist({ initialStatus, compact = false }: Props) {
+  const csrfToken = useCsrfToken();
   const [status] = useState(initialStatus);
   const [dismissed, setDismissed] = useState<boolean>(initialStatus.dismissed);
 
@@ -40,7 +42,7 @@ export function OnboardingChecklist({ initialStatus, compact = false }: Props) {
   async function handleDismiss() {
     setDismissed(true);
     notify.info('Hidden. You can re-enable from Settings if you change your mind.');
-    await dismissOnboardingAction();
+    await dismissOnboardingAction(csrfToken);
   }
 
   const steps = buildSteps();

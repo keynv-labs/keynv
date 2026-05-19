@@ -54,6 +54,15 @@ describe('validateAuditPayload — happy paths', () => {
       { project_id: 'p_1', env: 'dev', key: 'db_pass', from_version: 1, to_version: 2 },
     ],
     ['approval.requested', { alias: '@p.prod.db' }],
+    [
+      'user.invited',
+      {
+        target_user_id: 'u_1',
+        email: 'invitee@team.test',
+        org_role: 'developer',
+        org_id: 'o_1',
+      },
+    ],
   ] as Array<[AuditEventType, Record<string, unknown>]>)(
     'accepts %s with %j',
     (eventType, payload) => {

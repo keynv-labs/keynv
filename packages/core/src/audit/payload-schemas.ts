@@ -40,7 +40,9 @@ export const PAYLOAD_SCHEMAS = {
   'auth.password_change.denied': empty,
   'cli_token.created': z.object({ token_id: z.string().min(1), name: z.string().min(1) }).strict(),
   'cli_token.revoked': z.object({ token_id: z.string().min(1), name: z.string().min(1) }).strict(),
-  'user.invited': z.object({ target_user_id: userId, email, org_role: orgRole }).strict(),
+  'user.invited': z
+    .object({ target_user_id: userId, email, org_role: orgRole, org_id: orgId })
+    .strict(),
   'user.removed': z.object({ target_user_id: userId, email }).strict(),
   'user.role_changed': z.object({ target_user_id: userId, org_role: orgRole }).strict(),
   'project.created': z

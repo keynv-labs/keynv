@@ -1,0 +1,32 @@
+/**
+ * Sanitises a user-controlled `next` redirect target so that
+ * `redirect(safeNext(...))` can never bounce the browser off the
+ * current origin. Anything that isn't a same-origin path falls back to
+ * the supplied default.
+ *
+ * Why: `next.startsWith('/')` is not enough — protocol-relative URLs
+ * (`//evil.com`) and backslash variants (`/\\evil.com`, which browsers
+ * normalise to `//evil.com`) both pass that check, and `redirect()`
+ * forwards them verbatim into the `Location` header.
+ */
+export function safeNext(value: string | undefined | null, fallback = '/dashboard'): string {
+  if (typeof value !== 'string' || value.length === 0) return fallback;
+  // Header-injection guard: any C0 control character (incl. CR, LF, NUL)
+  // or DEL must never reach `Location`.
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code <= 0x1f || code === 0x7f) return fallback;
+  }
+  if (!value.startsWith('/')) return fallback;
+  // Protocol-relative or backslash-normalised authority.
+  if (value.startsWith('//') || value.startsWith('/\\')) return fallback;
+  // Defence-in-depth: parse against a known base and demand the origin
+  // doesn't change. Catches anything the prefix checks missed.
+  try {
+    const url = new URL(value, 'http://internal.invalid');
+    if (url.origin !== 'http://internal.invalid') return fallback;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return fallback;
+  }
+}

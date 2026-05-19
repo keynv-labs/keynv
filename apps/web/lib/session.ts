@@ -12,6 +12,16 @@ export const COOKIE_NAME = 'keynv_session';
 export const ONE_WEEK_S = 7 * 24 * 3600;
 const SEALED_PREFIX = 'v2';
 
+/**
+ * After this instant, the legacy v1 HMAC-only cookie format is no
+ * longer accepted on incoming requests — callers are forced through
+ * the login flow once, at which point they get a fresh v2 sealed
+ * cookie. v1 only offered integrity (HMAC) and no confidentiality;
+ * the seven-day session window plus this sunset bound the residual
+ * risk to a single migration window.
+ */
+export const SESSION_V1_SUNSET_MS = Date.UTC(2026, 6, 1, 0, 0, 0); // 2026-07-01T00:00:00Z
+
 function getSecret(): string {
   const secret = process.env.KEYNV_WEB_SESSION_SECRET;
   if (secret && secret.length >= 32) return secret;
@@ -79,9 +89,15 @@ export function encodeSession(session: Session): string {
   return seal(JSON.stringify(session));
 }
 
-export function decodeSession(raw: string): Session | null {
+export function decodeSession(raw: string, now: number = Date.now()): Session | null {
   try {
-    const payload = raw.startsWith(`${SEALED_PREFIX}.`) ? unseal(raw) : verify(raw);
+    const isV2 = raw.startsWith(`${SEALED_PREFIX}.`);
+    if (!isV2 && now >= SESSION_V1_SUNSET_MS) {
+      // Legacy unsealed cookies are no longer accepted; surface as
+      // unauthenticated so callers re-login and get a v2 cookie.
+      return null;
+    }
+    const payload = isV2 ? unseal(raw) : verify(raw);
     if (!payload) return null;
     return JSON.parse(payload) as Session;
   } catch {
