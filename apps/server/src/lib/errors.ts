@@ -59,12 +59,7 @@ export interface ApiError {
   readonly details?: unknown;
 }
 
-export function jsonError(
-  c: Context,
-  code: ErrorCode,
-  message: string,
-  details?: unknown,
-) {
+export function jsonError(c: Context, code: ErrorCode, message: string, details?: unknown) {
   const body: { error: ApiError } = {
     error: { code, message, ...(details ? { details } : {}) },
   };

@@ -79,7 +79,8 @@ describe('scanFile', () => {
     const path = join(workdir, 'history');
     // 40-char random-ish token that the entropy detector would
     // otherwise flag (no vendor prefix; high entropy).
-    await writeFile(path, 'TOKEN=k9Lp2X7vQ4mN8jR3wY6tZ1bC5sA0eF7dG8hP6qJ2');
+    const entropyFixture = ['k9Lp2X7vQ4', 'mN8jR3wY6', 'tZ1bC5sA0e', 'F7dG8hP6qJ2'].join('');
+    await writeFile(path, `TOKEN=${entropyFixture}`);
     const withEntropy = await scanFile(path);
     expect(withEntropy.matchCount).toBeGreaterThanOrEqual(1);
     const noEntropy = await scanFile(path, { entropy: false });

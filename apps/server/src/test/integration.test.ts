@@ -487,7 +487,10 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
     const res = await harness.app.request('http://localhost/v1/projects', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: 'rotation-demo', environments: [{ name: 'dev', tier: 'non-production' }] }),
+      body: JSON.stringify({
+        name: 'rotation-demo',
+        environments: [{ name: 'dev', tier: 'non-production' }],
+      }),
     });
     expect(res.status).toBe(201);
     const body = (await res.json()) as { id: string };
@@ -508,10 +511,18 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
     // Set rotation interval
     const setRes = await harness.app.request(
       `http://localhost/v1/projects/${projectId}/secrets/dev/DB_PASS/rotation`,
-      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 30 }) },
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ interval_days: 30 }),
+      },
     );
     expect(setRes.status).toBe(200);
-    const setBody = (await setRes.json()) as { alias: string; interval_days: number; next_rotation_at: string };
+    const setBody = (await setRes.json()) as {
+      alias: string;
+      interval_days: number;
+      next_rotation_at: string;
+    };
     expect(setBody.alias).toBe('@rotation-demo.dev.DB_PASS');
     expect(setBody.interval_days).toBe(30);
     expect(setBody.next_rotation_at).toBeTruthy();
@@ -519,10 +530,18 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
     // Rotate the secret
     const rotateRes = await harness.app.request(
       `http://localhost/v1/projects/${projectId}/secrets/dev/DB_PASS/rotate`,
-      { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ new_value: 'rotated-value' }) },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ new_value: 'rotated-value' }),
+      },
     );
     expect(rotateRes.status).toBe(200);
-    const rotateBody = (await rotateRes.json()) as { alias: string; version: number; next_rotation_at: string };
+    const rotateBody = (await rotateRes.json()) as {
+      alias: string;
+      version: number;
+      next_rotation_at: string;
+    };
     expect(rotateBody.version).toBe(2);
     expect(rotateBody.next_rotation_at).toBeTruthy();
 
@@ -544,7 +563,11 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
 
     const zeroRes = await harness.app.request(
       `http://localhost/v1/projects/${projectId}/secrets/dev/API_KEY/rotation`,
-      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 0 }) },
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ interval_days: 0 }),
+      },
     );
     expect(zeroRes.status).toBe(400);
   });
@@ -562,7 +585,11 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
     // Set very short interval so it becomes overdue immediately
     const setRes = await harness.app.request(
       `http://localhost/v1/projects/${projectId}/secrets/dev/TOKEN/rotation`,
-      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 1 }) },
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ interval_days: 1 }),
+      },
     );
     expect(setRes.status).toBe(200);
 
@@ -573,7 +600,9 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
       { headers: { authorization: `Bearer ${token}` } },
     );
     expect(listDue.status).toBe(200);
-    const listBody = (await listDue.json()) as { secrets: Array<{ alias: string; status: string }> };
+    const listBody = (await listDue.json()) as {
+      secrets: Array<{ alias: string; status: string }>;
+    };
     // Not yet due — status should be "upcoming", not "due"
     expect(listBody.secrets.length).toBeGreaterThanOrEqual(0);
 
@@ -584,7 +613,14 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
       { headers: { authorization: `Bearer ${token}` } },
     );
     expect(listAll.status).toBe(200);
-    const allBody = (await listAll.json()) as { secrets: Array<{ alias: string; rotation_interval_days: number; next_rotation_at: string | null; status: string }> };
+    const allBody = (await listAll.json()) as {
+      secrets: Array<{
+        alias: string;
+        rotation_interval_days: number;
+        next_rotation_at: string | null;
+        status: string;
+      }>;
+    };
     expect(allBody.secrets.length).toBe(1);
     expect(allBody.secrets[0]?.alias).toBe('@rotation-demo.dev.TOKEN');
     expect(allBody.secrets[0]?.rotation_interval_days).toBe(1);
@@ -621,7 +657,11 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
 
     await harness.app.request(
       `http://localhost/v1/projects/${projectId}/secrets/dev/AUDIT_KEY/rotation`,
-      { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ interval_days: 90 }) },
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ interval_days: 90 }),
+      },
     );
 
     const auditRes = await harness.app.request(
@@ -629,7 +669,9 @@ describe('Rotation — set interval, list rotations, rotation includes metadata'
       { headers: { authorization: `Bearer ${token}` } },
     );
     expect(auditRes.status).toBe(200);
-    const auditBody = (await auditRes.json()) as { entries: Array<{ event_type: string; payload: { key: string; interval_days: number } }> };
+    const auditBody = (await auditRes.json()) as {
+      entries: Array<{ event_type: string; payload: { key: string; interval_days: number } }>;
+    };
     expect(auditBody.entries.length).toBe(1);
     expect(auditBody.entries[0]?.event_type).toBe('rotation.policy_changed');
     expect(auditBody.entries[0]?.payload.key).toBe('AUDIT_KEY');

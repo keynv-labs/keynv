@@ -90,8 +90,11 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install Playwright system dependencies
+        if: runner.os == 'Linux'
+        run: pnpm --filter @keynv/tests-e2e exec playwright install-deps chromium
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm --filter @keynv/tests-e2e exec playwright install chromium
       - name: Run E2E tests
         run: pnpm test:e2e
 

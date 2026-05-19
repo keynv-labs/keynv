@@ -369,10 +369,10 @@ export class SecretSetRotationCommand extends Command {
         alias: string;
         interval_days: number | null;
         next_rotation_at: string | null;
-      }>(
-        `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}/rotation`,
-        { method: 'PATCH', body: { interval_days: intervalDays } },
-      );
+      }>(`/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}/rotation`, {
+        method: 'PATCH',
+        body: { interval_days: intervalDays },
+      });
       this.context.stdout.write(
         `rotation policy for ${data.alias}: interval=${data.interval_days}d, next=${data.next_rotation_at ?? 'TBD'}\n`,
       );
@@ -419,7 +419,7 @@ export class SecretRotationsCommand extends Command {
       }>(`/v1/projects/${projectId}/secrets/rotations${query}`);
 
       if (this.json === true) {
-        this.context.stdout.write(JSON.stringify(data, null, 2) + '\n');
+        this.context.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
         return 0;
       }
 

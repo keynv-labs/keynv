@@ -151,10 +151,7 @@ describe('SHELL_SECRET_ERE pattern bank', () => {
     ['stripe live secret', `${'sk'}_live_${'x'.repeat(24)}`],
     ['anthropic api key', `${'sk'}-ant-api03-${'a'.repeat(24)}`],
     ['openai key', `${'sk'}-proj-${'a'.repeat(20)}`],
-    [
-      'jwt',
-      `${'eyJ'}hbGciOiJIUzI1NiJ9.${'eyJ'}zdWIiOiIxMjM0NTY3ODkwIn0.signaturesigna`,
-    ],
+    ['jwt', `${'eyJ'}hbGciOiJIUzI1NiJ9.${'eyJ'}zdWIiOiIxMjM0NTY3ODkwIn0.signaturesigna`],
     ['postgres uri w/ creds', `${'postgres'}://user:pass@db.example.com:5432/app`],
     ['redis uri w/ creds', `${'redis'}://:secret@cache.example.com:6379`],
   ])('matches a %s shape', (_label, sample) => {

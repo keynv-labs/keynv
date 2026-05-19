@@ -38,6 +38,10 @@ paths = [
   # Server integration tests use throwaway in-memory fixtures.
   '''apps/server/src/test/.*\.test\.ts$''',
 
+  # Text-surface scanner tests intentionally write fake high-entropy
+  # strings to temporary files to assert the detector catches them.
+  '''packages/text-surfaces/src/.*\.test\.ts$''',
+
   # End-to-end security regression suite. Fixtures are vendor-shaped
   # placeholders + a clearly-fake RSA private-key block (only the
   # BEGIN/END markers and a few literal-fake bytes); intentional

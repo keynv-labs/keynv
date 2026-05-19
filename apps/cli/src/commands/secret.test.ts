@@ -7,17 +7,19 @@ import { SecretRotationsCommand, SecretSetRotationCommand } from './secret.js';
 const requestMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../client/http.js', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ApiClient: vi.fn().mockImplementation(function MockApiClient(this: any) {
-    this.ensureHydrated = vi.fn().mockResolvedValue(undefined);
-    this.isLoggedIn = true;
-    this.request = requestMock;
-    return this;
+  ApiClient: vi.fn(function ApiClientMock() {
+    return {
+      ensureHydrated: vi.fn().mockResolvedValue(undefined),
+      isLoggedIn: true,
+      request: requestMock,
+    };
   }),
   isClientError: vi.fn().mockReturnValue(false),
 }));
 
-function attachContext<T extends object>(command: T): { stdout: ReturnType<typeof vi.fn>; stderr: ReturnType<typeof vi.fn> } {
+function attachContext<T extends object>(
+  command: T,
+): { stdout: ReturnType<typeof vi.fn>; stderr: ReturnType<typeof vi.fn> } {
   const stdout = vi.fn();
   const stderr = vi.fn();
   Object.assign(command, { context: { stdout: { write: stdout }, stderr: { write: stderr } } });
@@ -116,7 +118,9 @@ describe('SecretSetRotationCommand', () => {
     const result = await cmd.execute();
     expect(result).toBe(1);
     expect(requestMock).not.toHaveBeenCalled();
-    expect(stderr).toHaveBeenCalledWith('keynv: --interval must be an integer between 1 and 365.\n');
+    expect(stderr).toHaveBeenCalledWith(
+      'keynv: --interval must be an integer between 1 and 365.\n',
+    );
   });
 });
 
@@ -130,7 +134,14 @@ describe('SecretRotationsCommand', () => {
       .mockResolvedValueOnce({ projects: [{ id: 'p_abc', name: 'billing' }] })
       .mockResolvedValueOnce({
         secrets: [
-          { alias: '@billing.dev.db_password', version: 3, rotation_interval_days: 90, rotated_at: '2026-05-01T12:00:00.000Z', next_rotation_at: '2026-07-30T12:00:00.000Z', status: 'upcoming' },
+          {
+            alias: '@billing.dev.db_password',
+            version: 3,
+            rotation_interval_days: 90,
+            rotated_at: '2026-05-01T12:00:00.000Z',
+            next_rotation_at: '2026-07-30T12:00:00.000Z',
+            status: 'upcoming',
+          },
         ],
       });
 
@@ -149,7 +160,14 @@ describe('SecretRotationsCommand', () => {
   it('outputs json when --json flag is set', async () => {
     const payload = {
       secrets: [
-        { alias: '@billing.dev.API_KEY', version: 1, rotation_interval_days: 30, rotated_at: null, next_rotation_at: '2026-06-17T12:00:00.000Z', status: 'due' },
+        {
+          alias: '@billing.dev.API_KEY',
+          version: 1,
+          rotation_interval_days: 30,
+          rotated_at: null,
+          next_rotation_at: '2026-06-17T12:00:00.000Z',
+          status: 'due',
+        },
       ],
     };
     requestMock
@@ -163,7 +181,7 @@ describe('SecretRotationsCommand', () => {
 
     const result = await cmd.execute();
     expect(result).toBe(0);
-    expect(stdout).toHaveBeenCalledWith(JSON.stringify(payload, null, 2) + '\n');
+    expect(stdout).toHaveBeenCalledWith(`${JSON.stringify(payload, null, 2)}\n`);
   });
 
   it('prints empty message when no secrets are due', async () => {

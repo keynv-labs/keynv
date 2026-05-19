@@ -690,10 +690,7 @@ export function secretRoutes(deps: SecretDeps): Hono {
       ).toISOString();
     }
 
-    await deps.db
-      .update(schema.secrets)
-      .set(update)
-      .where(eq(schema.secrets.id, secret.id));
+    await deps.db.update(schema.secrets).set(update).where(eq(schema.secrets.id, secret.id));
 
     await audit(c, deps.db, 'rotation.policy_changed', {
       project_id: projectId,
