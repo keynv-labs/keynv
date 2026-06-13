@@ -141,8 +141,12 @@ async function pickConnectionTarget(): Promise<string | null> {
   const target = await select({
     message: 'Connect to keynv',
     options: [
-      { value: 'cloud', label: 'keynv.dev', hint: 'recommended' },
-      { value: 'self-hosted', label: 'Self-hosted server', hint: 'enter your API URL' },
+      { value: 'cloud', label: 'keynv.dev', hint: 'hosted (beta)' },
+      {
+        value: 'self-hosted',
+        label: 'Self-hosted server',
+        hint: 'recommended — enter your API URL',
+      },
       { value: 'exit', label: 'Exit' },
     ],
   });

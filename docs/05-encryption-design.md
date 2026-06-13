@@ -56,7 +56,7 @@ We do **not** use:
 
 - **Generation**: a 32-byte random DEK is generated at `project create`. The DEK is wrapped with the master KEK (XSalsa20-Poly1305) and stored in the `projects.dek_wrapped` column.
 - **Use**: when a request needs to read/write a secret, the server unwraps the DEK in-process, performs the crypto, and zeroes the unwrapped DEK from memory before returning.
-- **Rotation**: `keynv project rotate-dek <project>` — generates a new DEK, decrypts every secret with the old DEK, re-encrypts with the new DEK in a single transaction. Old DEK is destroyed.
+- **Rotation** _(planned — not yet implemented)_: `keynv project rotate-dek <project>` will generate a new DEK, decrypt every secret with the old DEK, re-encrypt with the new DEK in a single transaction, and destroy the old DEK. The CLI command and `POST /v1/projects/:id/rotate-dek` endpoint are not shipped yet; tracked for a later iteration.
 
 ### Per-secret value encryption
 

@@ -190,11 +190,8 @@ suppress entropy hits.
     }
 
     out.write('  Next:\n');
-    out.write(
-      '    keynv scrub                 # atomic retro-rewrite (with backups)  [Phase A Step 2]\n',
-    );
-    out.write(
-      '    keynv watch enable          # prevent new leaks in real time       [Phase A Step 4]\n',
-    );
+    out.write('    keynv scrub                 # atomic retro-rewrite (with backups)\n');
+    out.write('    keynv shell install         # stop new leaks landing in shell history\n');
+    out.write('    keynv watch start           # scrub live AI-agent sessions in real time\n');
   }
 }

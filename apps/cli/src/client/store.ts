@@ -10,6 +10,7 @@
  * keychain entry an attacker has nothing useful even with full
  * filesystem read access.
  */
+import { DEFAULT_SERVER_URL } from './defaults.js';
 import { clearCredentialsFile, loadCredentialsBlob, saveCredentialsBlob } from './secure-store.js';
 
 export interface Credentials {
@@ -26,7 +27,33 @@ export interface Credentials {
 
 let cache: Credentials | null | undefined;
 
+/**
+ * Builds an ephemeral credential from environment variables, for headless
+ * / CI use where there is no interactive login or on-disk session. When
+ * `KEYNV_TOKEN` is set the CLI authenticates with it as a CLI token
+ * (Bearer) against `KEYNV_SERVER_URL` (or the default server). This takes
+ * precedence over any on-disk session so CI runs are deterministic and
+ * never depend on the OS keychain. Returns null when `KEYNV_TOKEN` is unset.
+ */
+export function credentialsFromEnv(): Credentials | null {
+  const token = process.env.KEYNV_TOKEN;
+  if (!token) return null;
+  return {
+    auth_kind: 'cli_token',
+    server_url: process.env.KEYNV_SERVER_URL ?? DEFAULT_SERVER_URL,
+    user_id: '',
+    email: '',
+    org_id: process.env.KEYNV_ORG ?? '',
+    org_role: '',
+    access_token: token,
+    refresh_token: '',
+    access_expires_at: '',
+  };
+}
+
 export async function loadCredentialsAsync(): Promise<Credentials | null> {
+  const fromEnv = credentialsFromEnv();
+  if (fromEnv) return fromEnv;
   if (cache !== undefined) return cache;
   const blob = await loadCredentialsBlob();
   if (!blob) {
@@ -52,7 +79,7 @@ export async function loadCredentialsAsync(): Promise<Credentials | null> {
  * loadCredentialsAsync.
  */
 export function loadCredentials(): Credentials | null {
-  return cache ?? null;
+  return credentialsFromEnv() ?? cache ?? null;
 }
 
 export async function saveCredentials(creds: Credentials): Promise<void> {
