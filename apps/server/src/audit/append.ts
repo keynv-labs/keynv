@@ -8,6 +8,8 @@ export interface AppendArgs {
   actor_agent: string;
   event_type: auditCore.AuditEventType;
   payload: Record<string, unknown>;
+  /** Active org of the actor; scopes audit reads. Null for system events. */
+  org_id: string | null;
 }
 
 /**
@@ -65,6 +67,7 @@ export async function appendAudit(db: Db, args: AppendArgs): Promise<auditCore.A
         actor_agent: args.actor_agent,
         event_type: args.event_type,
         payload_json: JSON.stringify(payload),
+        org_id: args.org_id,
       })
       .returning({ id: schema.audit.id })
       .all()[0];
@@ -81,12 +84,19 @@ export async function listAudit(
     sinceId?: number | undefined;
     eventType?: string | undefined;
     projectId?: string | undefined;
+    /**
+     * Restrict to entries appended under this org. Pass the caller's active
+     * org for `GET /v1/audit` so cross-org entries are never returned. Omit
+     * only for whole-chain integrity verification (which returns no content).
+     */
+    orgId?: string | undefined;
   } = {},
 ): Promise<auditCore.AuditEntry[]> {
   const limit = Math.min(opts.limit ?? 100, 1000);
   const conditions: ReturnType<typeof sql>[] = [];
   if (opts.sinceId) conditions.push(sql`id > ${opts.sinceId}`);
   if (opts.eventType) conditions.push(sql`event_type = ${opts.eventType}`);
+  if (opts.orgId) conditions.push(sql`org_id = ${opts.orgId}`);
   if (opts.projectId)
     conditions.push(sql`json_extract(payload_json, '$.project_id') = ${opts.projectId}`);
   const whereClause = conditions.length ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isBlockedHost } from './ssrf.js';
+import { isBlockedHostResolved } from './ssrf.js';
 import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const Target = z.object({
@@ -16,7 +16,7 @@ export const mysqlTester: Tester<MysqlTarget> = {
   type: 'mysql',
   schema: Target,
   async test(secret: ResolvedSecret, target: MysqlTarget): Promise<TestResult> {
-    if (isBlockedHost(target.host)) {
+    if (await isBlockedHostResolved(target.host)) {
       return {
         ok: false,
         latency_ms: 0,

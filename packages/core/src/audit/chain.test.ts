@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { GENESIS_HASH, appendEntry, computeHash, verifyChain } from './index.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  GENESIS_HASH,
+  appendEntry,
+  computeHash,
+  configureChainKey,
+  isChainKeyConfigured,
+  verifyChain,
+} from './index.js';
 import type { AuditEntry, AuditInput } from './index.js';
 
 function input(seed: number): AuditInput {
@@ -165,5 +172,56 @@ describe('verifyChain', () => {
     expect(result.ok).toBe(false);
     expect(result.brokenAt).toBe(0);
     expect(result.reason).toBe('prev_hash_mismatch');
+  });
+});
+
+describe('tamper-evident (HMAC) chain key', () => {
+  const KEY = new Uint8Array(32).fill(7);
+  afterEach(() => configureChainKey(null)); // reset module-global between tests
+
+  it('tags keyed hashes with the v1: prefix and verifies them', () => {
+    configureChainKey(KEY);
+    expect(isChainKeyConfigured()).toBe(true);
+    const chain = buildChain(20);
+    expect(chain[0]?.hash.startsWith('v1:')).toBe(true);
+    expect(verifyChain(chain)).toEqual({ ok: true });
+  });
+
+  it('cannot be re-forged by recomputing keyless after a payload edit', () => {
+    configureChainKey(KEY);
+    const chain = buildChain(10);
+    // Attacker (no key) edits a payload and recomputes the hash keyless.
+    configureChainKey(null);
+    const forgedHash = computeHash(chain[5]!.prev_hash, {
+      ...input(5),
+      payload: { alias: '@p.dev.k5', version: 999 },
+    });
+    const tampered = chain.map((e, i) =>
+      i === 5 ? { ...e, payload: { alias: '@p.dev.k5', version: 999 }, hash: forgedHash } : e,
+    );
+    // Verifier (with the key) rejects it: the row is a v1: row, so a keyless
+    // recompute can never match.
+    configureChainKey(KEY);
+    const result = verifyChain(tampered);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('hash_mismatch');
+    expect(result.brokenAt).toBe(5);
+  });
+
+  it('reports a keyed chain as broken when the key is absent at verify time', () => {
+    configureChainKey(KEY);
+    const chain = buildChain(5);
+    configureChainKey(null);
+    expect(verifyChain(chain).ok).toBe(false);
+  });
+
+  it('rejects an entirely keyless chain when a key is configured (full-downgrade protection)', () => {
+    // An attacker who rewrites every row as keyless must NOT pass verification
+    // once the verifier holds the key.
+    configureChainKey(null);
+    const keyless = buildChain(5); // all bare SHA-256
+    expect(keyless[0]?.hash.startsWith('v1:')).toBe(false);
+    configureChainKey(KEY);
+    expect(verifyChain(keyless).ok).toBe(false);
   });
 });

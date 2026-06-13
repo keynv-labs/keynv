@@ -2,15 +2,34 @@ import { createHash, createHmac } from 'node:crypto';
 import { type AuditEntry, type AuditInput, GENESIS_HASH } from './types.js';
 
 /**
- * HMAC key used to prevent chain forgery. Callsites must inject this
- * via configureChainKey() before calling computeHash/appendEntry.
- * Falls back to a SHA-256 hash (no key) when no HMAC key is set, so
- * existing chains remain verifiable.
+ * HMAC key that makes the chain tamper-evident: an attacker with DB write
+ * access cannot recompute hashes without it. The server configures it from
+ * the KEK at startup (see configureChainKey). When no key is set, hashing
+ * uses a plain SHA-256 that is NOT tamper-evident — used only by tests.
+ *
+ * Keyed hashes carry a `v1:` prefix. Verification is STRICT and symmetric to
+ * the current configuration to defeat downgrade attacks: when a key IS
+ * configured every row must be a keyed (`v1:`) HMAC (a bare hash is rejected
+ * as a downgrade); when NO key is configured every row must be a bare keyless
+ * hash. There is intentionally no keyless fallback while a key is present, so
+ * an attacker cannot strip the prefix and recompute keyless to forge a row.
+ *
+ * Migration note: turning the key on establishes tamper-evidence for rows
+ * written from then on. A chain that contains rows written by an older
+ * keyless build will not HMAC-verify under a configured key — those rows are
+ * retained but reported as not verifiable.
  */
 let chainHmacKey: Uint8Array | null = null;
 
-export function configureChainKey(key: Uint8Array): void {
+const HMAC_PREFIX = 'v1:';
+
+export function configureChainKey(key: Uint8Array | null): void {
   chainHmacKey = key;
+}
+
+/** True once a tamper-evident chain key has been configured. */
+export function isChainKeyConfigured(): boolean {
+  return chainHmacKey !== null;
 }
 
 /**
@@ -32,13 +51,8 @@ function canonicalize(value: unknown): string {
   return `{${parts.join(',')}}`;
 }
 
-/**
- * Computes the hash for an audit entry. When an HMAC key is configured
- * (via configureChainKey), uses HMAC-SHA-256 for key-binding; otherwise
- * falls back to plain SHA-256 for backward compatibility.
- */
-export function computeHash(prevHash: string, input: AuditInput): string {
-  const canonical = canonicalize({
+function canonicalOf(prevHash: string, input: AuditInput): string {
+  return canonicalize({
     prev_hash: prevHash,
     ts: input.ts,
     actor_user_id: input.actor_user_id,
@@ -46,10 +60,38 @@ export function computeHash(prevHash: string, input: AuditInput): string {
     event_type: input.event_type,
     payload: input.payload,
   });
+}
+
+/**
+ * Computes the hash for a NEW audit entry. When a chain key is configured
+ * (via configureChainKey) this is an HMAC-SHA-256 tagged with the `v1:`
+ * prefix; otherwise it is a plain SHA-256 (not tamper-evident, legacy/test
+ * only).
+ */
+export function computeHash(prevHash: string, input: AuditInput): string {
+  const canonical = canonicalOf(prevHash, input);
   if (chainHmacKey) {
-    return createHmac('sha256', chainHmacKey).update(canonical, 'utf8').digest('hex');
+    return HMAC_PREFIX + createHmac('sha256', chainHmacKey).update(canonical, 'utf8').digest('hex');
   }
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
+}
+
+/**
+ * Recomputes a stored hash and reports whether it matches, STRICTLY in the
+ * current key mode so a downgrade is impossible:
+ *  - key configured  → the row MUST be a `v1:` HMAC; a bare hash is rejected.
+ *  - no key configured → the row MUST be a bare keyless SHA-256; a `v1:` row
+ *    cannot be verified without the key and is rejected.
+ */
+function hashMatches(prevHash: string, input: AuditInput, storedHash: string): boolean {
+  const canonical = canonicalOf(prevHash, input);
+  if (chainHmacKey) {
+    if (!storedHash.startsWith(HMAC_PREFIX)) return false; // downgrade attempt
+    const h = `${HMAC_PREFIX}${createHmac('sha256', chainHmacKey).update(canonical, 'utf8').digest('hex')}`;
+    return h === storedHash;
+  }
+  if (storedHash.startsWith(HMAC_PREFIX)) return false; // keyed row, no key to verify
+  return createHash('sha256').update(canonical, 'utf8').digest('hex') === storedHash;
 }
 
 /**
@@ -111,8 +153,7 @@ export function verifyChain(
     if (cur.prev_hash !== expectedPrevHash) {
       return { ok: false, brokenAt: i, reason: 'prev_hash_mismatch' };
     }
-    const recomputed = computeHash(cur.prev_hash, cur);
-    if (recomputed !== cur.hash) {
+    if (!hashMatches(cur.prev_hash, cur, cur.hash)) {
       return { ok: false, brokenAt: i, reason: 'hash_mismatch' };
     }
   }

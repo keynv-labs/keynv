@@ -164,7 +164,7 @@ export function authRoutes(deps: AuthDeps): Hono {
         ttlSeconds: deps.refreshTtlS,
       });
 
-      await audit(c, deps.db, 'auth.register', { email, org_id: orgId, org_name });
+      await audit(c, deps.db, 'auth.register', { email, org_id: orgId, org_name }, { orgId });
 
       return c.json(
         {
@@ -265,7 +265,7 @@ export function authRoutes(deps: AuthDeps): Hono {
         device_fingerprint: flow.device_name ?? undefined,
       });
 
-      await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
+      await audit(c, deps.db, 'auth.login.allowed', { email: user.email }, { orgId: user.org_id });
 
       return c.json({
         access_token: access,
@@ -300,7 +300,15 @@ export function authRoutes(deps: AuthDeps): Hono {
       const ok = await verifyPassword(user?.password_hash ?? dummyHash, body.data.password);
 
       if (!user || !ok) {
-        await audit(c, deps.db, 'auth.login.denied', { email: body.data.email });
+        await audit(
+          c,
+          deps.db,
+          'auth.login.denied',
+          { email: body.data.email },
+          {
+            orgId: user?.org_id ?? null,
+          },
+        );
         return jsonError(c, 'auth.invalid_credentials', 'Invalid email or password.');
       }
 
@@ -318,7 +326,7 @@ export function authRoutes(deps: AuthDeps): Hono {
         ttlSeconds: deps.refreshTtlS,
       });
 
-      await audit(c, deps.db, 'auth.login.allowed', { email: user.email });
+      await audit(c, deps.db, 'auth.login.allowed', { email: user.email }, { orgId: user.org_id });
 
       return c.json({
         access_token: access,

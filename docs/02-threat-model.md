@@ -126,9 +126,9 @@ Out of scope:
 | Threat | Mitigation |
 |---|---|
 | Fake `keynv` binary on PATH spoofs the real one and exfiltrates. | Binaries are signed (Phase 5); installer verifies signature. Documentation tells users to verify signatures and pin paths. |
-| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls. | The setup flow writes the MCP config with an absolute path; the CLI asserts the configured `command` matches the keynv-mcp binary on first run. | `tests/security/mcp-reference-token.test.ts` | 🟡 Mitigated by inspection |
+| Fake MCP server registered as `keynv-mcp` redirects `use_secret` calls. | The user registers `keynv-mcp` by absolute path in their own agent config (keynv does not auto-write it); docs tell users to point at the installed binary. Reference tokens are single-use, 60s-TTL, and only redeemable over a local 0600 same-user socket, so a captured token has narrow value and cannot be reused. |
 | Replay of an old auth token. | JWTs are short-lived (15 min). Refresh tokens are bound to a device fingerprint. |
-| Forged audit entries. | Audit chain is hash-chained: each row includes SHA-256 of previous row. `keynv audit verify` detects tampering. |
+| Forged audit entries. | The audit chain is hash-chained and tamper-evident: each row's hash is an HMAC-SHA-256 keyed from the KEK (which is kept out of the database), computed over the previous hash plus the row contents — so an attacker with DB write access cannot recompute it. `keynv audit verify` detects tampering. |
 
 ### Tampering
 
@@ -275,10 +275,14 @@ Initial built-in patterns. Each lives in `packages/redactor/src/patterns.ts` wit
 | OpenAI API key | `\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b` |
 | Anthropic API key | `\bsk-ant-[A-Za-z0-9_-]{20,}\b` |
 | Google API key | `\bAIza[0-9A-Za-z_-]{35}\b` |
+| Twilio Account SID | `\bAC[0-9a-f]{32}\b` |
+| Twilio API Key SID | `\bSK[0-9a-f]{32}\b` |
+| Mailgun API key | `\bkey-[0-9a-f]{32}\b` |
+| SendGrid API key | `\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b` |
 | JWT structure | `\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b` |
 | RSA / SSH private key marker | `-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----` |
 | PGP private key marker | `-----BEGIN PGP PRIVATE KEY BLOCK-----[\s\S]*?-----END PGP PRIVATE KEY BLOCK-----` |
-| Generic high-entropy string | length ≥ 24, Shannon entropy ≥ 4.5 bits/char (configurable) |
+| Generic high-entropy string | length ≥ 24, Shannon entropy ≥ 4.5 bits/char (configurable). **Limitation:** this backstop only catches high-alphabet tokens (base64/base62-shaped). A pure-hex token cannot reach 4.5 bits/char (max is log2(16) = 4.0), so hex-encoded secrets with no vendor prefix are **not** caught by entropy and rely on a specific pattern above. The threshold is deliberately not lowered to cover hex because that would false-positive on git SHAs and content hashes (which are pervasive in AI transcripts). |
 
 User-defined custom patterns live per-project; admins can add an arbitrary regex with a name and a redaction style.
 

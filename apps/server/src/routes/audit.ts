@@ -35,6 +35,10 @@ export function auditRoutes(deps: AuditDeps): Hono {
       sinceId: parsed.data.since_id,
       eventType: parsed.data.event_type,
       projectId: parsed.data.project_id,
+      // Scope to the caller's active org so cross-org audit entries are never
+      // disclosed (audit finding H3). A foreign project_id therefore matches
+      // no rows, since those entries carry a different org_id.
+      orgId: g.user.org_id,
     });
     const lastId = entries.at(-1)?.id;
     return c.json({

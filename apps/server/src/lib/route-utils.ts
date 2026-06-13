@@ -40,13 +40,20 @@ export async function audit(
   db: Parameters<typeof appendAudit>[0],
   event_type: AppendArgs['event_type'],
   payload: Record<string, unknown>,
+  // Explicit org attribution for events emitted on UNauthenticated routes
+  // (register/login) where c.var.user is not set yet. When omitted, the
+  // caller's active org is used. Without this, those rows would carry a null
+  // org_id and be invisible to the org-scoped GET /v1/audit (finding H3).
+  opts?: { orgId?: string | null },
 ): Promise<void> {
   const user = c.var.user;
+  const orgId = opts && 'orgId' in opts ? (opts.orgId ?? null) : (user?.org_id ?? null);
   await appendAudit(db, {
     actor_user_id: user?.id ?? null,
     actor_agent: readAgent(c),
     event_type,
     payload,
+    org_id: orgId,
   });
   recordAuditDomainEvents(c, event_type);
 }
