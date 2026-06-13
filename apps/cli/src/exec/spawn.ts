@@ -52,6 +52,12 @@ export interface SpawnArgs {
   injectedEnv?: Record<string, string>;
   /** Resolved values to feed to the redactor as literals. */
   resolved: ReadonlyArray<ResolvedAlias>;
+  /**
+   * Extra secret values (e.g. resolved via `--resolve <mcp-token>`) that have
+   * no alias literal in argv but must still be redacted from output and
+   * zeroed on exit.
+   */
+  extraLiterals?: ReadonlyArray<string>;
   /** Disable the redactor on stdout/stderr. Audit-flagged. */
   noRedact?: boolean;
   /** Hard timeout in seconds. */
@@ -161,7 +167,9 @@ export function spawnPrivileged(opts: SpawnArgs): Promise<SpawnResult> {
     windowsVerbatimArguments,
   });
 
-  const literals = opts.resolved.map((r) => r.value).filter((v) => v.length > 0);
+  const literals = [...opts.resolved.map((r) => r.value), ...(opts.extraLiterals ?? [])].filter(
+    (v) => v.length > 0,
+  );
 
   if (!opts.noRedact && child.stdout) {
     child.stdout.pipe(createRedactStream({ literals })).pipe(process.stdout);

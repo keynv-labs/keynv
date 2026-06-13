@@ -99,7 +99,7 @@ contains alias references — NOT real values.
 |-------------------------------|-------------------------------------|
 | Add a new API key             | `keynv secret create`              |
 | Run the app / dev server      | `keynv exec -- <existing command>` |
-| Show me the value of X        | `keynv secret get @alias` — clipboard only, never print in chat |
+| Show me the value of X        | `keynv secret get @alias --copy` — `--copy` copies to clipboard and never prints; without it the value goes to stdout |
 | Rotate this key               | `keynv secret rotate @alias`       |
 | Who has access?               | `keynv member list <project>`      |
 
@@ -150,6 +150,59 @@ new secrets, or upgrade the CLI — it refreshes only the keynv-managed block in
 ```bash
 keynv   # safe to re-run at any time
 ```
+
+---
+
+## MCP server (optional)
+
+The CLI + `AGENTS.md` flow above is the recommended way to wire an agent. If your
+agent speaks the Model Context Protocol, you can also run **keynv-mcp**, which
+exposes keynv as MCP tools (`who_am_i`, `list_secrets`, `use_secret`,
+`redact_text`, `test_connection`). It runs over stdio and inherits your logged-in
+`keynv` session, so run `keynv login` (or `keynv`) on the same machine first.
+
+Install it alongside the CLI:
+
+```bash
+npm install -g @keynv/mcp
+```
+
+**Claude Desktop / Claude Code** — add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "keynv": { "command": "keynv-mcp" }
+  }
+}
+```
+
+**Cursor** — add to `~/.cursor/mcp.json` (or a project-level `.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "keynv": { "command": "keynv-mcp" }
+  }
+}
+```
+
+### How `use_secret` keeps the value away from the agent
+
+`keynv.use_secret` never returns a raw value — it returns an opaque, single-use,
+60-second reference token. The agent uses the token by running:
+
+```bash
+keynv exec --resolve DB_PASSWORD=<reference_token> -- <command>
+```
+
+`keynv exec` redeems the token through the running keynv-mcp server over a local
+0600 same-user socket, injects the resolved value into the subprocess as
+`DB_PASSWORD`, and redacts it from the subprocess output. The raw value never
+crosses back to the agent.
+
+> Register `keynv-mcp` by the binary on your PATH (or an absolute path). keynv does
+> not write your agent's MCP config for you — point it at the installed binary.
 
 ---
 

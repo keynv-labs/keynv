@@ -4,6 +4,19 @@ import { type RedactOptions, redact } from '@keynv/redactor';
 import type { RewriteFileResult, RewriteOptions, ScanOptions } from './types.js';
 
 /**
+ * Internal per-file metadata a surface passes to {@link rewriteFile}.
+ * Not part of the public {@link RewriteOptions} so callers of a surface's
+ * `rewrite()` can't accidentally disable the streaming-surface safety.
+ */
+export interface RewriteFileMeta {
+  /**
+   * True for append-only surfaces (shell history) where each entry is a
+   * single atomic line. Exempts the file from the active-write skip.
+   */
+  readonly appendOnly?: boolean;
+}
+
+/**
  * How recently the file's mtime must NOT have advanced for us to feel
  * safe rewriting it. Claude Code and similar tools append to JSONL
  * session files as they stream, so a file touched in the last
@@ -52,6 +65,7 @@ const SURFACE_ENTROPY_EXCLUDE_PREFIXES: ReadonlyArray<string> = [
 export async function rewriteFile(
   path: string,
   options: RewriteOptions = {},
+  meta: RewriteFileMeta = {},
 ): Promise<RewriteFileResult> {
   let mtimeMs = 0;
   try {
@@ -67,7 +81,14 @@ export async function rewriteFile(
     };
   }
 
-  if (!options.includeActive && Date.now() - mtimeMs < ACTIVE_WRITE_WINDOW_MS) {
+  // The active-write skip exists to avoid clobbering an in-flight *stream*
+  // (Claude Code / Cursor append JSONL as they run). Append-only surfaces
+  // like shell history are different: each entry is a single atomic line,
+  // and — crucially — running `keynv scrub` itself bumps the history
+  // mtime (the shell records the command), so a blanket 10s skip would
+  // always skip the very history file the user just asked to clean. Exempt
+  // append-only surfaces; streaming surfaces still honor the window.
+  if (!options.includeActive && !meta.appendOnly && Date.now() - mtimeMs < ACTIVE_WRITE_WINDOW_MS) {
     return {
       path,
       matchCount: 0,
@@ -198,6 +219,7 @@ function isoCompact(d: Date): string {
 export async function rewriteSingleFile(
   path: string,
   options: RewriteOptions,
+  meta: RewriteFileMeta = {},
 ): Promise<RewriteFileResult> {
-  return rewriteFile(path, options);
+  return rewriteFile(path, options, meta);
 }

@@ -51,3 +51,39 @@ describe('ApiClient auth refresh handling', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('ApiClient request URL building', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('preserves a base path on the server URL (reverse-proxy mount)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new ApiClient({ ...credentials, server_url: 'https://host.test/keynv' });
+    await client.request('/v1/projects');
+
+    const calledUrl = fetchMock.mock.calls[0]?.[0] as string;
+    expect(calledUrl).toBe('https://host.test/keynv/v1/projects');
+  });
+
+  it('builds a root URL correctly when the base has no path', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new ApiClient({ ...credentials, server_url: 'https://host.test' });
+    await client.request('/v1/projects', { query: { page: 2 } });
+
+    const calledUrl = fetchMock.mock.calls[0]?.[0] as string;
+    expect(calledUrl).toBe('https://host.test/v1/projects?page=2');
+  });
+});

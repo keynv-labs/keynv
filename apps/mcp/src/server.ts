@@ -35,7 +35,7 @@ const TOOLS = [
   {
     name: 'keynv.use_secret',
     description:
-      'Returns a single-use reference token bound to an alias. Tokens expire in 60s. The token is NOT the value — it must be passed to `keynv exec --resolve <token>` to reach the resolved value, which is then injected into a privileged subprocess.',
+      'Returns a single-use reference token bound to an alias. Tokens expire in 60s. The token is NOT the value — pass it to `keynv exec --resolve NAME=<token> -- <cmd>`, which redeems it through this MCP server and injects the resolved value into the subprocess env var NAME. The value is redacted from the subprocess output and never returns to you.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -163,7 +163,7 @@ export function buildServer(deps: ServerDeps): Server {
             alias: parsed.literal,
             expires_at: issued.expires_at,
             usage_hint:
-              'Pass reference_token to a privileged subprocess (keynv exec --resolve). Token is single-use and expires in 60s. Raw value never leaves the keynv exec boundary.',
+              'Run `keynv exec --resolve NAME=<reference_token> -- <command>` to use the value as env var NAME. Single-use, expires in 60s. The raw value never leaves the keynv exec subprocess boundary.',
           });
         }
 

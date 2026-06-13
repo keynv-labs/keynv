@@ -82,6 +82,17 @@ importers:
 
   apps/mcp:
     dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.0.4
+        version: 1.29.0(zod@4.4.3)
+      '@napi-rs/keyring':
+        specifier: ^1.1.0
+        version: 1.3.0
+    optionalDependencies:
+      ssh2:
+        specifier: ^1.16.0
+        version: 1.17.0
+    devDependencies:
       '@keynv/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -91,13 +102,9 @@ importers:
       '@keynv/testers':
         specifier: workspace:*
         version: link:../../packages/testers
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.0.4
-        version: 1.29.0(zod@4.4.3)
-      '@napi-rs/keyring':
-        specifier: ^1.1.0
-        version: 1.3.0
-    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.14)(tsx@4.21.0)(typescript@5.9.3)
       tsx:
         specifier: ^4.19.2
         version: 4.21.0

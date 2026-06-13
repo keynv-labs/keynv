@@ -21,7 +21,7 @@ When the user asks about secrets or env vars, follow this decision tree:
 | "Add a new API key" / "set up a secret" | `keynv secret create` (interactive prompt picks project + env + key) |
 | "I have a `.env`, migrate it" | Run `keynv` and choose **Set up this project** (you're seeing this file because that already happened) |
 | "Run the app / dev server / tests" | `keynv exec -- <their existing command>` (auto-loads `.keynv.env`) |
-| "Show me the value of X" | `keynv secret get @alias` — but copy to clipboard, do NOT print the value into chat / terminal |
+| "Show me the value of X" | `keynv secret get @alias --copy` — `--copy` puts the value on the clipboard and never prints it. Without `--copy` it prints to stdout, so in agent contexts always pass `--copy`. |
 | "Rotate this key" | `keynv secret rotate @alias` |
 | "Add a new env var to the project" | Edit `.keynv.env` and add `NAME=@project.env.key` (after creating the secret with `keynv secret create`) |
 | "Who has access?" | `keynv member list <project>` |

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isBlockedUrl } from './ssrf.js';
+import { isBlockedUrlResolved } from './ssrf.js';
 import type { ResolvedSecret, TestResult, Tester } from './types.js';
 
 const Target = z.object({
@@ -23,7 +23,7 @@ export const httpTester: Tester<HttpTarget> = {
   type: 'http',
   schema: Target,
   async test(secret: ResolvedSecret, target: HttpTarget): Promise<TestResult> {
-    if (isBlockedUrl(target.url)) {
+    if (await isBlockedUrlResolved(target.url)) {
       return {
         ok: false,
         latency_ms: 0,
@@ -57,6 +57,11 @@ export const httpTester: Tester<HttpTarget> = {
         method: target.method,
         headers,
         signal: AbortSignal.timeout(5000),
+        // Do NOT follow redirects: the SSRF pre-check only validated the
+        // original URL, and following a 3xx could land on an internal
+        // address and leak the auth header cross-origin. A redirect is
+        // treated as a (non-2xx) result.
+        redirect: 'manual',
       });
       const ok = res.status >= target.expect_status_min && res.status <= target.expect_status_max;
       return {

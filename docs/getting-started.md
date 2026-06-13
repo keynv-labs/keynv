@@ -52,6 +52,8 @@ Then pick up at [Quickstart Step 4](./quickstart.md#4--install-the-cli).
 
 For experimentation you can run the server directly on your laptop:
 
+On macOS/Linux (bash/zsh):
+
 ```bash
 # From the repo root
 pnpm install
@@ -59,12 +61,25 @@ pnpm install
 # Build (use build:direct if keynv CLI isn't installed yet)
 pnpm build:direct
 
-# Required — server refuses to start without this
-$env:KEYNV_JWT_SECRET = 'your-48-byte-base64-secret'
+# Required — server refuses to start without this.
 # Generate with: node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-# (works on all platforms — node is a prerequisite of keynv)
+export KEYNV_JWT_SECRET='your-48-byte-base64-secret'
 
 # Bootstrap credentials for the auto-created owner account
+export KEYNV_BOOTSTRAP_OWNER_EMAIL='dev@localhost'
+export KEYNV_BOOTSTRAP_OWNER_PASSWORD='a-local-dev-password'
+
+pnpm --filter @keynv/server dev
+```
+
+On Windows (PowerShell), set the env vars with `$env:` instead:
+
+```powershell
+pnpm install
+pnpm build:direct
+
+# node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+$env:KEYNV_JWT_SECRET = 'your-48-byte-base64-secret'
 $env:KEYNV_BOOTSTRAP_OWNER_EMAIL = 'dev@localhost'
 $env:KEYNV_BOOTSTRAP_OWNER_PASSWORD = 'a-local-dev-password'
 
@@ -114,10 +129,14 @@ interactive login. Generate one from the web dashboard at
 **/settings/account → CLI Tokens**, then:
 
 ```bash
-export KEYNV_TOKEN=keynv-cli-v1-<your-token>
+export KEYNV_TOKEN=kt_<your-token>
 export KEYNV_SERVER_URL=https://api.keynv.example.com
 keynv exec -- <your-build-command>
 ```
+
+`keynv exec` (and every other command) authenticates with `KEYNV_TOKEN` as a
+Bearer CLI token against `KEYNV_SERVER_URL`, so no interactive `keynv login` and
+no OS keychain are needed in CI.
 
 CLI tokens never expire (unless revoked) and carry the same permissions as the
 user who issued them. Create separate tokens for CI with the minimum required
@@ -168,4 +187,4 @@ If your agent doesn't have built-in keynv support:
 | [API specification](./06-api-spec.md) | Full REST API surface for integration builders |
 | [Encryption design](./05-encryption-design.md) | Envelope encryption, key hierarchy, crypto primitives |
 | [Quickstart](./quickstart.md) | Step-by-step Coolify deployment with exact env vars |
-| [Audit findings (Phase 5)](./AUDIT-FINDINGS-PHASE5.md) | Security audit walkthrough and remediation status |
+| [Audit findings](../AUDIT-FINDINGS.md) · [round 2](../AUDIT-FINDINGS-2.md) | Security audit walkthrough and remediation status |

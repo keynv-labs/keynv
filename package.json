@@ -37,6 +37,10 @@
     "overrides": {
       "esbuild": ">=0.25.0",
       "postcss": ">=8.4.49"
+    },
+    "auditConfig": {
+      "//": "Escape hatch for `pnpm audit` (the release security-gate). Add a GHSA/CVE id here, with a comment + tracking issue, when an advisory has no available fix and no exploitable path in keynv — so a transitive upstream advisory cannot block all releases with zero code changes.",
+      "ignoreCves": []
     }
   }
 }

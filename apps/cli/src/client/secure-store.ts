@@ -8,10 +8,13 @@
  * a clear actionable error instead of falling back to plaintext.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { crypto } from '@keynv/core';
-import { Entry } from '@napi-rs/keyring';
+// Type-only import: erased at compile time so it never loads the native
+// addon. The actual `@napi-rs/keyring` binding is required lazily below.
+import type { Entry } from '@napi-rs/keyring';
 
 const SERVICE = 'keynv-cli';
 const KEY_ACCOUNT = 'credentials-key';
@@ -26,8 +29,23 @@ function legacyPath(): string {
   );
 }
 
+// Lazily require the keyring native addon only when a keychain-backed
+// credential operation actually runs. Local-only commands (doctor, scrub,
+// redact, watch, shell) — and the KEYNV_DISABLE_KEYCHAIN=1 file-key path —
+// never reach here, so a machine with no prebuilt keyring binary can still
+// run the whole local surface without the CLI crashing at startup.
+let EntryCtor: typeof import('@napi-rs/keyring').Entry | null = null;
+function loadEntryCtor(): typeof import('@napi-rs/keyring').Entry {
+  if (!EntryCtor) {
+    const require = createRequire(import.meta.url);
+    EntryCtor = (require('@napi-rs/keyring') as typeof import('@napi-rs/keyring')).Entry;
+  }
+  return EntryCtor;
+}
+
 function entry(): Entry {
-  return new Entry(SERVICE, KEY_ACCOUNT);
+  const Ctor = loadEntryCtor();
+  return new Ctor(SERVICE, KEY_ACCOUNT);
 }
 
 async function loadOrCreateKey(): Promise<Uint8Array> {

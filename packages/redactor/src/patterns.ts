@@ -95,6 +95,28 @@ export const BUILTIN_PATTERNS: ReadonlyArray<Pattern> = [
     regex: /\bsk-ant-(?:api03|admin01)-[A-Za-z0-9_-]{20,}\b/g,
   },
 
+  // Hex-shaped vendor tokens. The entropy backstop structurally cannot
+  // catch hex (max Shannon entropy log2(16)=4.0 < the 4.5 threshold), so
+  // these are matched by their distinctive prefixes — high precision, near
+  // zero false positives, unlike a blanket "long hex" rule which would fire
+  // on git SHAs and content hashes.
+  {
+    name: 'twilio-account-sid',
+    regex: /\bAC[0-9a-f]{32}\b/g,
+  },
+  {
+    name: 'twilio-api-key-sid',
+    regex: /\bSK[0-9a-f]{32}\b/g,
+  },
+  {
+    name: 'mailgun-api-key',
+    regex: /\bkey-[0-9a-f]{32}\b/g,
+  },
+  {
+    name: 'sendgrid-api-key',
+    regex: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b/g,
+  },
+
   // Structured tokens
   {
     name: 'jwt',

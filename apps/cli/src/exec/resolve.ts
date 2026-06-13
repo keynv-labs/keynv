@@ -59,6 +59,26 @@ export async function resolveAllAliases(
 }
 
 /**
+ * Returns true if any `@project.env.key` literal appears in `argv` or
+ * `extraStrings`. Pure and synchronous — never touches the server. Used
+ * by `keynv exec` to decide whether a logged-in session is required at
+ * all: a command with zero aliases (e.g. `keynv exec -- npm run dev`,
+ * run purely for subprocess-output redaction) must work with no
+ * connection.
+ */
+export function hasAliases(argv: readonly string[], extraStrings: readonly string[] = []): boolean {
+  for (const { matches } of reference.findAliasesInArgv(argv)) {
+    if (matches.length > 0) return true;
+  }
+  for (const s of extraStrings) {
+    for (const { matches } of reference.findAliasesInArgv([s])) {
+      if (matches.length > 0) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Replaces every alias literal in `text` with the resolver's value.
  * Used both for argv substitution and for `--via-env` value rewrites.
  */

@@ -17,9 +17,9 @@ import { describeDefaultWatchDirs, runWatcher } from '../watcher/watcher.js';
  * to Claude Code transcript JSONL + Cursor logs, scrubs matched
  * secret-shaped substrings on file change with a 1s debounce.
  *
- * Foreground only in Phase A. For background, prefix with `nohup` or
- * use `&` until `keynv watch enable` (launchd/systemd unit install)
- * lands in a later iteration.
+ * Foreground only for now. For background use, prefix with `nohup` or
+ * append `&`; a managed launchd/systemd unit installer may land in a
+ * later iteration.
  */
 export class WatchStartCommand extends Command {
   static override paths = [['watch', 'start']];

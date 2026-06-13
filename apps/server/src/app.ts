@@ -1,3 +1,5 @@
+import { createHmac } from 'node:crypto';
+import { audit as auditCore } from '@keynv/core';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Db } from './db/index.js';
@@ -66,6 +68,17 @@ export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
   const logger = deps.logger ?? makeLogger(process.env['KEYNV_LOG_LEVEL'] ?? 'info');
   const metrics = deps.metrics ?? createMetricsRegistry();
+
+  // Make the audit hash chain tamper-evident (audit finding M8): derive a
+  // domain-separated HMAC key from the KEK and bind every new audit row to
+  // it. Without this the chain falls back to keyless SHA-256, which anyone
+  // with DB write access could recompute after editing a row. Existing
+  // keyless rows still verify (their hashes carry no `v1:` prefix).
+  auditCore.configureChainKey(
+    new Uint8Array(
+      createHmac('sha256', Buffer.from(deps.getKek())).update('keynv-audit-chain-v1').digest(),
+    ),
+  );
 
   app.use('*', metricsMiddleware(metrics));
 

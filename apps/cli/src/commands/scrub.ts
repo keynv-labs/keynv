@@ -45,6 +45,10 @@ By default, files touched in the last 10 seconds are *skipped* — they
 may be actively being written by another process (e.g., a live Claude
 Code session), and overwriting them could lose in-flight appends.
 Pass --include-active to override.
+
+--json is an output format, not a consent flag: \`scrub --json\` without
+--yes emits the plan as JSON and writes nothing. Add --yes to actually
+rewrite.
 `,
     examples: [
       ['Scrub everything (interactive confirm)', '$0 scrub'],
@@ -138,9 +142,16 @@ Pass --include-active to override.
         }
       }
 
+      // `--json` is an OUTPUT FORMAT, not a consent signal. A `--json` run
+      // without `--yes` is treated as a plan: the scan result is emitted as
+      // JSON and NO files are written. Scripts must opt in explicitly with
+      // `--yes` to actually mutate (this also means `--json --no-backup`
+      // can never irreversibly rewrite without `--yes`).
+      const effectiveDryRun = this.dryRun || (this.json && !this.yes);
+
       const rewriteOptions: RewriteOptions = {
         ...(this.noBackup ? { backup: false } : {}),
-        ...(this.dryRun ? { dryRun: true } : {}),
+        ...(effectiveDryRun ? { dryRun: true } : {}),
         ...(this.includeActive ? { includeActive: true } : {}),
         ...(this.replacement !== undefined ? { replacement: this.replacement } : {}),
         scanOptions,
@@ -163,7 +174,7 @@ Pass --include-active to override.
         this.context.stdout.write(
           `${JSON.stringify(
             {
-              dryRun: this.dryRun,
+              dryRun: effectiveDryRun,
               totalMatchCount,
               surfaces: rewriteResults,
             },

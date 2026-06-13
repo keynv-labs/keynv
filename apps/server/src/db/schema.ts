@@ -187,10 +187,20 @@ export const audit = sqliteTable(
     actor_agent: text('actor_agent').notNull(),
     event_type: text('event_type').notNull(),
     payload_json: text('payload_json').notNull(),
+    /**
+     * Active org of the actor at append time. Used to scope `GET /v1/audit`
+     * so a reader in one org never sees another org's entries on a
+     * multi-tenant deployment. NOT part of the tamper-evident hash chain
+     * (the chain covers prev_hash/ts/actor/event/payload); it is an
+     * access-control dimension, populated going forward and backfilled for
+     * single-org deployments by migration 0010.
+     */
+    org_id: text('org_id'),
   },
   (t) => ({
     by_ts: index('audit_by_ts').on(t.ts),
     by_event: index('audit_by_event').on(t.event_type),
+    by_org: index('audit_by_org').on(t.org_id),
   }),
 );
 

@@ -27,8 +27,12 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Advisory only: a brand-new upstream advisory (often with no fix yet)
+      # must not turn `main` red on every push/PR/nightly with zero code
+      # changes. The release pipeline's security-gate is where audit blocks,
+      # and it honors pnpm.auditConfig.ignoreCves for curated exceptions.
       - run: pnpm audit --audit-level moderate
-        continue-on-error: false
+        continue-on-error: true
 
   codeql:
     name: codeql (javascript)

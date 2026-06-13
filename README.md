@@ -280,10 +280,10 @@ may change without backwards-compatibility shims.
 | [API compatibility](./docs/api-compatibility.md) | CLI/server skew, feature flags, deprecation policy |
 | [Roadmap](./docs/roadmap.md) | Phase status + active slice tracker |
 | [Coolify deploy](./deploy/COOLIFY.md) | 15-min self-host walkthrough |
-| [`CLAUDE.md`](./CLAUDE.md) | Working rules for humans + AI agents in this repo |
+| [`AGENTS.md`](./AGENTS.md) | Working rules for humans + AI agents in this repo |
 
 Stack: TypeScript everywhere; Bun for the CLI, Node 20+ for the server, Hono +
-SQLite + Drizzle + libsodium. Full lock-list in [`CLAUDE.md`](./CLAUDE.md).
+SQLite + Drizzle + libsodium. Working rules in [`AGENTS.md`](./AGENTS.md).
 
 ---
 
@@ -292,7 +292,7 @@ SQLite + Drizzle + libsodium. Full lock-list in [`CLAUDE.md`](./CLAUDE.md).
 Open core ships under **MIT** — see [`LICENSE`](./LICENSE). Decision rationale
 in [`docs/decisions/0001-license-choice.md`](./docs/decisions/0001-license-choice.md).
 
-The Phase 6 commercial modules (`packages/ee/*` — SSO, HSM, SIEM, multi-step
-approvals) and the keynv Cloud service will ship under a separate commercial
-license inside that subdirectory. The boundary is real: nothing under `ee/*`
-imports into the open-core packages, and CI enforces it.
+The planned Phase 6 commercial modules (SSO, HSM, SIEM, multi-step approvals) and
+the keynv Cloud service are intended to ship under a separate commercial license
+in a future `packages/ee/*` subdirectory, kept isolated from the open-core
+packages. _(That subdirectory does not exist in this repository yet.)_

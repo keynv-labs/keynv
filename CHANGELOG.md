@@ -150,8 +150,10 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
 #### AI-safety layer (Phase 2)
 - `keynv exec --` privileged subprocess wrapper. Resolves `@project.env.key` aliases
   in a child process whose env/argv/stdin the agent's process tree never inherits.
-- `keynv-mcp` MCP server (stdio + http transports). `use_secret(alias)` returns a
-  single-use reference token; the resolved value never crosses the MCP boundary.
+- `keynv-mcp` MCP server (stdio transport). `use_secret(alias)` returns a single-use,
+  60s reference token; `keynv exec --resolve NAME=<token>` redeems it over a local
+  0600 socket and injects the value into the subprocess — the resolved value never
+  crosses the MCP boundary back to the agent.
 - Output redactor (`packages/redactor`): pattern bank (50+ vendor regex rules) +
   Shannon-entropy fallback. Streaming + batch APIs.
 - Per-agent onboarding via `keynv init`: scans existing `.env` files, migrates

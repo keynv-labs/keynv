@@ -8,6 +8,7 @@ import { pickProject } from '../ui/helpers/pickProject.js';
 import { pickSecret } from '../ui/helpers/pickSecret.js';
 import { isInteractive } from '../ui/helpers/tty.js';
 import { promptHidden } from '../ui/input.js';
+import { ClipboardUnavailableError, copyToClipboard } from '../util/clipboard.js';
 import { resolveProjectId } from './project.js';
 
 const ALIAS_FORMAT_HINT =
@@ -102,10 +103,15 @@ export class SecretCreateCommand extends Command {
 export class SecretGetCommand extends Command {
   static override paths = [['secret', 'get']];
   static override usage = Command.Usage({
-    description: 'Resolve a secret. The value is printed to stdout; nothing else.',
+    description:
+      'Resolve a secret. Prints the value to stdout, or use --copy to put it on the clipboard without printing it.',
   });
   alias = Option.String({ required: false });
   json = Option.Boolean('--json', false);
+  copy = Option.Boolean('--copy', false, {
+    description:
+      'Copy the value to the OS clipboard instead of printing it (never shown in output).',
+  });
 
   async execute(): Promise<number> {
     try {
@@ -133,6 +139,27 @@ export class SecretGetCommand extends Command {
       const data = await client.request<{ alias: string; value: string; version: number }>(
         `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
       );
+      if (this.copy) {
+        // Clipboard path: the value goes to the OS clipboard and is NEVER
+        // written to stdout/stderr, so it can't land in an AI transcript,
+        // terminal scrollback, or shell log. On failure we error out — we
+        // must not silently fall back to printing the secret.
+        try {
+          await copyToClipboard(data.value);
+        } catch (err) {
+          if (err instanceof ClipboardUnavailableError) {
+            this.context.stderr.write(
+              `keynv: ${err.message}.\n       Install one (pbcopy/clip are built in; Linux: wl-clipboard or xclip), or omit --copy to print to stdout.\n`,
+            );
+            return 1;
+          }
+          throw err;
+        } finally {
+          data.value = '';
+        }
+        this.context.stderr.write(`keynv: copied ${data.alias} (v${data.version}) to clipboard.\n`);
+        return 0;
+      }
       if (this.json) {
         this.context.stdout.write(
           `${JSON.stringify({ alias: data.alias, version: data.version, value: data.value })}\n`,

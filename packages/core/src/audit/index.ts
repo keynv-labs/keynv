@@ -3,6 +3,8 @@ export { GENESIS_HASH } from './types.js';
 export {
   appendEntry,
   computeHash,
+  configureChainKey,
+  isChainKeyConfigured,
   verifyChain,
   type VerifyOptions,
   type VerifyResult,

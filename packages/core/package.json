@@ -1,8 +1,8 @@
 {
   "name": "@keynv/core",
   "version": "0.1.0-rc.21",
-  "private": true,
   "description": "keynv shared core: reference parser, encryption primitives, audit chain, types.",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,6 +12,16 @@
       "import": "./dist/index.js"
     }
   },
+  "files": ["dist"],
+  "engines": { "node": ">=20.0.0" },
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keynv-labs/keynv.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/keynv-labs/keynv#readme",
+  "bugs": { "url": "https://github.com/keynv-labs/keynv/issues" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

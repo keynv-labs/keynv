@@ -114,9 +114,13 @@ export function replaceAliases(
     const m = matches[i];
     if (!m) continue;
     const replacement = resolve(m);
-    if (replacement.startsWith('@') && PROJECT_RE.test(replacement.slice(1).split('.')[0] ?? '')) {
+    // Circularity guard: only reject a replacement that is itself a FULLY
+    // VALID alias literal (`@project.env.key`). A value that merely starts
+    // with `@` plus a kebab segment — e.g. a real secret like `@my-token`
+    // or `@2fa-backup` — is not an alias and must pass through unchanged.
+    if (parseAlias(replacement) !== null) {
       throw new Error(
-        `replaceAliases: resolved value for ${m.literal} looks like an alias (${replacement}). Circular or misconfigured resolution detected.`,
+        `replaceAliases: resolved value for ${m.literal} is itself a valid alias (${replacement}). Circular or misconfigured resolution detected.`,
       );
     }
     out = out.slice(0, m.start) + replacement + out.slice(m.end);

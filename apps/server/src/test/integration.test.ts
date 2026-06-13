@@ -1002,6 +1002,51 @@ describe('B2 regression — cross-org access is denied', () => {
       h.cleanup();
     }
   });
+
+  // Regression for AUDIT-FINDINGS-2 H3: GET /v1/audit returned the entire
+  // cross-org audit table (login emails, project/secret KEY names, etc.).
+  // It must be scoped to the caller's active org.
+  it('owner B cannot read org A audit entries via GET /v1/audit', async () => {
+    const h = await twoOrgHarness();
+    try {
+      // Owner A performs an auditable action in org A.
+      const projRes = await h.app.request('http://localhost/v1/projects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${h.tokenA}` },
+        body: JSON.stringify({
+          name: 'secret-proj',
+          environments: [{ name: 'dev', tier: 'non-production' }],
+        }),
+      });
+      expect(projRes.status).toBe(201);
+      const project = (await projRes.json()) as { id: string };
+
+      // Owner A sees their own project.created entry.
+      const probeA = await h.app.request(`http://localhost/v1/audit?project_id=${project.id}`, {
+        headers: { authorization: `Bearer ${h.tokenA}` },
+      });
+      const bodyA = (await probeA.json()) as { entries: Array<{ payload: { name?: string } }> };
+      expect(bodyA.entries.length).toBeGreaterThan(0);
+
+      // Owner B's full audit view must contain none of org A's entries...
+      const auditB = await h.app.request('http://localhost/v1/audit', {
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
+      const fullB = (await auditB.json()) as {
+        entries: Array<{ payload: { project_id?: string } }>;
+      };
+      expect(fullB.entries.some((e) => e.payload?.project_id === project.id)).toBe(false);
+
+      // ...and probing org A's project_id directly leaks nothing.
+      const probeB = await h.app.request(`http://localhost/v1/audit?project_id=${project.id}`, {
+        headers: { authorization: `Bearer ${h.tokenB}` },
+      });
+      const bodyB = (await probeB.json()) as { entries: unknown[] };
+      expect(bodyB.entries.length).toBe(0);
+    } finally {
+      h.cleanup();
+    }
+  });
 });
 
 describe('User management — DELETE /v1/users/:id', () => {
