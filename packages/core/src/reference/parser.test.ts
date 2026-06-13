@@ -191,6 +191,17 @@ describe('replaceAliases', () => {
     const result = replaceAliases('-p@a.b.c', () => 'PASS', { mode: 'argv' });
     expect(result).toBe('-pPASS');
   });
+
+  it('allows a resolved value that starts with @ + a kebab segment (not an alias)', () => {
+    // A real secret value like `@my-token` must pass through unchanged — it
+    // is a single segment, not a `@project.env.key` alias literal.
+    expect(replaceAliases('@a.b.c', () => '@my-token')).toBe('@my-token');
+    expect(replaceAliases('@a.b.c', () => '@2fa-backup')).toBe('@2fa-backup');
+  });
+
+  it('throws when a resolved value is itself a fully valid alias (real circularity)', () => {
+    expect(() => replaceAliases('@a.b.c', () => '@x.y.z')).toThrow(/circular|valid alias/i);
+  });
 });
 
 describe('buildAlias', () => {

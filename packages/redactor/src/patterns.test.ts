@@ -20,6 +20,10 @@ const fix = {
   openai: `${'sk'}-proj-${X(24)}`,
   anthropic: `${'sk'}-ant-api03-${X(24)}`,
   jwt: `${'eyJ'}${X(20)}.${'eyJ'}${X(20)}.${X(20)}`,
+  twilioSid: `${'AC'}${'a1b2c3d4'.repeat(4)}`,
+  twilioKey: `${'SK'}${'a1b2c3d4'.repeat(4)}`,
+  mailgun: `${'key'}-${'a1b2c3d4'.repeat(4)}`,
+  sendgrid: `${'SG'}.${X(22)}.${X(43)}`,
 };
 
 describe('pattern bank — true positives', () => {
@@ -46,6 +50,10 @@ describe('pattern bank — true positives', () => {
     ['Stripe live key', `STRIPE_KEY=${fix.stripe}`, 'stripe-live-secret-key'],
     ['OpenAI API key', `OPENAI_API_KEY=${fix.openai}`, 'openai-api-key'],
     ['Anthropic API key', `ANTHROPIC_API_KEY=${fix.anthropic}`, 'anthropic-api-key'],
+    ['Twilio Account SID', `TWILIO_SID=${fix.twilioSid}`, 'twilio-account-sid'],
+    ['Twilio API Key SID', `TWILIO_KEY=${fix.twilioKey}`, 'twilio-api-key-sid'],
+    ['Mailgun API key', `MAILGUN_KEY=${fix.mailgun}`, 'mailgun-api-key'],
+    ['SendGrid API key', `SENDGRID_KEY=${fix.sendgrid}`, 'sendgrid-api-key'],
     ['JWT', `Authorization: Bearer ${fix.jwt}`, 'jwt'],
   ])('redacts %s', (_label, input, expectedPattern) => {
     const { text, matches } = redact(input);
@@ -88,6 +96,10 @@ describe('pattern bank — false positives (innocent fixtures must NOT be redact
     ['UUIDv4', '550e8400-e29b-41d4-a716-446655440000'],
     ['short git SHA', 'a3f9b8c'],
     ['long git SHA', 'a3f9b8c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7'],
+    // A bare 32-char hex (MD5-shaped) with no vendor prefix must NOT match —
+    // proves we did not add a blanket "long hex" rule that would fire on
+    // content hashes and git SHAs.
+    ['bare md5 hash (no vendor prefix)', 'd41d8cd98f00b204e9800998ecf8427e'],
     ['lorem ipsum', 'lorem ipsum dolor sit amet consectetur adipiscing elit'],
     ['file path', '/usr/local/bin/keynv-server'],
     [

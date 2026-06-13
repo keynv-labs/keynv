@@ -80,7 +80,10 @@ function createShellHistorySurface(shell: Shell): TextSurface {
     },
 
     async rewrite(options: RewriteOptions = {}): Promise<RewriteResult> {
-      const result = await rewriteFile(filePath, options);
+      // Shell history is append-only (one atomic line per command), and
+      // running `keynv scrub` itself bumps its mtime — so it must not be
+      // caught by the streaming active-write skip.
+      const result = await rewriteFile(filePath, options, { appendOnly: true });
       return {
         surfaceId: `shell-history:${shell}`,
         files: [result],

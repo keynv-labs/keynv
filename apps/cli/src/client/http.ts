@@ -35,7 +35,13 @@ interface FetchOptions {
 }
 
 function buildUrl(base: string, path: string, query?: FetchOptions['query']): string {
-  const url = new URL(path, base);
+  // Preserve any base path on the server URL (e.g. a reverse-proxy mount
+  // like https://host/keynv). `new URL('/v1/x', 'https://host/keynv')`
+  // resolves against the origin and silently discards '/keynv', so join
+  // the two manually instead.
+  const trimmedBase = base.replace(/\/+$/, '');
+  const trimmedPath = path.startsWith('/') ? path : `/${path}`;
+  const url = new URL(trimmedBase + trimmedPath);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v !== undefined) url.searchParams.set(k, String(v));

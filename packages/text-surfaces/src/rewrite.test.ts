@@ -78,6 +78,17 @@ describe('rewriteFile', () => {
     expect(await readFile(file, 'utf8')).not.toContain('AKIAIOSFODNN7EXAMPLE');
   });
 
+  it('exempts append-only surfaces (shell history) from the active-write skip', async () => {
+    const file = join(workdir, 'history');
+    // Fresh mtime — would be skipped as "actively-written" for a streaming
+    // surface, but shell history is append-only so it must be rewritten.
+    await writeFile(file, 'export AWS=AKIAIOSFODNN7EXAMPLE\n');
+    const result = await rewriteFile(file, {}, { appendOnly: true });
+    expect(result.skipped).toBeFalsy();
+    expect(result.matchCount).toBe(1);
+    expect(await readFile(file, 'utf8')).not.toContain('AKIAIOSFODNN7EXAMPLE');
+  });
+
   it('honors dryRun: computes count but leaves file untouched', async () => {
     const file = join(workdir, 'history');
     const original = 'export AWS=AKIAIOSFODNN7EXAMPLE\n';
