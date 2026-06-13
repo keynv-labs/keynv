@@ -96,7 +96,7 @@ sprints. Sorry to future you.
 
 - Unit tests live next to the code (`src/foo.ts` + `src/foo.test.ts`).
 - Property tests use [`fast-check`](https://github.com/dubzzz/fast-check). Use them for parsers, encoders, and anything with algebraic invariants.
-- Security regression tests live in `tests/security/`. Each row of the threat model has at least one test.
+- Security regression tests live in `tests/security/`. Most threat-model rows have at least one test; a couple of areas (git-history secret leakage, indirect prompt injection) are still tracked as `it.todo` placeholders — fill those in rather than adding new gaps.
 - Run `pnpm test` before pushing; CI will catch the rest.
 
 ## Reviews

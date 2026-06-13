@@ -68,6 +68,10 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Blocks the release on moderate+ advisories. For an advisory with no
+      # available fix and no exploitable path in keynv, add its GHSA/CVE id to
+      # pnpm.auditConfig.ignoreCves (with a tracking issue) so a transitive
+      # upstream advisory can't permanently block shipping.
       - name: Audit dependencies
         run: pnpm audit --audit-level moderate
 
@@ -198,6 +202,60 @@ jobs:
           done
           actual="$(npm exec --yes --package "@keynv/cli@$version" -- keynv --version)"
           test "$actual" = "$version"
+
+  npm-publish-mcp:
+    name: npm (@keynv/mcp)
+    needs: [prepare, security-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --frozen-lockfile
+      - name: Sync package versions with tag
+        run: pnpm version:sync "${{ needs.prepare.outputs.version }}"
+      # Build the MCP bundle and its workspace deps (tsup bundles @keynv/* in).
+      - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
+      - name: Verify built MCP bin
+        run: |
+          set -euo pipefail
+          test -f apps/mcp/dist/index.js
+          head -1 apps/mcp/dist/index.js | grep -q '^#!/usr/bin/env node'
+      - name: Publish to npm
+        working-directory: apps/mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then
+            npm publish --access public --tag next --provenance
+            npm dist-tag add @keynv/mcp@${{ needs.prepare.outputs.version }} latest
+          else
+            npm publish --access public --provenance
+            npm dist-tag add @keynv/mcp@${{ needs.prepare.outputs.version }} latest
+          fi
+      - name: Verify published npm MCP version
+        run: |
+          set -euo pipefail
+          version="${{ needs.prepare.outputs.version }}"
+          for i in $(seq 1 12); do
+            if npm view "@keynv/mcp@$version" version >/dev/null 2>&1; then
+              break
+            fi
+            if [ "$i" = "12" ]; then
+              echo "@keynv/mcp@$version is not visible on npm" >&2
+              exit 1
+            fi
+            sleep 10
+          done
 
   docker-image:
     name: docker (multi-arch)

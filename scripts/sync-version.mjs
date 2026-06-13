@@ -12,6 +12,7 @@ const VERSIONED_PACKAGES = [
   'packages/redactor/package.json',
   'packages/rbac/package.json',
   'packages/testers/package.json',
+  'packages/text-surfaces/package.json',
   'apps/cli/package.json',
   'apps/server/package.json',
   'apps/web/package.json',
