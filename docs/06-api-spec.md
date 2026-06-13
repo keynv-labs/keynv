@@ -199,9 +199,11 @@ Errors:
 
 Soft-delete (Phase 1) — secrets and DEK marked deleted, retained in audit. Hard-delete is a Phase 4 admin operation.
 
-#### `POST /v1/projects/:id/rotate-dek` (Owner/Admin)
+#### `POST /v1/projects/:id/rotate-dek` (Owner/Admin) — _planned, not yet implemented_
 
-Generates a new DEK, re-encrypts all secrets in a single transaction.
+Will generate a new DEK and re-encrypt all secrets in a single transaction. This
+endpoint and the corresponding `keynv project rotate-dek` CLI command are not
+shipped yet; tracked for a later iteration.
 
 ### Members
 
@@ -538,7 +540,7 @@ Route labels use normalized templates such as
 
 ## MCP API (`keynv-mcp`)
 
-Implements the MCP 2025-06 specification over stdio (default) or HTTP. Tools:
+Implements the MCP 2025-06 specification over stdio. Tools:
 
 ### `keynv.use_secret`
 
@@ -551,7 +553,7 @@ output: {
 }
 ```
 
-The `reference_token` is opaque. It's only resolvable by passing it to `keynv exec --resolve <token>` (which only the privileged subprocess can do successfully — token is bound to the subprocess pid at resolution time).
+The `reference_token` is opaque and single-use (60-second TTL). It is redeemed with `keynv exec --resolve NAME=<token>`, which connects to the running `keynv-mcp` server over a local 0600 same-user socket; `keynv-mcp` resolves the value and returns it to the `keynv exec` subprocess, which injects it as env var `NAME` and redacts it from output. The raw value never returns to the agent.
 
 ### `keynv.list_secrets`
 

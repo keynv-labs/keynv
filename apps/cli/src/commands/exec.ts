@@ -9,7 +9,8 @@ import {
   EnvFileTooLargeError,
   loadEnvFile,
 } from '../exec/envFile.js';
-import { resolveAllAliases, substitute } from '../exec/resolve.js';
+import { resolveReferenceToken } from '../exec/mcp-resolve.js';
+import { hasAliases, resolveAllAliases, substitute } from '../exec/resolve.js';
 import { spawnPrivileged } from '../exec/spawn.js';
 
 export class ExecCommand extends Command {
@@ -55,6 +56,10 @@ spelled \`--from\` to avoid the collision.)
   viaEnv = Option.Array('--via-env', {
     description: 'NAME=@alias — set NAME in the subprocess env (alias is NOT placed in argv).',
   });
+  resolve = Option.Array('--resolve', {
+    description:
+      'NAME=<token> — redeem a single-use keynv-mcp reference token (from keynv.use_secret) and set NAME in the subprocess env. Requires a running keynv-mcp server.',
+  });
   noRedact = Option.Boolean('--no-redact', false, {
     description: 'Disable the stdout/stderr redactor. Audit-flagged.',
   });
@@ -86,13 +91,6 @@ spelled \`--from\` to avoid the collision.)
     if (!command) {
       this.context.stderr.write('keynv: missing command\n');
       return 2;
-    }
-
-    const client = new ApiClient();
-    await client.ensureHydrated();
-    if (!client.isLoggedIn) {
-      this.context.stderr.write('keynv: not connected. Run `keynv` first.\n');
-      return 1;
     }
 
     // Load .keynv.env (or explicit override) before parsing --via-env so
@@ -156,6 +154,20 @@ spelled \`--from\` to avoid the collision.)
       }
     }
     for (const s of viaEnvSpecs) extraAliasStrings.push(s.aliasLiteral);
+
+    // The server (and a logged-in session) is only required when there is
+    // at least one @alias to resolve. The README "no cloud" hero —
+    // `keynv exec -- npm run dev`, run purely for subprocess-output
+    // redaction — carries zero aliases and must work with no connection.
+    const needsServer = hasAliases([command, ...args], extraAliasStrings);
+    const client = new ApiClient();
+    if (needsServer) {
+      await client.ensureHydrated();
+      if (!client.isLoggedIn) {
+        this.context.stderr.write('keynv: not connected. Run `keynv` first.\n');
+        return 1;
+      }
+    }
 
     let resolved: Awaited<ReturnType<typeof resolveAllAliases>>;
     try {
@@ -221,6 +233,42 @@ spelled \`--from\` to avoid the collision.)
       injectedEnv[spec.name] = value;
     }
 
+    // --resolve NAME=<token>: redeem keynv-mcp reference tokens. Resolved
+    // over the local keynv-mcp socket (not the CLI's own session), so they
+    // need no login. Values are injected as env vars and tracked as redaction
+    // literals so they're masked in output and zeroed on exit.
+    const resolveLiterals: string[] = [];
+    for (const spec of this.resolve ?? []) {
+      const eq = spec.indexOf('=');
+      if (eq <= 0) {
+        this.context.stderr.write(`keynv: invalid --resolve '${spec}', expected NAME=<token>\n`);
+        return 2;
+      }
+      const name = spec.slice(0, eq);
+      const token = spec.slice(eq + 1);
+      const res = await resolveReferenceToken(token);
+      if (!res.ok) {
+        const hint =
+          res.error === 'not-running'
+            ? 'keynv-mcp is not running. --resolve needs the keynv-mcp server (configure it in your AI agent).'
+            : res.error;
+        this.context.stderr.write(`keynv: --resolve ${name}: ${hint}\n`);
+        return 1;
+      }
+      const overriddenLine = fromEnvFile.get(name);
+      if (overriddenLine !== undefined && envFileLoaded && !this.quiet) {
+        this.context.stderr.write(
+          `keynv: --resolve ${name} overrides ${envFileLoaded.path}:${overriddenLine}\n`,
+        );
+      }
+      injectedEnv[name] = res.value;
+      resolveLiterals.push(res.value);
+    }
+    if (resolveLiterals.length > 0) {
+      const { registerValueWithWatcher } = await import('../watcher/rpc.js');
+      await Promise.all(resolveLiterals.map((v) => registerValueWithWatcher(v).catch(() => null)));
+    }
+
     if (envFileLoaded && !this.quiet) {
       const aliasEntries = envFileLoaded.entries.filter((e) => e.isAlias);
       const plainEntries = envFileLoaded.entries.filter((e) => !e.isAlias);
@@ -249,6 +297,7 @@ spelled \`--from\` to avoid the collision.)
         args: substArgs,
         injectedEnv,
         resolved,
+        extraLiterals: resolveLiterals,
         noRedact: this.noRedact,
         timeoutS,
       });
@@ -261,6 +310,7 @@ spelled \`--from\` to avoid the collision.)
     } finally {
       for (const item of resolved) item.value = '';
       for (const key of Object.keys(injectedEnv)) injectedEnv[key] = '';
+      resolveLiterals.fill('');
       substArgs.fill('');
     }
   }

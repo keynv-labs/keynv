@@ -1,9 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+declare const __KEYNV_VERSION__: string;
 
-const packageJsonPath = resolve(dirname(fileURLToPath(import.meta.url)), '../package.json');
-const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version: string };
+export const VERSION: string =
+  typeof __KEYNV_VERSION__ === 'string' ? __KEYNV_VERSION__ : '0.0.0-dev';
 
-export const VERSION = pkg.version;
 export const AGENT = `keynv-mcp/${VERSION}`;

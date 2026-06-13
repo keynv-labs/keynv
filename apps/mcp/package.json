@@ -1,27 +1,48 @@
 {
   "name": "@keynv/mcp",
   "version": "0.1.0-rc.21",
-  "private": true,
-  "description": "keynv-mcp Model Context Protocol server (stdio + http transports).",
+  "description": "keynv-mcp — Model Context Protocol server (stdio transport) that gives AI agents alias references and single-use reference tokens, never raw secret values.",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "keynv-mcp": "./dist/index.js"
   },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keynv-labs/keynv.git",
+    "directory": "apps/mcp"
+  },
+  "homepage": "https://github.com/keynv-labs/keynv#readme",
+  "bugs": {
+    "url": "https://github.com/keynv-labs/keynv/issues"
+  },
+  "keywords": ["mcp", "model-context-protocol", "secrets", "ai-safety", "keynv"],
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "@keynv/core": "workspace:*",
-    "@keynv/redactor": "workspace:*",
-    "@keynv/testers": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.4",
     "@napi-rs/keyring": "^1.1.0"
   },
+  "optionalDependencies": {
+    "ssh2": "^1.16.0"
+  },
   "devDependencies": {
+    "@keynv/core": "workspace:*",
+    "@keynv/redactor": "workspace:*",
+    "@keynv/testers": "workspace:*",
+    "tsup": "^8.3.5",
     "tsx": "^4.19.2"
   }
 }
