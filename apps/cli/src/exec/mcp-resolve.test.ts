@@ -24,7 +24,12 @@ describe('resolveReferenceToken', () => {
 
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'keynv-cli-res-'));
-    process.env.KEYNV_MCP_RESOLVER_SOCKET = join(dir, 'r.sock');
+    // Windows can't listen on a Unix-socket file path; use a named pipe there
+    // (mirrors apps/cli/src/watcher/rpc.test.ts).
+    process.env.KEYNV_MCP_RESOLVER_SOCKET =
+      process.platform === 'win32'
+        ? `\\\\.\\pipe\\keynv-cli-res-${process.pid}-${Date.now()}`
+        : join(dir, 'r.sock');
   });
 
   afterEach(async () => {
