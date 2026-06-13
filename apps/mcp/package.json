@@ -1,6 +1,8 @@
 {
   "name": "@keynv/mcp",
   "version": "0.1.0-rc.21",
+  "private": true,
+  "_comment": "Development home is moving to keynv-labs/keynv-mcp, which is the npm publisher. Kept private here so the monorepo release never publishes it (avoids two sources for one package).",
   "description": "keynv-mcp — Model Context Protocol server (stdio transport) that gives AI agents alias references and single-use reference tokens, never raw secret values.",
   "license": "MIT",
   "type": "module",

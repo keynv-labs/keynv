@@ -203,10 +203,13 @@ jobs:
           actual="$(npm exec --yes --package "@keynv/cli@$version" -- keynv --version)"
           test "$actual" = "$version"
 
-  npm-publish-mcp:
-    name: npm (@keynv/mcp)
+  npm-publish-libs:
+    name: npm (@keynv/core, redactor, testers)
     needs: [prepare, security-gate]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -222,39 +225,29 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Sync package versions with tag
         run: pnpm version:sync "${{ needs.prepare.outputs.version }}"
-      # Build the MCP bundle and its workspace deps (tsup bundles @keynv/* in).
       - run: pnpm -r --filter '!@keynv/cli' --filter '!@keynv/web' build
-      - name: Verify built MCP bin
-        run: |
-          set -euo pipefail
-          test -f apps/mcp/dist/index.js
-          head -1 apps/mcp/dist/index.js | grep -q '^#!/usr/bin/env node'
-      - name: Publish to npm
-        working-directory: apps/mcp
+      # The shared libraries are consumed by the separate keynv-mcp repo, so
+      # they are published here. pnpm publish rewrites @keynv/testers'
+      # workspace:* deps to the released versions (plain npm publish would not).
+      - name: Publish libraries to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then
-            npm publish --access public --tag next --provenance
-            npm dist-tag add @keynv/mcp@${{ needs.prepare.outputs.version }} latest
-          else
-            npm publish --access public --provenance
-            npm dist-tag add @keynv/mcp@${{ needs.prepare.outputs.version }} latest
-          fi
-      - name: Verify published npm MCP version
+          # Tag latest so a bare `npm i @keynv/core` resolves (the released
+          # version is the current one); the keynv-mcp repo pins exact ranges.
+          pnpm --filter @keynv/core --filter @keynv/redactor --filter @keynv/testers publish \
+            --access public --no-git-checks --provenance --tag latest
+      - name: Verify published library versions
         run: |
           set -euo pipefail
           version="${{ needs.prepare.outputs.version }}"
-          for i in $(seq 1 12); do
-            if npm view "@keynv/mcp@$version" version >/dev/null 2>&1; then
-              break
-            fi
-            if [ "$i" = "12" ]; then
-              echo "@keynv/mcp@$version is not visible on npm" >&2
-              exit 1
-            fi
-            sleep 10
+          for pkg in @keynv/core @keynv/redactor @keynv/testers; do
+            for i in $(seq 1 12); do
+              if npm view "$pkg@$version" version >/dev/null 2>&1; then break; fi
+              if [ "$i" = "12" ]; then echo "$pkg@$version not visible on npm" >&2; exit 1; fi
+              sleep 10
+            done
           done
 
   docker-image:
