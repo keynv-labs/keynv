@@ -173,7 +173,15 @@ jobs:
           set -euo pipefail
           actual="$(node dist/index.js --version)"
           test "$actual" = "${{ needs.prepare.outputs.version }}"
-      - name: Publish to npm
+      - name: Verify npm auth
+        working-directory: apps/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "npm registry: $(npm config get registry)"
+          echo "authenticated user: $(npm whoami)"
+      - name: Publish @keynv/cli to npm
         working-directory: apps/cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -181,11 +189,16 @@ jobs:
           set -euo pipefail
           if [ "${{ needs.prepare.outputs.prerelease }}" = "true" ]; then
             npm publish --access public --tag next --provenance
-            npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
           else
             npm publish --access public --provenance
-            npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
           fi
+      - name: Promote @keynv/cli dist-tag to latest
+        working-directory: apps/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm dist-tag add @keynv/cli@${{ needs.prepare.outputs.version }} latest
       - name: Verify published npm CLI version
         run: |
           set -euo pipefail
