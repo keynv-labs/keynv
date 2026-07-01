@@ -20,7 +20,7 @@ _seed_dir="$(cd "$(dirname "$_seed_src")" && pwd)"
 KEYNV_REPO="$(dirname "$_seed_dir")"
 
 # Throwaway home the scanner treats as $HOME.
-KEYNV_TS_HOME="$(mktemp -d "${TMPDIR:-/tmp}/keynv-demo.XXXXXX")"
+KEYNV_TS_HOME="$(mktemp -d "/tmp/keynv-demo.XXXXXX")"  # short path = tidy demo output
 export KEYNV_TS_HOME
 unset HISTFILE  # don't let a stray $HISTFILE pull your real zsh history in
 
@@ -43,8 +43,8 @@ stripe trigger payment_intent.succeeded --api-key $_stripe
 EOF
 
 # --- fake Claude Code transcript (unquoted heredoc so vars expand) -------
-mkdir -p "$KEYNV_TS_HOME/.claude/projects/demo-project"
-cat > "$KEYNV_TS_HOME/.claude/projects/demo-project/session-demo.jsonl" <<EOF
+mkdir -p "$KEYNV_TS_HOME/.claude/projects/demo"
+cat > "$KEYNV_TS_HOME/.claude/projects/demo/s.jsonl" <<EOF
 {"type":"user","message":{"role":"user","content":"the env is DATABASE_URL=postgres://admin:s3cr3tP4ss@db.internal:5432/prod"}}
 {"type":"assistant","message":{"role":"assistant","content":"I'll call the API with OPENAI_API_KEY=sk-1a2B3c4D5e6F7g8H9i0JklmnopQRstuvWXyz1234567890AB."}}
 {"type":"tool_result","content":"remote: Invalid token ghp_1A2b3C4d5E6f7G8h9I0jklmnopqrstuvwx12"}
@@ -58,7 +58,7 @@ EOF
 # pre-existing history so the demo's `scrub` cleans everything.
 touch -t 202601010000 \
   "$KEYNV_TS_HOME/.zsh_history" \
-  "$KEYNV_TS_HOME/.claude/projects/demo-project/session-demo.jsonl"
+  "$KEYNV_TS_HOME/.claude/projects/demo/s.jsonl"
 
 # --- a `keynv` that runs this repo's built CLI ---------------------------
 keynv() { node "$KEYNV_REPO/apps/cli/dist/index.js" "$@"; }

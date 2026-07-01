@@ -1,7 +1,9 @@
-# keynv — the money shot: doctor finds leaked secrets, scrub cleans them.
+# keynv — the money shot in three glanceable acts:
+#   1. doctor finds leaked secrets   2. scrub cleans them   3. doctor: clean
 #
 # Deterministic + safe: runs against a seeded throwaway sandbox (see
 # seed-sandbox.sh), never your real machine, using only fake tokens.
+# Each act gets a cleared screen so it reads at a glance.
 #
 # Record it (from the REPO ROOT):
 #   pnpm --filter @keynv/cli build      # build the CLI the demo drives
@@ -15,12 +17,12 @@ Require node
 
 Set Shell bash
 Set FontSize 18
-Set Width 1120
-Set Height 760
-Set Padding 26
+Set Width 1280
+Set Height 700
+Set Padding 24
 Set Theme "Catppuccin Mocha"
 Set WindowBar Colorful
-Set TypingSpeed 40ms
+Set TypingSpeed 35ms
 
 # --- hidden setup: seed the sandbox, clear the screen ---
 Hide
@@ -29,32 +31,38 @@ Enter
 Sleep 1s
 Type "clear"
 Enter
-Sleep 500ms
+Sleep 400ms
 Show
 
-# --- 1. find the leaks ---
-Type "keynv doctor"
-Sleep 600ms
+# --- act 1: find the leaks (‑q drops the noisy per-match previews) ---
+Type "keynv doctor -q"
+Sleep 500ms
 Enter
 Sleep 4s
 
-# --- 2. preview the fix ---
-Type "keynv scrub --dry-run"
-Sleep 600ms
+Hide
+Type "clear"
 Enter
-Sleep 3s
+Sleep 300ms
+Show
 
-# --- 3. fix it (atomic, with backups) ---
+# --- act 2: fix them (atomic, with backups) ---
 Type "keynv scrub --yes"
-Sleep 600ms
-Enter
-Sleep 3s
-
-# --- 4. prove it's clean ---
-Type "keynv doctor"
-Sleep 600ms
+Sleep 500ms
 Enter
 Sleep 4s
+
+Hide
+Type "clear"
+Enter
+Sleep 300ms
+Show
+
+# --- act 3: prove it's clean ---
+Type "keynv doctor -q"
+Sleep 500ms
+Enter
+Sleep 3500ms
 
 # --- hidden teardown ---
 Hide
