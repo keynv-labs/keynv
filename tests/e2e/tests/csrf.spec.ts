@@ -23,13 +23,19 @@ test.describe('CSRF guard', () => {
       el?.remove();
     });
 
-    await Promise.all([page.waitForLoadState('networkidle'), page.click('button[type="submit"]')]);
+    await page.click('button[type="submit"]');
 
-    // Action must keep the user on /register (or bounce them to it)
-    // and the page must surface the "Security check failed" message.
-    expect(page.url()).toContain('/register');
-    const body = await page.locator('body').innerText();
-    expect(body).toMatch(/Security check failed/i);
+    // Action must keep the user on /register (or bounce them to it) and
+    // surface the "Security check failed" message. Web-first assertions
+    // poll the live DOM instead of reading it once, so we wait for the
+    // rejection page to render rather than racing it — the e2e web server
+    // is `next dev`, which compiles the route on first hit, so the POST
+    // response can arrive a beat after the click. Generous timeout absorbs
+    // that cold-compile delay.
+    await expect(page.locator('body')).toContainText(/Security check failed/i, {
+      timeout: 20_000,
+    });
+    await expect(page).toHaveURL(/\/register/);
   });
 
   test('login form renders the CSRF token', async ({ page }) => {
