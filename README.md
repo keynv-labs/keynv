@@ -1,4 +1,9 @@
-# keynv
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./demo/logo-dark.svg">
+    <img alt="keynv" src="./demo/logo-light.svg" height="44">
+  </picture>
+</h1>
 
 > Runtime text-surface protection for AI coding workflows.
 
@@ -105,13 +110,7 @@ value ephemerally — inside a privileged subprocess your AI agent's
 process tree cannot read. Output through the redactor. Audit trail
 per resolution event.
 
-```text
-your code:           keynv exec -- mysql -p@billing.prod.db_password
-                                       │
-                                       ▼
-the AI agent sees:   "@billing.prod.db_password" (just the alias literal)
-the database sees:   the actual password (decrypted in a privileged subprocess)
-```
+![Alias-first resolution: the AI agent only ever sees the alias literal; keynv resolves it to the real value inside a privileged subprocess the agent's process tree cannot read](./demo/alias-resolution.svg)
 
 **2. Text-surface scrubbing.** Every text surface where a secret
 could leak — shell history files, Claude Code session JSONL, Cursor

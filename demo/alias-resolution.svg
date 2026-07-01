@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" viewBox="0 0 960 480" role="img" aria-label="Alias-first resolution: the AI agent only ever sees the alias literal; keynv resolves it to the real value inside a privileged subprocess the agent's process tree cannot read.">
+  <rect width="960" height="480" rx="16" fill="#0B1120"/>
+  <rect x="0.5" y="0.5" width="959" height="479" rx="15.5" fill="none" stroke="#1E293B"/>
+
+  <!-- your command -->
+  <rect x="180" y="30" width="600" height="52" rx="10" fill="#0E1526" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="480" y="62" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" fill="#E2E8F0">keynv exec -- mysql -p@billing.prod.db_password</text>
+
+  <!-- split connectors -->
+  <path d="M480 82 L480 100 M480 100 L230 100 L230 138 M480 100 L730 100 L730 138" fill="none" stroke="#475569" stroke-width="2"/>
+  <path d="M224 130 L236 130 L230 141 Z" fill="#475569"/>
+  <path d="M724 130 L736 130 L730 141 Z" fill="#475569"/>
+
+  <!-- trust boundary -->
+  <line x1="480" y1="152" x2="480" y2="446" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 6" stroke-opacity="0.5"/>
+  <text transform="rotate(-90 480 400)" x="480" y="400" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="10.5" letter-spacing="2" fill="#F59E0B" fill-opacity="0.85">PROCESS BOUNDARY</text>
+
+  <!-- LEFT: exposed surfaces -->
+  <rect x="40" y="140" width="380" height="300" rx="12" fill="#0E1526" stroke="#334155"/>
+  <text x="64" y="176" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="15" font-weight="600" fill="#94A3B8">What the AI agent sees</text>
+  <text x="64" y="197" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="12" fill="#64748B">shell history · terminal · transcript</text>
+  <rect x="64" y="220" width="332" height="54" rx="8" fill="#1B1305" stroke="#F59E0B"/>
+  <text x="230" y="254" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" fill="#F59E0B">@billing.prod.db_password</text>
+  <text x="64" y="316" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="13.5" fill="#94A3B8">Only the alias literal is ever written</text>
+  <text x="64" y="337" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="13.5" fill="#94A3B8">to disk — never the real value.</text>
+  <text x="64" y="392" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="13" fill="#64748B">Safe to commit, log, and share.</text>
+
+  <!-- RIGHT: privileged subprocess -->
+  <rect x="540" y="140" width="380" height="300" rx="12" fill="#0E1526" stroke="#F59E0B" stroke-opacity="0.55"/>
+  <text x="564" y="176" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="15" font-weight="600" fill="#F59E0B">keynv privileged subprocess</text>
+  <text x="564" y="197" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="12" fill="#64748B">the agent's process tree can't read it</text>
+  <text x="564" y="232" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#64748B">@billing.prod.db_password</text>
+  <text x="564" y="256" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="12.5" fill="#64748B">↓ resolved &amp; decrypted in memory</text>
+  <rect x="564" y="270" width="332" height="48" rx="8" fill="#111827" stroke="#475569"/>
+  <text x="730" y="300" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#E2E8F0">s3cr3tP4ss··········</text>
+  <text x="564" y="356" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="13.5" fill="#94A3B8">→ handed straight to the database</text>
+  <rect x="564" y="370" width="156" height="42" rx="8" fill="#0E1526" stroke="#334155"/>
+  <text x="642" y="397" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, sans-serif" font-size="14" fill="#E2E8F0">database</text>
+</svg>

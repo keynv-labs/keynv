@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="56" viewBox="0 0 210 56" fill="none" role="img" aria-label="keynv">
+  <g transform="translate(6,8) scale(1.25)">
+    <rect width="32" height="32" rx="6" fill="#0B1120"/>
+    <rect x="0.5" y="0.5" width="31" height="31" rx="5.5" fill="none" stroke="#F59E0B" stroke-opacity="0.35"/>
+    <path d="M9 7 L9 25 M9 17 L17 9 M9 17 L17 25" stroke="#F59E0B" stroke-width="2.4" stroke-linecap="square"/>
+    <circle cx="22.5" cy="9.5" r="1.5" fill="#F59E0B"/>
+  </g>
+  <text x="60" y="39" font-family="ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="-1" fill="#0B1120">keynv</text>
+</svg>
