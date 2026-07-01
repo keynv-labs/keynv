@@ -51,6 +51,16 @@ paths = [
   # Spike/benchmark scripts deliberately allocate fake secrets to
   # measure encrypt/decrypt throughput.
   '''scripts/spikes/src/.*\.ts$''',
+
+  # README demo fixture. seed-sandbox.sh seeds a throwaway sandbox with
+  # deliberately FAKE, vendor-shaped tokens (the AWS documented-example
+  # key, a fake OpenAI key / GitHub PAT / JWT, a credential-bearing URI)
+  # so `keynv doctor` / `keynv scrub` can be demoed and recorded against
+  # a sandbox — never a real machine. The two shapes GitHub push
+  # protection also trips on (Stripe / Slack) are assembled from
+  # fragments at runtime and never appear as literals. Real values never
+  # live here — see the file header.
+  '''demo/seed-sandbox\.sh$''',
 ]
 regexes = [
   # Clearly-fake placeholders we ship in docs and CLI examples.
