@@ -2,6 +2,11 @@
 
 > Runtime text-surface protection for AI coding workflows.
 
+[![release](https://img.shields.io/github/v/release/keynv-labs/keynv?include_prereleases&sort=semver&color=F59E0B&label=release)](https://github.com/keynv-labs/keynv/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/keynv-labs/keynv/ci.yml?branch=main&label=ci)](https://github.com/keynv-labs/keynv/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![stars](https://img.shields.io/github/stars/keynv-labs/keynv?style=flat&color=555)](https://github.com/keynv-labs/keynv/stargazers)
+
 Your AI agent's transcripts, your shell history, and your terminal
 output are leaking secrets right now. keynv keeps them out, in real
 time, on your machine. No cloud. No re-architecting how you work.
@@ -33,6 +38,12 @@ would pass any storage-era secret-manager audit clean.
 
 keynv finds the leaks. Then it fixes them — atomically, with backups —
 and stops new ones happening.
+
+![keynv doctor finds leaked secrets, then scrub cleans them and doctor reports clean — recorded against a throwaway demo sandbox, not a real machine](./demo/keynv-doctor.gif)
+
+> The GIF runs against a seeded sandbox of **fake** secrets — regenerate it
+> with [`vhs demo/keynv-doctor.tape`](./demo/). The 62,311 figure above is a
+> real scan of a real developer machine.
 
 ```bash
 keynv scrub               # retroactively clean what doctor found
