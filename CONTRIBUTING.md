@@ -4,7 +4,7 @@ Thanks for your interest. keynv is an AI-safe secrets management platform; a few
 
 ## Before you start
 
-- Read [`CLAUDE.md`](./CLAUDE.md) for the project rules. They apply to humans too — the file is named for the AI agent we use day-to-day, but the rules cover anyone touching the code.
+- Read [`AGENTS.md`](./AGENTS.md) for the project rules. They apply to humans too — the file is named for the AI agent we use day-to-day, but the rules cover anyone touching the code.
 - Read the threat model: [`docs/02-threat-model.md`](./docs/02-threat-model.md). Every change touching the safety layer must reference it.
 - Check [`docs/roadmap.md`](./docs/roadmap.md) for the active phase + slice tracker. Work outside the in-progress scope is unlikely to land.
 
