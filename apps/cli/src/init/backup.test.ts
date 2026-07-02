@@ -35,6 +35,23 @@ describe('backupEnvFile', () => {
     expect(readFileSync(`${envPath}.backup-20260515-1430`, 'utf8')).toBe('NEW=1');
   });
 
+  it('does not clobber a stamped backup from the same minute (AUDIT-FINDINGS-4 Y3)', () => {
+    const envPath = join(root, '.env');
+    const fixedDate = new Date(2026, 4, 15, 14, 30); // same minute for both calls
+    // .env.backup and the stamped path both already exist.
+    writeFileSync(`${envPath}.backup`, 'OLDEST=1');
+    writeFileSync(`${envPath}.backup-20260515-1430`, 'PREV=1');
+
+    writeFileSync(envPath, 'NEW=1');
+    const r = backupEnvFile(envPath, fixedDate);
+
+    expect(r.usedTimestamp).toBe(true);
+    // Incrementing suffix instead of overwriting the earlier stamped backup.
+    expect(r.renamedTo).toBe(`${envPath}.backup-20260515-1430-2`);
+    expect(readFileSync(`${envPath}.backup-20260515-1430`, 'utf8')).toBe('PREV=1');
+    expect(readFileSync(`${envPath}.backup-20260515-1430-2`, 'utf8')).toBe('NEW=1');
+  });
+
   it('also works for suffixed env files (.env.local → .env.local.backup)', () => {
     const envPath = join(root, '.env.local');
     writeFileSync(envPath, '');

@@ -277,9 +277,9 @@ note.)
 | B3 | MEDIUM | web | **FIXED** — CSV export neutralizes `= + - @` / tab / CR formula prefixes |
 | B4 | MEDIUM | deploy | **FIXED** — liveness→`/health/live`, readiness/compose→`/health/ready` |
 | B5 | LOW | web | **FIXED** — CSV `payload` column now `JSON.stringify`'d (was `[object Object]`) |
-| K3 | HIGH* | redactor/shell | OPEN — codegen or CI-diff the shell bank |
-| Y3 | HIGH | cli/init, text-surfaces | OPEN — collision-check backups |
-| Y4 | MEDIUM* | cli/init | OPEN — post-normalization key collision check |
+| K3 | HIGH* | redactor/shell | **FIXED** — CI drift guard: every canonical pattern must be shell-mirrored or explicitly exempted |
+| Y3 | HIGH | cli/init, text-surfaces | **FIXED** — backups use an incrementing counter / COPYFILE_EXCL, never clobber |
+| Y4 | MEDIUM* | cli/init | **FIXED** — normalized-key collision guard disambiguates with a `-N` suffix (+ test) |
 | O1–O7, B6–B8 | MEDIUM/LOW | cross-cutting | OPEN |
 | L1–L6 | LOW | tooling/hygiene | OPEN |
 
@@ -287,10 +287,8 @@ note.)
 
 ### Suggested next sequencing
 
-1. **K3, Y3, Y4** — remaining robustness follow-ups from Cycle-3 (shell-bank
-   drift, same-bucket backup overwrite, key-normalization collision).
-2. **B6/B7 + B8** — reconcile the landing license/Cloud copy with the live
+1. **B6/B7 + B8** — reconcile the landing license/Cloud copy with the live
    reality; make `min_cli_version` derive from `pkg.version`.
-3. **O-series** — comments-vs-reality, dead code, dedup, targeted auth unit tests.
-4. **Adoption pass** — opportunities 2–8 above, gated behind shipping `rc.22`
-   (opportunity 1), which this session prepares.
+2. **O-series** — comments-vs-reality, dead code, dedup, targeted auth unit tests.
+3. **Adoption pass** — opportunities 3–8 in §C (opportunity 2 landed: CLI
+   README/LICENSE + doc links), gated behind shipping `rc.22` (opportunity 1).
