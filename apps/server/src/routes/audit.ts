@@ -48,7 +48,12 @@ export function auditRoutes(deps: AuditDeps): Hono {
   });
 
   r.post('/verify', async (c) => {
-    const g = guard(c, 'audit.read');
+    // Chain verification walks the entire global audit log (a full-table scan
+    // + per-row HMAC recompute) and exposes the system-wide row count, so it
+    // is restricted to owner/admin — not every `audit.read` holder (which
+    // includes `reader`). This closes both the cross-tenant volume side
+    // channel and the resource-exhaustion vector (AUDIT-FINDINGS-4 B2).
+    const g = guard(c, 'audit.verify');
     if ('errorResponse' in g) return g.errorResponse;
     // Walk the chain in pages of 1000. Thread the previous page's
     // tail hash into each subsequent verify so the cross-page

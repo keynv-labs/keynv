@@ -49,6 +49,7 @@ export type Action =
   | 'secret.test'
   | 'audit.read'
   | 'audit.export'
+  | 'audit.verify'
   | 'approval.grant';
 
 /**

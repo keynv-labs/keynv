@@ -14,6 +14,10 @@ export const ORG_LEVEL_ACTIONS = new Set<Action>([
   'user.role_change',
   'project.create',
   'project.delete',
+  // Chain verification walks the whole append-only audit log, which is a
+  // single global chain across all orgs — it is an operator concern, not a
+  // per-project one, so it is gated by org role with no membership lookup.
+  'audit.verify',
 ]);
 
 /**
@@ -50,5 +54,6 @@ export const ROLE_ALLOWS_ACTION: Record<Action, ReadonlyArray<Role>> = {
   'secret.test': ['owner', 'admin', 'lead', 'developer'],
   'audit.read': ['owner', 'admin', 'lead', 'developer', 'reader'],
   'audit.export': ['owner', 'admin', 'lead'],
+  'audit.verify': ['owner', 'admin'],
   'approval.grant': ['owner', 'admin', 'lead'],
 };

@@ -25,6 +25,11 @@ import { consumeReferenceToken, peekReferenceToken } from './tokens.js';
  *                  | { type: 'error', message: string }
  */
 
+// Hard cap on a single unterminated request line, mirroring the redactor's
+// 64 KB streaming buffer limit. A resolve request is a few hundred bytes;
+// anything larger is abusive.
+const MAX_LINE_BYTES = 64 * 1024;
+
 /** Well-known resolver socket path. Identical formula on the CLI side so the
  * two processes meet without configuration. Override with
  * KEYNV_MCP_RESOLVER_SOCKET. */
@@ -97,7 +102,13 @@ export async function startResolver(
     socket.on('data', (chunk: string) => {
       buffer += chunk;
       const nl = buffer.indexOf('\n');
-      if (nl === -1) return;
+      if (nl === -1) {
+        // No complete line yet — cap the buffer so a same-uid client streaming
+        // without a newline can't exhaust memory (AUDIT-FINDINGS-4 Y2). A
+        // resolve request (`{type,token}`) is well under 64 KB.
+        if (buffer.length > MAX_LINE_BYTES) socket.destroy();
+        return;
+      }
       const line = buffer.slice(0, nl);
       void handleLine(line, socket, resolve);
     });

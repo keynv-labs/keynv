@@ -1,4 +1,5 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -33,6 +34,30 @@ describe('RPC server + client', () => {
       expect(fp).toMatch(/^[0-9a-f]{8}$/);
       expect(registry.size()).toBe(1);
       expect(registry.values()).toContain('super-secret-custom-token-9000');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('drops a connection that streams past the line-buffer cap (AUDIT-FINDINGS-4 Y2)', async () => {
+    const registry = new FingerprintRegistry();
+    const server = await startRpcServer(registry);
+    try {
+      const sockPath = process.env.KEYNV_WATCHER_SOCKET as string;
+      const closed = await new Promise<boolean>((resolve) => {
+        const c = createConnection(sockPath);
+        c.on('connect', () => {
+          // 70 KB with no newline — exceeds the 64 KB cap, so the server must
+          // destroy the connection instead of buffering without bound.
+          c.write('x'.repeat(70 * 1024));
+        });
+        c.on('close', () => resolve(true));
+        c.on('error', () => resolve(true)); // ECONNRESET from destroy() is fine
+        setTimeout(() => resolve(false), 3000);
+      });
+      expect(closed).toBe(true);
+      // The abusive, newline-less payload never parsed into a request.
+      expect(registry.size()).toBe(0);
     } finally {
       await server.close();
     }

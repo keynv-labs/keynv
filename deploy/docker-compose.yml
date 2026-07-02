@@ -44,7 +44,10 @@ services:
     volumes:
       - keynv-data:/data
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/v1/health || exit 1']
+      # /v1/health/ready returns 503 when the DB check fails; plain /v1/health
+      # always returns 200, so a DB-broken container would stay "healthy"
+      # (AUDIT-FINDINGS-4 B4). wget exits non-zero on 503.
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/v1/health/ready || exit 1']
       interval: 15s
       timeout: 5s
       retries: 5

@@ -58,15 +58,21 @@ spec:
                   name: {{ include "keynv.jwtSecretName" . }}
                   key: KEYNV_JWT_SECRET
           livenessProbe:
+            # Process liveness only — always 200 while the server is up. Must
+            # NOT depend on the DB, or a transient DB blip would restart-loop
+            # the pod instead of just draining traffic.
             httpGet:
-              path: /v1/health
+              path: /v1/health/live
               port: http
             initialDelaySeconds: 10
             periodSeconds: 30
             timeoutSeconds: 5
           readinessProbe:
+            # Gates traffic on DB health: /v1/health/ready returns 503 when the
+            # DB check fails, so k8s pulls the pod from the Service endpoints
+            # (plain /v1/health always returns 200 — AUDIT-FINDINGS-4 B4).
             httpGet:
-              path: /v1/health
+              path: /v1/health/ready
               port: http
             periodSeconds: 5
             timeoutSeconds: 3
