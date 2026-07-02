@@ -292,6 +292,43 @@ describe('Phase 1 acceptance flow', () => {
     expect(verify.checked).toBeGreaterThan(0);
   });
 
+  // Regression for AUDIT-FINDINGS-4 B2: POST /v1/audit/verify walks the entire
+  // global audit chain, so it is gated by the dedicated org-level `audit.verify`
+  // action (owner/admin only). This makes the restriction explicit rather than
+  // relying on the route happening not to pass a project context to `audit.read`.
+  it('restricts POST /v1/audit/verify to owner/admin', async () => {
+    const ownerToken = await login(harness.app, harness.ownerEmail, harness.ownerPassword);
+
+    const invite = async (email: string, org_role: string): Promise<string> => {
+      const res = await harness.app.request('http://localhost/v1/users', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${ownerToken}` },
+        body: JSON.stringify({ email, password: `${org_role}-x-password-12345`, org_role }),
+      });
+      expect(res.status).toBe(201);
+      return login(harness.app, email, `${org_role}-x-password-12345`);
+    };
+
+    const readerToken = await invite('reader-x@team.test', 'reader');
+    const adminToken = await invite('admin-x@team.test', 'admin');
+
+    // A reader cannot verify the global chain.
+    const readerRes = await harness.app.request('http://localhost/v1/audit/verify', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${readerToken}` },
+    });
+    expect(readerRes.status).toBe(403);
+
+    // An admin can (the new action grants owner + admin, not just owner).
+    const adminRes = await harness.app.request('http://localhost/v1/audit/verify', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(adminRes.status).toBe(200);
+    const body = (await adminRes.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
+  });
+
   it('rejects login with wrong password and emits auth.login.denied', async () => {
     const res = await harness.app.request('http://localhost/v1/auth/login', {
       method: 'POST',

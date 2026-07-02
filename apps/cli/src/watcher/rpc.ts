@@ -55,6 +55,11 @@ export interface RpcServer {
  * Returns a handle with `close()` for orderly shutdown. The caller
  * still owns the registry; we don't unregister on close.
  */
+// Hard cap on a single unterminated request line, mirroring the redactor's
+// 64 KB streaming buffer limit. RPC requests (register_value / ping) are tiny;
+// anything larger is abusive.
+const MAX_LINE_BYTES = 64 * 1024;
+
 export async function startRpcServer(registry: FingerprintRegistry): Promise<RpcServer> {
   await ensureStateDir();
   const path = socketPath();
@@ -80,6 +85,9 @@ export async function startRpcServer(registry: FingerprintRegistry): Promise<Rpc
         if (line.length === 0) continue;
         handleLine(line, socket, registry);
       }
+      // Cap the unterminated remainder: a same-uid client streaming without a
+      // newline must not grow this buffer without bound (AUDIT-FINDINGS-4 Y2).
+      if (buffer.length > MAX_LINE_BYTES) socket.destroy();
     });
     socket.on('error', () => {
       // best-effort — client may have hung up
