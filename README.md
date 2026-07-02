@@ -280,6 +280,9 @@ may change without backwards-compatibility shims.
 
 | | |
 |---|---|
+| [Getting started](./docs/getting-started.md) | First run, core commands, headless/CI usage |
+| [Quickstart](./docs/quickstart.md) | The five-step local workflow end to end |
+| [AI setup (Claude Code / Cursor / MCP)](./docs/ai-setup.md) | Wire keynv into your AI agents so they reference aliases, not values |
 | [Vision](./docs/00-vision.md) | What keynv is, what it's not, where it goes |
 | [Threat model](./docs/02-threat-model.md) | What we defend against, what we explicitly don't |
 | [Text surfaces](./docs/03-text-surfaces.md) | The `TextSurface` contract, rewrite semantics, race window |
