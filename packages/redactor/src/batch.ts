@@ -83,21 +83,36 @@ export function redact(text: string, opts: RedactOptions = {}): RedactResult {
 
   // Sort and de-overlap (earliest start wins; longer match wins on tie).
   raw.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
-  const merged: Match[] = [];
+  // Copies so we can extend `end` on overlap (Match.end is readonly).
+  type MutableMatch = { -readonly [K in keyof Match]: Match[K] };
+  const merged: MutableMatch[] = [];
   for (const m of raw) {
     const last = merged[merged.length - 1];
-    if (!last || m.start >= last.end) merged.push(m);
+    if (!last || m.start >= last.end) {
+      merged.push({ ...m });
+    } else if (m.end > last.end) {
+      // Partial overlap: extend the surviving match to cover the union span.
+      // Dropping `m` outright would leave characters (last.end, m.end) — the
+      // tail of a real secret — un-redacted. Extending only ever redacts
+      // MORE, never less, so it is strictly safer.
+      last.end = m.end;
+    }
   }
 
-  // Build redacted output right-to-left so offsets remain valid.
-  let out = text;
-  for (let i = merged.length - 1; i >= 0; i--) {
-    const m = merged[i];
-    if (!m) continue;
+  // Build the redacted output in a single left-to-right pass. `merged` is
+  // sorted ascending and non-overlapping, so we can push [gap, token] pieces
+  // and join once — O(n) instead of the O(matches × filesize) rebuild that a
+  // per-match slice+concat incurs on large scans.
+  const pieces: string[] = [];
+  let cursor = 0;
+  for (const m of merged) {
+    if (m.start > cursor) pieces.push(text.slice(cursor, m.start));
     const original = text.slice(m.start, m.end);
     const renderer =
       patterns.find((p) => p.name === m.pattern)?.redactWith ?? (() => defaultRender(m.pattern));
-    out = out.slice(0, m.start) + renderer(original) + out.slice(m.end);
+    pieces.push(renderer(original));
+    cursor = m.end;
   }
-  return { text: out, matches: merged };
+  if (cursor < text.length) pieces.push(text.slice(cursor));
+  return { text: pieces.join(''), matches: merged };
 }

@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { reference } from '@keynv/core';
 import type { McpApiClient } from './api-client.js';
-import { consumeReferenceToken } from './tokens.js';
+import { consumeReferenceToken, peekReferenceToken } from './tokens.js';
 
 /**
  * Reference-token resolver IPC.
@@ -45,16 +45,18 @@ export interface ResolverServer {
 }
 
 /**
- * Resolves a reference token to its secret value: consumes the token
- * (single-use + TTL enforced in tokens.ts), then fetches the value through
- * the MCP session. Returns null when the token is unknown/expired/consumed,
- * or the alias no longer resolves. Never throws the raw value into an error.
+ * Resolves a reference token to its secret value: validates the token
+ * (single-use + TTL enforced in tokens.ts), fetches the value through the
+ * MCP session, and only then consumes the token — so a transient fetch
+ * failure leaves the token redeemable and the agent can retry. Returns null
+ * when the token is unknown/expired/consumed, or the alias no longer
+ * resolves. Never throws the raw value into an error.
  */
 export async function resolveTokenToValue(
   api: McpApiClient,
   token: string,
 ): Promise<string | null> {
-  const alias = consumeReferenceToken(token);
+  const alias = peekReferenceToken(token);
   if (!alias) return null;
   const parsed = reference.parseAlias(alias);
   if (!parsed) return null;
@@ -66,6 +68,9 @@ export async function resolveTokenToValue(
   const data = await api.request<{ value: string }>(
     `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
   );
+  // Value in hand — burn the token now so it stays single-use, but a
+  // failure above never permanently invalidated a valid token.
+  consumeReferenceToken(token);
   return data.value;
 }
 

@@ -1,3 +1,4 @@
+import { safeNext } from '@/lib/safe-next';
 import { COOKIE_NAME, decodeSession, encodeSession, sessionCookieOptions } from '@/lib/session';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -49,7 +50,11 @@ export async function GET(req: NextRequest) {
       next = '/dashboard';
     }
   }
-  if (!next.startsWith('/')) next = '/dashboard';
+  // Same-origin only. A raw `startsWith('/')` check lets `//evil.com` and
+  // `/\evil.com` through, and `new URL(next, origin)` then resolves them
+  // off-origin — an authenticated open redirect. safeNext() also strips
+  // control chars (header-injection guard).
+  next = safeNext(next);
 
   const raw = req.cookies.get(COOKIE_NAME)?.value;
   if (!raw) return redirectTo(origin, '/login', next);

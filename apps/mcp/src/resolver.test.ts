@@ -123,4 +123,25 @@ describe('resolveTokenToValue', () => {
     } as unknown as McpApiClient;
     expect(await resolveTokenToValue(fakeApi, reference_token)).toBeNull();
   });
+
+  it('does not burn the token on a transient fetch failure (retryable)', async () => {
+    const { reference_token } = issueReferenceToken('@proj.dev.api-key');
+    let attempt = 0;
+    const fakeApi = {
+      request: async (path: string) => {
+        // Fail the very first request (network blip), succeed afterwards.
+        attempt++;
+        if (attempt === 1) throw new Error('ECONNRESET');
+        if (path === '/v1/projects') return { projects: [{ id: 'p1', name: 'proj' }] };
+        return { value: 'RESOLVED' };
+      },
+    } as unknown as McpApiClient;
+
+    // First redemption throws inside the fetch — token must remain redeemable.
+    await expect(resolveTokenToValue(fakeApi, reference_token)).rejects.toThrow();
+    // Retry with the SAME token now succeeds — it was never consumed.
+    expect(await resolveTokenToValue(fakeApi, reference_token)).toBe('RESOLVED');
+    // And it is single-use thereafter.
+    expect(await resolveTokenToValue(fakeApi, reference_token)).toBeNull();
+  });
 });

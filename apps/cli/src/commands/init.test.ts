@@ -160,6 +160,61 @@ describe('InitCommand non-interactive mode', () => {
     }
   });
 
+  it('routes ambiguous entries to the vault in --yes mode (fail-safe, no plaintext leak)', async () => {
+    const cwd = process.cwd();
+    const dir = mkdtempSync(join(tmpdir(), 'keynv-autoscan-amb-'));
+    try {
+      process.chdir(dir);
+      writeFileSync('package.json', JSON.stringify({ name: 'glmcore' }));
+      // RELEASE_CHANNEL=stable has no secret-suffix, no value pattern, and is
+      // short/low-entropy → classifyEntry returns 'ambiguous'. With no human
+      // gate (--yes) it must be treated as a secret, not written as plaintext.
+      writeFileSync('.env', 'RELEASE_CHANNEL=stable\n');
+
+      const request = vi.fn().mockImplementation((path: string, init?: { method?: string }) => {
+        if (path === '/v1/health') {
+          return Promise.resolve({
+            version: '0.2.0',
+            capabilities: { features: { batch_secret_create: true } },
+          });
+        }
+        if (path === '/v1/projects' && (!init || init.method === undefined)) {
+          return Promise.resolve({ projects: [] });
+        }
+        if (path === '/v1/projects' && init?.method === 'POST') {
+          return Promise.resolve({ id: 'p_test', name: 'glmcore' });
+        }
+        if (path === '/v1/projects/p_test/secrets/batch') {
+          return Promise.resolve({ created: [] });
+        }
+        return Promise.resolve({});
+      });
+
+      const command = new InitCommand();
+      command.yes = true;
+      command.noScripts = true;
+      command.dryRun = false;
+      command.envFile = undefined;
+      command.project = undefined;
+      command.env = undefined;
+      command.secret = undefined;
+      Object.assign(command, {
+        context: { stdout: { write: vi.fn() }, stderr: { write: vi.fn() } },
+      });
+
+      const result = await command.runAutoScan({ request } as unknown as ApiClient);
+      expect(result).toBe(0);
+
+      const keynvEnv = readFileSync('.keynv.env', 'utf8');
+      // Fail-safe: became an alias reference, NOT committable plaintext.
+      expect(keynvEnv).toContain('RELEASE_CHANNEL=@glmcore.dev.RELEASE_CHANNEL');
+      expect(keynvEnv).not.toContain('RELEASE_CHANNEL=stable');
+    } finally {
+      process.chdir(cwd);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('writes .keynv.env for --env-file migrations', async () => {
     const cwd = process.cwd();
     const dir = mkdtempSync(join(tmpdir(), 'keynv-init-'));
