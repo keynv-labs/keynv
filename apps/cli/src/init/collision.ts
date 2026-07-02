@@ -217,12 +217,53 @@ export function planVaultKeys(sources: ReadonlyArray<SourceEntry>): CollisionPla
     }
   }
 
+  // -- Step 3: normalized-key collision guard.
+  // Groups above key on the EXACT localKey, but two DISTINCT local keys can
+  // normalize to the same vaultKey (e.g. `foo!bar` and `foo@bar` → `foobar`,
+  // or two >64-char names sharing a truncated prefix). Those land in different
+  // groups and would silently overwrite each other in the vault (first-wins).
+  // Detect on the normalized key and disambiguate with a counter (Y4).
+  const takenByKey = new Map<string, ResolvedEntry>(); // `${env}|${vaultKey}` -> first entry
+  for (const e of resolved) {
+    const composite = `${e.envName}|${e.vaultKey}`;
+    const prior = takenByKey.get(composite);
+    if (!prior) {
+      takenByKey.set(composite, e);
+      continue;
+    }
+    // Same local key sharing a vault key is an intentional merge — not a clash.
+    if (prior.localKey === e.localKey) continue;
+    const disambiguated = firstFreeVaultKey(e.envName, e.vaultKey, takenByKey);
+    renamed.push({
+      envName: e.envName,
+      localKey: e.localKey,
+      vaultKey: disambiguated,
+      source: e.source,
+      otherSources: [prior.source],
+    });
+    e.vaultKey = disambiguated;
+    takenByKey.set(`${e.envName}|${disambiguated}`, e);
+  }
+
   return {
     resolved,
     renamed,
     merged,
     shadowed: [...shadowedAccum.values()],
   };
+}
+
+/**
+ * First vault key of the form `<base>-2`, `<base>-3`, … not already taken in
+ * `env`. The base is trimmed so the suffixed key never exceeds the 64-char
+ * limit `KEY_RE` enforces.
+ */
+function firstFreeVaultKey(env: string, base: string, taken: Map<string, ResolvedEntry>): string {
+  for (let i = 2; ; i++) {
+    const suffix = `-${i}`;
+    const candidate = `${base.slice(0, 64 - suffix.length)}${suffix}`;
+    if (!taken.has(`${env}|${candidate}`)) return candidate;
+  }
 }
 
 /**

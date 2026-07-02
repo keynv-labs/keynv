@@ -24,9 +24,21 @@ export function backupEnvFile(absolutePath: string, now: Date = new Date()): Bac
     renameSync(absolutePath, plain);
     return { renamedTo: plain, usedTimestamp: false };
   }
-  const stamped = `${absolutePath}.backup-${timestampSlug(now)}`;
-  renameSync(absolutePath, stamped);
-  return { renamedTo: stamped, usedTimestamp: true };
+  // Minute-resolution stamp collides for a second migration within the same
+  // minute; append an incrementing counter so an earlier stamped backup is
+  // never clobbered (AUDIT-FINDINGS-4 Y3).
+  const target = firstFreePath(`${absolutePath}.backup-${timestampSlug(now)}`);
+  renameSync(absolutePath, target);
+  return { renamedTo: target, usedTimestamp: true };
+}
+
+/** First path that doesn't already exist: `base`, then `base-2`, `base-3`, … */
+function firstFreePath(base: string): string {
+  if (!existsSync(base)) return base;
+  for (let i = 2; ; i++) {
+    const candidate = `${base}-${i}`;
+    if (!existsSync(candidate)) return candidate;
+  }
 }
 
 /** `YYYYMMDD-HHmm` in local time, e.g. `20260515-1430`. */

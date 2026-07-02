@@ -81,6 +81,26 @@ describe('planVaultKeys', () => {
     expect(byRel['apps/api']).toBe('api-DATABASE_URL');
   });
 
+  it('disambiguates distinct local keys that normalize to the same vault key (AUDIT-FINDINGS-4 Y4)', () => {
+    // `FOO!BAR` and `FOO@BAR` both strip to the vault key `foobar`, but are
+    // distinct secrets with distinct values. Without the guard the second would
+    // silently overwrite the first in the vault; instead it gets a `-2` suffix.
+    const f = fileHit('apps/api');
+    const plan = planVaultKeys([
+      src(f, 'FOO!BAR', 'first-value'),
+      src(f, 'FOO@BAR', 'second-value'),
+    ]);
+    const vaultKeys = plan.resolved.map((r) => r.vaultKey);
+    // No two resolved entries share a vault key.
+    expect(new Set(vaultKeys).size).toBe(vaultKeys.length);
+    expect(vaultKeys).toContain('foobar');
+    expect(vaultKeys).toContain('foobar-2');
+    // Local keys (the process.env names) are preserved so app code still works.
+    expect(plan.resolved.map((r) => r.localKey).sort()).toEqual(['FOO!BAR', 'FOO@BAR']);
+    // The clash is surfaced, not silent.
+    expect(plan.renamed.some((r) => r.vaultKey === 'foobar-2')).toBe(true);
+  });
+
   it('collapses intra-dir duplicates with dotenv last-wins and records the shadow', () => {
     const dir = fileHit('apps/api', '.env');
     const dirLocal = fileHit('apps/api', '.env.local');

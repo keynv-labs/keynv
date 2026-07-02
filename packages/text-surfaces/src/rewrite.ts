@@ -1,3 +1,4 @@
+import { constants } from 'node:fs';
 import { copyFile, open, readFile, rename, stat, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { type RedactOptions, redact } from '@keynv/redactor';
@@ -159,10 +160,13 @@ export async function rewriteFile(
   }
 
   const ts = isoCompact(new Date());
-  const backupPath = options.backup === false ? undefined : `${path}.keynv.bak.${ts}`;
-  if (backupPath !== undefined) {
+  let backupPath: string | undefined;
+  if (options.backup !== false) {
     try {
-      await copyFile(path, backupPath);
+      // Second-resolution stamp collides for a second scrub of the same file
+      // within the same second; COPYFILE_EXCL + counter never clobbers an
+      // earlier backup (AUDIT-FINDINGS-4 Y3).
+      backupPath = await backupWithoutClobber(path, `${path}.keynv.bak.${ts}`);
     } catch (err) {
       return {
         path,
@@ -213,6 +217,24 @@ export async function rewriteFile(
 function isoCompact(d: Date): string {
   // Filesystem-safe stamp: 20260518T194913Z
   return `${d.toISOString().replace(/[-:]/g, '').replace(/\..+$/, 'Z')}`;
+}
+
+/**
+ * Copies `src` to the first non-existing backup path — `base`, then `base-2`,
+ * `base-3`, … — using COPYFILE_EXCL so the create-or-skip is atomic and a
+ * same-second second scrub can never clobber an earlier backup.
+ */
+async function backupWithoutClobber(src: string, base: string): Promise<string> {
+  for (let i = 0; ; i++) {
+    const dest = i === 0 ? base : `${base}-${i + 1}`;
+    try {
+      await copyFile(src, dest, constants.COPYFILE_EXCL);
+      return dest;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'EEXIST') continue;
+      throw err;
+    }
+  }
 }
 
 /** Convenience for surfaces that have a single file path. */
