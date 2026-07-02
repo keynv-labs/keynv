@@ -368,7 +368,11 @@ any prompts.
             skippedCount++;
             continue;
           }
-          if (verdict === 'secret' && !e.isAlias) {
+          // Fail-safe: this is the non-interactive (--yes) auto-scan path, so
+          // there is no human to confirm borderline entries. Treat 'ambiguous'
+          // as secret too — a single classifier miss must never land a real
+          // secret as committable plaintext in .keynv.env.
+          if ((verdict === 'secret' || verdict === 'ambiguous') && !e.isAlias) {
             isSecret.add(`${f.path}|${e.name}`);
           }
           allSources.push({

@@ -34,6 +34,25 @@ export function issueReferenceToken(alias: string): {
 }
 
 /**
+ * Returns a token's bound alias if and only if the token is still valid
+ * AND unconsumed — WITHOUT consuming it. Returns null in every other case.
+ *
+ * Callers that must fetch before committing single-use (so a transient
+ * failure stays retryable) peek first, do their work, then call
+ * `consumeReferenceToken` only on success.
+ */
+export function peekReferenceToken(token: string): string | null {
+  const entry = STORE.get(token);
+  if (!entry) return null;
+  if (entry.consumed) return null;
+  if (entry.expires_at <= Date.now()) {
+    STORE.delete(token);
+    return null;
+  }
+  return entry.alias;
+}
+
+/**
  * Resolves a reference token to its bound alias if and only if the
  * token is still valid AND has not been consumed. Returns null in
  * every other case. Successful resolution flips `consumed` so reuse

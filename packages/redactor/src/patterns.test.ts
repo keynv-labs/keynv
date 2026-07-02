@@ -152,6 +152,23 @@ describe('redact — overlap and ordering', () => {
     expect(text).toContain('<REDACTED:jwt>');
     expect(matches.filter((m) => m.start < input.indexOf(jwt) + jwt.length).length).toBe(1);
   });
+
+  it('does not leak the tail of a longer secret on partial overlap', () => {
+    // Two resolved values share overlapping text. The earlier, shorter match
+    // must NOT cause the tail of the later one to survive un-redacted: the
+    // de-overlap step extends to the union span rather than dropping the
+    // second hit. Regression for the "tail leak" (batch de-overlap loop).
+    const input = 'abc123def456ghi';
+    const { text } = redact(input, {
+      literals: ['abc123def', 'def456ghi'],
+      entropy: { enabled: false },
+    });
+    // Every character of either secret must be gone — no plaintext tail.
+    expect(text).not.toContain('abc123def');
+    expect(text).not.toContain('def456ghi');
+    expect(text).not.toContain('456ghi');
+    expect(text).not.toMatch(/[0-9]/);
+  });
 });
 
 describe('redact — literals (resolved-value pre-emptive redaction)', () => {
