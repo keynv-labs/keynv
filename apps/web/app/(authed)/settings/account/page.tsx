@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardEyebrow, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/session";
-import { CheckCircle2 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Field } from "./_components/field";
 import { ChangePasswordForm } from "./_components/password-form";
