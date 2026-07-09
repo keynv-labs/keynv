@@ -19,6 +19,7 @@ RUN corepack enable
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web/package.json ./apps/web/
+COPY packages/core/package.json packages/core/tsconfig.json ./packages/core/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
   pnpm install --frozen-lockfile --filter '@keynv/web...'
@@ -31,8 +32,10 @@ RUN corepack enable
 
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/web/node_modules ./apps/web/node_modules
+COPY --from=deps /repo/packages/core/node_modules ./packages/core/node_modules
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web ./apps/web
+COPY packages/core ./packages/core
 
 # Static rendering for /changelog and /docs reads these files at
 # build time via apps/web/lib/markdown.ts → readFile('CHANGELOG.md')
@@ -50,7 +53,7 @@ ENV KEYNV_WEB_SESSION_SECRET=build-time-placeholder-not-a-real-secret
 ENV KEYNV_SERVER_URL=http://localhost:8080
 
 WORKDIR /repo/apps/web
-RUN ./node_modules/.bin/next build
+RUN /repo/node_modules/.bin/tsc -p /repo/packages/core/tsconfig.json && ./node_modules/.bin/next build
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
@@ -66,6 +69,16 @@ WORKDIR /app
 # (No public/ folder yet; add a COPY for it the day we ship favicons.)
 COPY --from=builder --chown=keynv:keynv /repo/apps/web/.next/standalone ./
 COPY --from=builder --chown=keynv:keynv /repo/apps/web/.next/static ./apps/web/.next/static
+# Next standalone keeps source-root-relative module paths from the workspace
+# package, so mirror the dependency tree both inside /app and at the original
+# absolute /repo path expected by createRequire(import.meta.url).
+COPY --from=builder --chown=keynv:keynv /repo/node_modules/.pnpm ./node_modules/.pnpm
+COPY --from=builder --chown=keynv:keynv /repo/node_modules/.pnpm /repo/node_modules/.pnpm
+COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules ./node_modules
+COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules ./apps/web/node_modules
+COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules ./packages/core/node_modules
+COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules ./repo/packages/core/node_modules
+COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules /repo/packages/core/node_modules
 
 USER keynv
 ENV NODE_ENV=production

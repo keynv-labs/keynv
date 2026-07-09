@@ -2,6 +2,7 @@
 // trips up some bundlers; loading via createRequire keeps the module path
 // stable across Node, Bun, and tsx.
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
 
 interface Sodium {
   ready: Promise<void>;
@@ -15,8 +16,20 @@ interface Sodium {
   memzero(buf: Uint8Array): void;
 }
 
-const require = createRequire(import.meta.url);
-const sodium = require('libsodium-wrappers') as Sodium;
+const moduleRequire = createRequire(import.meta.url);
+
+function loadSodiumModule(): Sodium {
+  try {
+    return moduleRequire('libsodium-wrappers') as Sodium;
+  } catch {
+    // Next standalone can preserve workspace-absolute module origins, so fall
+    // back to resolving from the runtime app root where copied dependencies live.
+    const runtimeRequire = createRequire(join(process.cwd(), 'package.json'));
+    return runtimeRequire('libsodium-wrappers') as Sodium;
+  }
+}
+
+const sodium = loadSodiumModule();
 
 let readyPromise: Promise<Sodium> | null = null;
 
