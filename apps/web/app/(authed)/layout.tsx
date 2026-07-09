@@ -1,13 +1,13 @@
-import { AppPalette } from '@/components/command-palette/app-palette';
-import { MobileTopBar } from '@/components/layout/mobile-top-bar';
-import { Sidebar } from '@/components/layout/sidebar';
-import { CsrfProvider } from '@/components/security/csrf-field';
-import { SkipLink } from '@/components/ui/skip-link';
-import { api } from '@/lib/api';
-import { createCsrfToken } from '@/lib/csrf';
-import { getSession } from '@/lib/session';
-import { redirect } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { AppPalette } from "@/components/command-palette/app-palette";
+import { MobileTopBar } from "@/components/layout/mobile-top-bar";
+import { Sidebar } from "@/components/layout/sidebar";
+import { CsrfProvider } from "@/components/security/csrf-field";
+import { SkipLink } from "@/components/ui/skip-link";
+import { api } from "@/lib/api";
+import { createCsrfToken } from "@/lib/csrf";
+import { getSession } from "@/lib/session";
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 
 interface OrgInfo {
   id: string;
@@ -20,16 +20,20 @@ interface WhoamiResponse {
   org_role?: string;
 }
 
-export default async function AuthedLayout({ children }: { children: ReactNode }) {
+export default async function AuthedLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const session = await getSession();
-  if (!session) redirect('/login');
+  if (!session) redirect("/login");
 
   // Fetch org info for the sidebar switcher.
   let orgs: OrgInfo[] = [];
   let activeOrgName = session.org_id;
   let activeOrgRole = session.org_role;
   try {
-    const data = await api<WhoamiResponse>('/v1/whoami');
+    const data = await api<WhoamiResponse>("/v1/whoami");
     orgs = data.orgs ?? [];
     activeOrgName = data.org_name ?? session.org_id;
     activeOrgRole = data.org_role ?? session.org_role;
@@ -42,7 +46,7 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
 
   return (
     <CsrfProvider token={csrfToken}>
-      <div className="flex min-h-screen">
+      <div className="flex max-w-[1400px] mx-auto min-h-screen">
         <SkipLink />
         <Sidebar
           email={session.email}
@@ -62,7 +66,7 @@ export default async function AuthedLayout({ children }: { children: ReactNode }
             orgs={orgs}
           />
           <main id="main" className="flex-1 min-w-0">
-            <div className="mx-auto max-w-6xl px-4 py-7 md:px-8 md:py-10">{children}</div>
+            <div className="mx-auto px-4 py-7 md:px-8 md:py-10">{children}</div>
           </main>
         </div>
         <AppPalette />

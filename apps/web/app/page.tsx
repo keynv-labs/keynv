@@ -1,1073 +1,158 @@
-import { Logomark } from '@/components/brand/logomark';
-import { InstallTabs } from '@/components/cli/install-tabs';
-import { GithubStars } from '@/components/trust/github-stars';
-import { StatusPill } from '@/components/trust/status-pill';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { SkipLink } from '@/components/ui/skip-link';
-import { getCapabilities } from '@/lib/capabilities';
-import { getSession } from '@/lib/session';
-import { ArrowRight, Check, EyeOff, Github, Lock, Terminal } from 'lucide-react';
-import type { Metadata } from 'next';
-import Link from 'next/link';
+import { Poppins } from "next/font/google";
+import { Github, Star, Mail, Terminal, ShieldCheck, Zap } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
 
-const TITLE = 'keynv — developer-first secrets management';
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "600"],
+});
+
+const TITLE = "keynv — developer-first secrets management";
 const DESCRIPTION =
-  'Store API keys, database credentials, SSH secrets, webhook tokens, and internal credentials in one vault. Use safe aliases in code, terminals, CI, and AI-assisted workflows.';
+  "Store API keys, database credentials, and secrets in one vault. Use safe aliases everywhere.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://keynv.dev'),
   title: TITLE,
   description: DESCRIPTION,
-  applicationName: 'keynv',
-  keywords: [
-    'secrets management',
-    'AI agent security',
-    'AI coding agents',
-    'Claude Code',
-    'Cursor',
-    'self-hosted vault',
-    'AI-safe secrets',
-    'developer secret manager',
-    'team credential vault',
-    'environment variables',
-    'API key vault',
-  ],
-  openGraph: {
-    type: 'website',
-    url: 'https://keynv.dev',
-    siteName: 'keynv',
-    title: TITLE,
-    description: DESCRIPTION,
-    locale: 'en_US',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: TITLE,
-    description: DESCRIPTION,
-  },
-  alternates: { canonical: 'https://keynv.dev' },
 };
 
-interface CtaContext {
-  isAuthed: boolean;
-  publicSignup: boolean;
-}
-
 export default async function LandingPage() {
-  const [session, { publicSignup }] = await Promise.all([getSession(), getCapabilities()]);
-  const ctx: CtaContext = { isAuthed: Boolean(session), publicSignup };
-
   return (
-    <div className="min-h-screen bg-bg flex flex-col">
-      <SkipLink />
-      <TopNav ctx={ctx} />
-      <main id="main" className="flex-1">
-        <Hero ctx={ctx} />
-        <SecretUseCases />
-        <Problem />
-        <HowItWorks />
-        <Integrations />
-        <InstallTabs />
-        <Pricing ctx={ctx} />
-        <BottomCta ctx={ctx} />
-      </main>
-      <Footer />
-    </div>
-  );
-}
-
-// ─── TOP NAV ─────────────────────────────────────────────────────────────────
-
-function TopNav({ ctx }: { ctx: CtaContext }) {
-  return (
-    <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 h-14 flex items-center gap-4">
-        <Link href={{ pathname: '/' }} className="flex items-center">
-          <Logomark size={22} />
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-6 text-sm text-fg-muted ml-6">
-          <a
-            href="#how-it-works"
-            className="hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            How it works
-          </a>
-          <a
-            href="#integrations"
-            className="hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            Integrations
-          </a>
-          <a href="#pricing" className="hover:text-fg transition-colors duration-fast ease-snap">
-            Pricing
-          </a>
-          <Link
-            href={{ pathname: '/docs' }}
-            className="hover:text-fg transition-colors duration-fast ease-snap"
-          >
-            Docs
-          </Link>
-          <GithubStars />
-        </nav>
-
-        <div className="ml-auto flex items-center gap-2">
-          {ctx.isAuthed ? (
-            <Link href={{ pathname: '/dashboard' }}>
-              <Button size="sm" className="gap-1.5">
-                Open dashboard
-                <ArrowRight size={13} strokeWidth={2.25} />
-              </Button>
-            </Link>
-          ) : ctx.publicSignup ? (
-            <>
-              <Link
-                href={{ pathname: '/login' }}
-                className="text-sm text-fg-muted hover:text-fg transition-colors duration-fast ease-snap px-2"
-              >
-                Sign in
-              </Link>
-              <Link href={{ pathname: '/register' }}>
-                <Button size="sm" className="gap-1.5">
-                  Get started
-                  <ArrowRight size={13} strokeWidth={2.25} />
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <Link href={{ pathname: '/login' }}>
-              <Button size="sm">Sign in</Button>
-            </Link>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
-
-// ─── HERO ────────────────────────────────────────────────────────────────────
-
-function Hero({ ctx }: { ctx: CtaContext }) {
-  return (
-    <section className="relative overflow-hidden border-b border-border">
-      <div aria-hidden className="absolute inset-0 bg-grid bg-grid-fade opacity-50" />
-      <div aria-hidden className="absolute inset-0 bg-amber-glow pointer-events-none" />
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent opacity-30 animate-scan motion-reduce:hidden"
-      />
-
-      <div className="relative mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-28 text-center">
-        <div className="animate-hero-rise">
-          <Badge tone="accent" className="mx-auto">
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-accent animate-amber-pulse" />
-            Public beta · keynv.dev or self-hosted
-          </Badge>
-        </div>
-
-        <h1
-          className="display mt-6 text-[44px] sm:text-[58px] md:text-[72px] lg:text-[84px] max-w-4xl mx-auto animate-hero-rise"
-          style={{ animationDelay: '60ms' }}
-        >
-          Store secrets once.
-          <br />
-          <span className="bg-gradient-to-b from-fg-muted to-fg-subtle bg-clip-text text-transparent">
-            Use safe aliases everywhere.
-          </span>
-        </h1>
-
-        <p
-          className="mt-6 text-base md:text-lg text-fg-muted max-w-2xl mx-auto leading-relaxed animate-hero-rise"
-          style={{ animationDelay: '120ms' }}
-        >
-          Developer-first vault for API keys, database credentials, SSH secrets, webhook tokens, and
-          internal credentials. Use readable aliases like{' '}
-          <code className="text-accent">@billing.prod.db_password</code> in code, terminals, CI, and
-          AI tools — real values stay protected.
-        </p>
-
-        <div
-          className="mt-9 flex items-center justify-center gap-3 flex-wrap animate-hero-rise"
-          style={{ animationDelay: '180ms' }}
-        >
-          {ctx.isAuthed ? (
-            <Link href={{ pathname: '/dashboard' }}>
-              <Button size="lg" className="gap-2">
-                Open dashboard
-                <ArrowRight size={14} strokeWidth={2.25} />
-              </Button>
-            </Link>
-          ) : ctx.publicSignup ? (
-            <>
-              <Link href={{ pathname: '/register' }}>
-                <Button size="lg" className="gap-2">
-                  Get started — free
-                  <ArrowRight size={14} strokeWidth={2.25} />
-                </Button>
-              </Link>
-              <a href="#how-it-works">
-                <Button size="lg" variant="outline">
-                  See how it works
-                </Button>
-              </a>
-            </>
-          ) : (
-            <Link href={{ pathname: '/login' }}>
-              <Button size="lg" className="gap-2">
-                Sign in
-                <ArrowRight size={14} strokeWidth={2.25} />
-              </Button>
-            </Link>
-          )}
-        </div>
-
-        {!ctx.isAuthed && ctx.publicSignup ? (
-          <p className="mt-5 text-xs text-fg-subtle font-mono uppercase tracking-[0.14em]">
-            npm install -g @keynv/cli · run keynv · no credit card
-          </p>
-        ) : null}
-
-        <div className="animate-hero-rise" style={{ animationDelay: '260ms' }}>
-          <AgentVsSubprocessFrame />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── AGENT VS SUBPROCESS DEMO ────────────────────────────────────────────────
-//
-// The aha-moment of the product: same command, two realities. The left
-// pane is what the AI agent sees in its tool transcript; the right pane
-// is what actually runs in the subprocess that keynv-exec spawns. The
-// agent's process tree literally cannot read the right pane.
-
-function AgentVsSubprocessFrame() {
-  return (
-    <div className="mt-14 mx-auto max-w-5xl text-left">
-      <div className="grid md:grid-cols-2 gap-px bg-border-strong rounded-xl border border-border-strong overflow-hidden shadow-[0_24px_64px_-24px_rgba(0,0,0,0.7)]">
-        {/* ─── Agent's view ─────────────────────────────────────────── */}
-        <div className="bg-bg-elevated">
-          <TerminalChrome
-            label="developer / agent view"
-            sublabel="alias only"
-            indicator={{ tone: 'warn', icon: <EyeOff size={11} strokeWidth={2.25} /> }}
-          />
-          <pre className="px-5 py-5 font-mono text-[12px] sm:text-[13px] leading-[1.7] overflow-x-auto whitespace-pre">
-            <Line dim>$ keynv exec --</Line>
-            <Line>
-              {'  '}
-              <span className="text-fg">mysql</span> -p
-              <span className="text-accent">@billing.prod.db_password</span>
-            </Line>
-            <Line dim># exit 0 · 142ms</Line>
-            <Line> </Line>
-            <Line dim>$ ps aux | grep mysql</Line>
-            <Line>
-              {'  '}
-              <span className="text-fg-muted">mysql -p</span>
-              <span className="text-warn">▒▒▒▒▒▒</span>
-              <span className="text-fg-muted"> -h </span>
-              <span className="text-warn">▒▒▒▒▒▒</span>
-            </Line>
-            <Line dim># argv redacted by output scanner</Line>
-            <Line>
-              <Cursor />
-            </Line>
-          </pre>
-        </div>
-
-        {/* ─── Subprocess (privileged) ──────────────────────────────── */}
-        <div className="bg-bg-inset">
-          <TerminalChrome
-            label="runtime"
-            sublabel="resolved privately"
-            indicator={{ tone: 'success', icon: <Lock size={11} strokeWidth={2.25} /> }}
-          />
-          <pre className="px-5 py-5 font-mono text-[12px] sm:text-[13px] leading-[1.7] overflow-x-auto whitespace-pre">
-            <Line dim># resolved at fork-time, no env / no argv</Line>
-            <Line>
-              {'  '}
-              <span className="text-fg">mysql</span> -p
-              <span className="text-success">$secret_via_stdin</span>
-            </Line>
-            <Line>
-              {'  '}
-              <span className="text-fg-subtle">→ </span>
-              <span className="text-fg-muted">connected to db.prod.acme.internal</span>
-            </Line>
-            <Line> </Line>
-            <Line dim>$ select count(*) from payments;</Line>
-            <Line>
-              {'  '}
-              <span className="text-fg">42,318</span>
-            </Line>
-            <Line dim># this output never reaches the agent's transcript</Line>
-            <Line> </Line>
-          </pre>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle flex-wrap">
-        <span>vaulted</span>
-        <span className="text-fg-subtle/60">·</span>
-        <span className="text-accent">sha256:9f4c2e</span>
-        <span className="text-fg-subtle/60">·</span>
-        <span>audit chain</span>
-        <span className="text-fg-subtle/60">·</span>
-        <span>3 actors · 7 reads in last hour</span>
-      </div>
-    </div>
-  );
-}
-
-function TerminalChrome({
-  label,
-  sublabel,
-  indicator,
-}: {
-  label: string;
-  sublabel: string;
-  indicator: { tone: 'success' | 'warn'; icon: React.ReactNode };
-}) {
-  const toneClass =
-    indicator.tone === 'success' ? 'text-success bg-success-soft' : 'text-warn bg-warn-soft';
-  return (
-    <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
-      <div className="flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-bg-overlay border border-border-strong" />
-        <span className="h-2.5 w-2.5 rounded-full bg-bg-overlay border border-border-strong" />
-        <span className="h-2.5 w-2.5 rounded-full bg-bg-overlay border border-border-strong" />
-      </div>
-      <span className="ml-2 font-mono text-[11px] text-fg-subtle uppercase tracking-[0.14em]">
-        {label}
-      </span>
-      <span className="font-mono text-[11px] text-fg-subtle/60">·</span>
-      <span className="font-mono text-[10px] text-fg-subtle">{sublabel}</span>
-      <span
-        className={`ml-auto inline-flex items-center gap-1.5 rounded-sm px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${toneClass}`}
-      >
-        {indicator.icon}
-      </span>
-    </div>
-  );
-}
-
-function Line({ children, dim = false }: { children: React.ReactNode; dim?: boolean }) {
-  return <div className={dim ? 'text-fg-subtle' : ''}>{children}</div>;
-}
-
-function Cursor() {
-  return (
-    <span
-      aria-hidden
-      className="inline-block h-[1em] w-[0.5em] align-middle bg-accent animate-pulse motion-reduce:opacity-50"
-    />
-  );
-}
-
-// ─── USE CASES ────────────────────────────────────────────────────────────────
-
-function SecretUseCases() {
-  return (
-    <section className="border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow text-center">01 · what keynv protects</div>
-        <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
-          One place for the credentials your team uses every day.{' '}
-          <span className="text-fg-muted">Not just developer env vars.</span>
-        </h2>
-        <p className="mt-6 text-base text-fg-muted text-center max-w-2xl mx-auto leading-relaxed">
-          Store secrets manually in the dashboard, import them from existing{' '}
-          <code className="text-accent">.env</code> files, or manage them from the CLI. keynv keeps
-          the real value in the vault and gives your team a safe alias to use everywhere else.
-        </p>
-
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
-          <UseCaseCard
-            title="Application secrets"
-            body="API keys, database URLs, OAuth client secrets, webhook signing keys, and service tokens organized by project and environment."
-          />
-          <UseCaseCard
-            title="Manual team credentials"
-            body="Shared internal passwords, SSH credentials, admin tokens, and operational secrets that should not live in chat, notes, or local files."
-          />
-          <UseCaseCard
-            title="AI-assisted workflows"
-            body="Aliases are safe to show in prompts, code reviews, terminal transcripts, and agent tool calls; real values resolve only at runtime."
-          />
-        </div>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <Benefit
-            title="Readable aliases"
-            body="Use names like @billing.prod.stripe_key instead of copying raw values between tools."
-          />
-          <Benefit
-            title="Project + environment scope"
-            body="Keep dev, staging, and production credentials separated with clear ownership."
-          />
-          <Benefit
-            title="Audit-ready access"
-            body="Track who read or changed a secret, when it happened, and which project it belonged to."
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function UseCaseCard({ title, body }: { title: string; body: string }) {
-  return (
-    <article className="rounded-xl border border-border bg-bg-elevated p-6 hover:border-border-strong transition-colors duration-fast ease-snap">
-      <div className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-accent-soft-border bg-accent-soft text-accent">
-        <Check size={14} strokeWidth={2.5} />
-      </div>
-      <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-fg">{title}</h3>
-      <p className="mt-3 text-sm text-fg-muted leading-relaxed">{body}</p>
-    </article>
-  );
-}
-
-function Benefit({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-bg-inset/50 p-4">
-      <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
-        {title}
-      </div>
-      <p className="mt-2 text-xs text-fg-muted leading-relaxed">{body}</p>
-    </div>
-  );
-}
-
-// ─── PROBLEM ─────────────────────────────────────────────────────────────────
-
-function Problem() {
-  return (
-    <section className="border-b border-border">
-      <div className="mx-auto max-w-4xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow">02 · why it exists</div>
-        <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05]">
-          The old secret workflow breaks down{' '}
-          <span className="text-fg-muted">as soon as more than one person needs access.</span>
-        </h2>
-        <p className="mt-6 text-base text-fg-muted leading-relaxed max-w-3xl">
-          Secrets usually start in <code className="text-fg">.env</code> files, then spread into
-          chat, shell history, CI settings, screenshots, and AI agent transcripts. keynv replaces
-          that copying habit with a vault, readable aliases, runtime resolution, and an audit trail
-          your team can actually follow.
-        </p>
-
-        <ul className="mt-10 grid gap-3 sm:grid-cols-3 text-sm">
-          <Stat value="less copying" label="developers use aliases instead of moving raw values" />
-          <Stat
-            value="manual + app"
-            label="store operational credentials and project env vars together"
-          />
-          <Stat
-            value="agent-safe"
-            label="AI tools see alias literals, not production credentials"
-          />
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <li className="rounded-lg border border-border bg-bg-elevated p-4 hover:border-border-strong transition-colors duration-fast ease-snap">
-      <div className="text-fg font-mono text-[15px] font-medium tabular tracking-tight">
-        {value}
-      </div>
-      <div className="text-xs text-fg-muted mt-1.5 leading-relaxed">{label}</div>
-    </li>
-  );
-}
-
-// ─── HOW IT WORKS ────────────────────────────────────────────────────────────
-
-function HowItWorks() {
-  return (
-    <section id="how-it-works" className="border-b border-border">
-      <div className="mx-auto max-w-5xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow text-center">03 · how it works</div>
-        <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
-          A vault for real values.{' '}
-          <span className="text-fg-muted">Aliases for everything developers touch.</span>
-        </h2>
-
-        <ol className="mt-12 grid gap-4 md:grid-cols-3 relative">
-          <div
-            aria-hidden
-            className="hidden md:block absolute top-8 left-[16.66%] right-[16.66%] h-px bg-gradient-to-r from-transparent via-border-strong to-transparent"
-          />
-          <Step
-            number="01"
-            title="Connect"
-            body={
-              <>
-                Install the CLI and run <code className="text-accent">keynv</code>. The TUI connects
-                to keynv.dev or your self-hosted server, then offers to set up the current project.
-              </>
-            }
-          />
-          <Step
-            number="02"
-            title="Store"
-            body={
-              <>
-                Add secrets manually in the dashboard, create them from the CLI, or import existing{' '}
-                <code className="text-accent">.env</code> files into project and environment scopes.
-              </>
-            }
-          />
-          <Step
-            number="03"
-            title="Use safely"
-            body={
-              <>
-                Code, configs, terminals, CI, and AI agents use{' '}
-                <code className="text-accent">@project.env.key</code>. keynv resolves the real value
-                only when a trusted runtime needs it.
-              </>
-            }
-          />
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-function Step({
-  number,
-  title,
-  body,
-}: {
-  number: string;
-  title: string;
-  body: React.ReactNode;
-}) {
-  return (
-    <li className="relative rounded-lg border border-border bg-bg-elevated p-6 hover:border-border-strong transition-colors duration-fast ease-snap">
-      <div className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-accent-soft-border bg-accent-soft font-mono text-[12px] font-semibold text-accent tabular"
-        >
-          {number}
-        </span>
-        <h3 className="text-[17px] font-semibold tracking-tight text-fg">{title}</h3>
-      </div>
-      <p className="mt-3 text-sm text-fg-muted leading-relaxed">{body}</p>
-    </li>
-  );
-}
-
-// ─── INTEGRATIONS ────────────────────────────────────────────────────────────
-
-function Integrations() {
-  return (
-    <section id="integrations" className="border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow text-center">04 · developer workflows</div>
-        <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
-          Works where secrets already create risk.{' '}
-          <span className="text-fg-muted">Local dev, CI, dashboards, and AI agents.</span>
-        </h2>
-        <p className="mt-6 text-base text-fg-muted text-center max-w-2xl mx-auto leading-relaxed">
-          Run <code className="text-accent">keynv</code> in your project root and choose{' '}
-          <span className="text-fg">Set up this project</span>. The TUI can migrate existing{' '}
-          <code className="text-accent">.env</code> values, write a commit-safe{' '}
-          <code className="text-accent">.keynv.env</code>, and keep raw secrets out of your repo.
-        </p>
-
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
-          <IntegrationCard
-            name="Claude Code"
-            command="keynv"
-            file="your-project/.keynv.env"
-            snippet={
-              <>
-                <Line>
-                  <span className="text-fg-subtle">{'{'}</span>
-                </Line>
-                <Line>
-                  {'  '}
-                  <span className="text-fg-muted">"mcpServers"</span>:{' '}
-                  <span className="text-fg-subtle">{'{'}</span>
-                </Line>
-                <Line>
-                  {'    '}
-                  <span className="text-accent">"keynv"</span>:{' '}
-                  <span className="text-fg-subtle">{'{'}</span>
-                </Line>
-                <Line>
-                  {'      '}
-                  <span className="text-fg-muted">"command"</span>:{' '}
-                  <span className="text-success">"keynv-mcp"</span>
-                </Line>
-                <Line>
-                  {'    '}
-                  <span className="text-fg-subtle">{'}, ...'}</span>
-                </Line>
-                <Line>
-                  {'  '}
-                  <span className="text-fg-subtle">{'}'}</span>
-                </Line>
-                <Line>
-                  <span className="text-fg-subtle">{'}'}</span>
-                </Line>
-              </>
-            }
-            features={[
-              'MCP server with use_secret refs',
-              'Output redactor on every tool result',
-              'TUI-guided project setup',
-            ]}
-          />
-          <IntegrationCard
-            name="MCP-powered agents"
-            command="keynv-mcp"
-            file="any MCP-compatible agent"
-            snippet={
-              <>
-                <Line>
-                  <span className="text-fg-subtle">{'{'}</span>
-                </Line>
-                <Line>
-                  {'  '}
-                  <span className="text-fg-muted">"mcpServers"</span>:{' '}
-                  <span className="text-fg-subtle">{'{'}</span>
-                </Line>
-                <Line>
-                  {'    '}
-                  <span className="text-accent">"keynv"</span>:{' '}
-                  <span className="text-fg-subtle">{'{'}</span>
-                </Line>
-                <Line>
-                  {'      '}
-                  <span className="text-fg-muted">"command"</span>:{' '}
-                  <span className="text-success">"keynv-mcp"</span>
-                </Line>
-                <Line>
-                  {'    '}
-                  <span className="text-fg-subtle">{'}'}</span>
-                </Line>
-                <Line>
-                  {'  '}
-                  <span className="text-fg-subtle">{'}'}</span>
-                </Line>
-                <Line>
-                  <span className="text-fg-subtle">{'}'}</span>
-                </Line>
-              </>
-            }
-            features={[
-              'Works with any MCP client',
-              'use_secret returns single-use refs',
-              'Resolution inside privileged subprocess',
-            ]}
-          />
-          <IntegrationCard
-            name="Local dev + CI"
-            command="keynv exec -- pnpm dev"
-            file="any process · aliases only"
-            snippet={
-              <>
-                <Line dim># in your bash / zsh / fish</Line>
-                <Line>
-                  <span className="text-fg-subtle">$</span>{' '}
-                  <span className="text-fg">keynv exec</span> --
-                </Line>
-                <Line>
-                  {'    '}
-                  <span className="text-fg">pg_dump</span> -d{' '}
-                  <span className="text-accent">@reports.prod.dsn</span>
-                </Line>
-                <Line> </Line>
-                <Line dim># subprocess gets the value via stdin;</Line>
-                <Line dim># your shell history sees only the alias</Line>
-              </>
-            }
-            features={[
-              'Works with anything that takes argv/env/stdin',
-              'CI runners, Docker, Coolify',
-              'No vendor lock-in',
-            ]}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function IntegrationCard({
-  name,
-  command,
-  file,
-  snippet,
-  features,
-}: {
-  name: string;
-  command: string;
-  file: string;
-  snippet: React.ReactNode;
-  features: string[];
-}) {
-  return (
-    <article className="rounded-xl border border-border bg-bg-elevated overflow-hidden flex flex-col hover:border-border-strong transition-colors duration-fast ease-snap">
-      <header className="px-5 py-4 border-b border-border bg-bg-inset/40">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-base font-semibold tracking-tight text-fg">{name}</h3>
-          <Terminal size={13} strokeWidth={2} className="text-accent shrink-0" />
-        </div>
-        <code className="block mt-2 font-mono text-[11px] text-fg-muted tabular truncate">
-          {file}
-        </code>
-      </header>
-
-      <pre className="flex-1 px-4 py-4 font-mono text-[11px] sm:text-[12px] leading-[1.7] bg-bg-inset overflow-x-auto whitespace-pre">
-        {snippet}
-      </pre>
-
-      <div className="px-5 py-4 border-t border-border space-y-2">
-        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
-          install
-        </div>
-        <code className="block font-mono text-[12px] text-accent tabular truncate">{command}</code>
-        <ul className="mt-3 space-y-1.5 text-xs text-fg-muted">
-          {features.map((f) => (
-            <li key={f} className="flex items-start gap-1.5">
-              <Check size={11} strokeWidth={2.5} className="shrink-0 mt-0.5 text-accent" />
-              <span>{f}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </article>
-  );
-}
-
-// ─── PRICING ─────────────────────────────────────────────────────────────────
-
-function Pricing({ ctx }: { ctx: CtaContext }) {
-  return (
-    <section id="pricing" className="border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-20 md:py-24">
-        <div className="display-eyebrow text-center">05 · pricing</div>
-        <h2 className="display mt-3 text-3xl md:text-[42px] leading-[1.05] text-center max-w-3xl mx-auto">
-          Free to self-host, forever.{' '}
-          <span className="text-fg-muted">Managed tier is on the way.</span>
-        </h2>
-
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
-          <PriceCard
-            tier="Self-hosted"
-            price="Free"
-            priceSub="MIT license planned"
-            description="The whole platform, on your infra. Single binary + SQLite + Litestream."
-            features={[
-              'Unlimited projects, secrets, members',
-              'Full audit chain + tamper verification',
-              'OS keychain KEK, libsodium envelope encryption',
-              'All AI-agent integrations',
-              'Community support on GitHub',
-            ]}
-            cta={
-              ctx.isAuthed ? (
-                <Link href={{ pathname: '/dashboard' }}>
-                  <Button size="md" variant="outline" className="w-full gap-1.5">
-                    Open dashboard
-                    <ArrowRight size={13} strokeWidth={2.25} />
-                  </Button>
-                </Link>
-              ) : (
-                <a
-                  href="https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Button size="md" variant="outline" className="w-full gap-1.5">
-                    Deploy guide
-                    <ArrowRight size={13} strokeWidth={2.25} />
-                  </Button>
-                </a>
-              )
-            }
-          />
-          <PriceCard
-            tier="Managed"
-            price="TBD"
-            priceSub="waitlist open"
-            highlight
-            description="We run it for your team. Same binary, hosted region of your choice, 99.9% SLA."
-            features={[
-              'Everything in Self-hosted',
-              'Hosted on your region (EU / US)',
-              'Daily encrypted backups',
-              'Email support, 1-business-day reply',
-              'Migration tool from Doppler / 1Password',
-            ]}
-            cta={
-              <a href="mailto:hello@keynv.dev?subject=Managed%20waitlist">
-                <Button size="md" className="w-full gap-1.5">
-                  Join waitlist
-                  <ArrowRight size={13} strokeWidth={2.25} />
-                </Button>
-              </a>
-            }
-          />
-          <PriceCard
-            tier="Enterprise"
-            price="Custom"
-            priceSub="coming soon"
-            description="HSM/KMS-backed KEK, SSO, on-prem audit export, named architect."
-            features={[
-              'AWS KMS / GCP KMS / Vault Transit KEK',
-              'SSO (SAML, OIDC) + SCIM provisioning',
-              'SOC 2 Type II report',
-              'Postgres adapter, multi-region replication',
-              'Dedicated solution architect',
-            ]}
-            cta={
-              <a href="mailto:hello@keynv.dev?subject=Enterprise">
-                <Button size="md" variant="outline" className="w-full gap-1.5">
-                  Talk to us
-                  <ArrowRight size={13} strokeWidth={2.25} />
-                </Button>
-              </a>
-            }
-          />
-        </div>
-
-        <p className="mt-8 text-center text-xs text-fg-subtle font-mono uppercase tracking-[0.14em]">
-          self-host stays free regardless of which tier you pick
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function PriceCard({
-  tier,
-  price,
-  priceSub,
-  description,
-  features,
-  cta,
-  highlight = false,
-}: {
-  tier: string;
-  price: string;
-  priceSub: string;
-  description: string;
-  features: string[];
-  cta: React.ReactNode;
-  highlight?: boolean;
-}) {
-  return (
-    <article
-      className={`relative rounded-xl border p-6 flex flex-col ${
-        highlight
-          ? 'border-accent-soft-border bg-bg-elevated shadow-[0_24px_64px_-24px_rgba(255,183,77,0.18)]'
-          : 'border-border bg-bg-elevated'
-      }`}
+    <div
+      className={`min-h-screen bg-[#fafafa] text-[#1a1a1a] selection:bg-orange-100 ${poppins.className}`}
     >
-      {highlight ? (
-        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-sm border border-accent-soft-border bg-accent-soft px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
-          <span className="h-1 w-1 rounded-full bg-accent" />
-          coming soon
-        </span>
-      ) : null}
+      {/* Background Effects */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        {/* Dot Grid Effect */}
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
 
-      <header>
-        <div className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-fg-subtle">
-          {tier}
-        </div>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="display text-[32px] tracking-tight text-fg">{price}</span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-            {priceSub}
-          </span>
-        </div>
-        <p className="mt-3 text-sm text-fg-muted leading-relaxed">{description}</p>
-      </header>
-
-      <ul className="mt-6 space-y-2.5 text-sm text-fg-muted flex-1">
-        {features.map((f) => (
-          <li key={f} className="flex items-start gap-2">
-            <Check
-              size={13}
-              strokeWidth={2.25}
-              className={`shrink-0 mt-0.5 ${highlight ? 'text-accent' : 'text-success'}`}
-            />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-6">{cta}</div>
-    </article>
-  );
-}
-
-// ─── BOTTOM CTA ──────────────────────────────────────────────────────────────
-
-function BottomCta({ ctx }: { ctx: CtaContext }) {
-  return (
-    <section className="relative overflow-hidden border-b border-border">
-      <div aria-hidden className="absolute inset-0 bg-amber-glow pointer-events-none opacity-70" />
-      <div className="relative mx-auto max-w-3xl px-4 md:px-6 py-20 md:py-24 text-center">
-        <h2 className="display text-3xl md:text-[42px] leading-[1.05]">
-          Ready to clean up your secret workflow?
-        </h2>
-        <p className="mt-4 text-base text-fg-muted max-w-xl mx-auto">
-          Start on keynv.dev or self-host the same stack. One CLI, one dashboard, one safe alias
-          layer for developers and AI-assisted teams.
-        </p>
-        <div className="mt-9 flex items-center justify-center gap-3 flex-wrap">
-          {ctx.isAuthed ? (
-            <Link href={{ pathname: '/dashboard' }}>
-              <Button size="lg" className="gap-2">
-                Open dashboard
-                <ArrowRight size={14} strokeWidth={2.25} />
-              </Button>
-            </Link>
-          ) : ctx.publicSignup ? (
-            <Link href={{ pathname: '/register' }}>
-              <Button size="lg" className="gap-2">
-                Create your account
-                <ArrowRight size={14} strokeWidth={2.25} />
-              </Button>
-            </Link>
-          ) : (
-            <Link href={{ pathname: '/login' }}>
-              <Button size="lg" className="gap-2">
-                Sign in
-                <ArrowRight size={14} strokeWidth={2.25} />
-              </Button>
-            </Link>
-          )}
-          <a
-            href="https://github.com/keynv-labs/keynv/blob/main/deploy/COOLIFY.md"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Button size="lg" variant="outline">
-              Deploy guide
-            </Button>
-          </a>
-        </div>
+        {/* Soft Magnetic Glow */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-orange-50/50 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-50/50 blur-[120px]" />
       </div>
-    </section>
-  );
-}
 
-// ─── FOOTER ──────────────────────────────────────────────────────────────────
+      <main className="relative z-10 max-w-[1400px] mx-auto px-6 flex flex-col items-center justify-center min-h-screen">
+        {/* Hero Section */}
+        <div className="text-center mt-24 space-y-8 mb-20 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <h1 className="text-7xl md:text-9xl font-semibold tracking-tighter text-black lowercase italic">
+            keynv<span className="text-orange-500 not-italic">.</span>
+          </h1>
 
-function Footer() {
-  return (
-    <footer className="border-t border-border">
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-12">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr] text-xs text-fg-muted">
-          <div>
-            <Logomark size={26} wordmarkClassName="text-base" />
-            <p className="mt-4 leading-relaxed max-w-sm">
-              Self-hosted, source-available secrets manager built for the AI-coding era. In public
-              beta — source-available now, full MIT license once the public API stabilizes.
-            </p>
-            <div className="mt-5">
-              <StatusPill />
+          <p className="max-w-[500px] mx-auto text-lg md:text-xl text-black/50 leading-relaxed font-light">
+            {DESCRIPTION}
+          </p>
+
+          {/* Github & Stats Section */}
+          <div className="flex flex-col items-center gap-6 pt-4">
+            <Link
+              href="https://github.com/keynv-labs/keynv"
+              className="group flex items-center gap-4 px-6 py-3 rounded-2xl bg-black text-white hover:bg-black/80 transition-all duration-300 shadow-xl shadow-black/5"
+            >
+              <Github className="text-white" size={20} />
+              <span className="text-sm font-medium text-white">
+                View on GitHub
+              </span>
+              <div className="h-4 w-[1px] bg-white/20 mx-1" />
+              <div className="flex items-center gap-1.5 text-orange-300">
+                <Star size={14} fill="currentColor" />
+              </div>
+            </Link>
+
+            <div className="flex items-center gap-8 text-[12px] text-black/40 uppercase tracking-widest font-medium">
+              <div className="flex flex-col items-center gap-1">
+                <span>Core Devs</span>
+                <span className="text-black/80">Keynv Labs</span>
+              </div>
+              <div className="h-6 w-[1px] bg-black/[0.05]" />
+              <div className="flex flex-col items-center gap-1">
+                <span>License</span>
+                <span className="text-black/80">MIT / BSL</span>
+              </div>
             </div>
           </div>
-
-          <FooterColumn title="Product">
-            <FooterLink href="/docs">Docs</FooterLink>
-            <FooterLink href="/changelog">Changelog</FooterLink>
-            <FooterLink href="#integrations">Integrations</FooterLink>
-            <FooterLink href="#pricing">Pricing</FooterLink>
-          </FooterColumn>
-
-          <FooterColumn title="Security">
-            <FooterLink href="/docs/threat-model">Threat model</FooterLink>
-            <FooterLink href="/docs/encryption-design">Encryption design</FooterLink>
-            <FooterLink external href="https://github.com/keynv-labs/keynv/blob/main/SECURITY.md">
-              Responsible disclosure
-            </FooterLink>
-          </FooterColumn>
-
-          <FooterColumn title="Community">
-            <FooterLink external href="https://github.com/keynv-labs/keynv">
-              <Github size={11} strokeWidth={2} className="inline-block mr-1 -mt-px" />
-              GitHub
-            </FooterLink>
-            <FooterLink external href="https://github.com/keynv-labs/keynv/issues">
-              Issues
-            </FooterLink>
-            <FooterLink external href="https://github.com/keynv-labs/keynv/discussions">
-              Discussions
-            </FooterLink>
-            <FooterLink href="/changelog/rss.xml">RSS</FooterLink>
-          </FooterColumn>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-border flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-[11px] text-fg-subtle">
-          <span className="font-mono uppercase tracking-[0.14em]">
-            public beta · soc2 readiness h2/2026 ·{' '}
-            <Link
-              href={{ pathname: '/docs/threat-model' }}
-              className="text-fg-muted hover:text-fg normal-case"
-            >
-              what we defend against today
+        {/* Soft Divider */}
+        <div className="w-full max-w-[600px] h-px bg-gradient-to-r from-transparent via-black/[0.05] to-transparent mb-20" />
+
+        {/* Minimal Feature Grid */}
+        <div className="grid md:grid-cols-3 gap-12 w-full max-w-[1000px] mb-32">
+          <Feature
+            icon={<Terminal size={20} />}
+            title="Safe Aliases"
+            desc="Use @prod.db_pass instead of raw strings in your code."
+          />
+          <Feature
+            icon={<ShieldCheck size={20} />}
+            title="Zero Trust"
+            desc="Secrets are resolved at runtime, never stored in shell history."
+          />
+          <Feature
+            icon={<Zap size={20} />}
+            title="AI Ready"
+            desc="Seamlessly integrate with Claude Code, Cursor, and MCP."
+          />
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-black/[0.03] bg-white/30 backdrop-blur-md">
+        <div className="max-w-[1080px] mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex items-center gap-6 text-[13px] text-black/40">
+            <span>© {new Date().getFullYear()} Keynv Labs</span>
+            <Link href="/docs" className="hover:text-black transition-colors">
+              Documentation
             </Link>
-          </span>
-          <span className="font-mono tabular">© {new Date().getFullYear()} keynv labs</span>
-        </div>
-      </div>
-    </footer>
-  );
-}
+            <Link
+              href="/privacy"
+              className="hover:text-black transition-colors"
+            >
+              Privacy
+            </Link>
+          </div>
 
-function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-fg-subtle">
-        {title}
-      </div>
-      <ul className="mt-4 space-y-2.5">{children}</ul>
+          <div className="flex items-center gap-6">
+            <a
+              href="mailto:hello@keynv.dev"
+              className="flex items-center gap-2 text-sm text-black/60 hover:text-black transition-colors"
+            >
+              <Mail size={16} />
+              <span>hello@keynv.dev</span>
+            </a>
+            <div className="flex items-center gap-4">
+              <Link
+                href="#"
+                className="p-2 rounded-full hover:bg-black/[0.03] transition-colors"
+              >
+                <Github size={18} className="text-black/40" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
-function FooterLink({
-  href,
-  external,
-  children,
+function Feature({
+  icon,
+  title,
+  desc,
 }: {
-  href: string;
-  external?: boolean;
-  children: React.ReactNode;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
 }) {
-  if (external || href.startsWith('#')) {
-    return (
-      <li>
-        <a
-          href={href}
-          {...(external ? { target: '_blank', rel: 'noreferrer' } : {})}
-          className="hover:text-fg transition-colors duration-fast ease-snap"
-        >
-          {children}
-        </a>
-      </li>
-    );
-  }
   return (
-    <li>
-      <Link href={href} className="hover:text-fg transition-colors duration-fast ease-snap">
-        {children}
-      </Link>
-    </li>
+    <div className="flex flex-col items-center text-center space-y-4 group">
+      <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-black/[0.03] text-black/40 group-hover:text-orange-500 group-hover:border-orange-100 transition-all duration-500 shadow-sm">
+        {icon}
+      </div>
+      <h3 className="text-sm font-semibold tracking-tight text-black">
+        {title}
+      </h3>
+      <p className="text-sm text-black/40 leading-relaxed font-light">{desc}</p>
+    </div>
   );
 }

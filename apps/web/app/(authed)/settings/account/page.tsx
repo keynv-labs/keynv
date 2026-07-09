@@ -1,17 +1,17 @@
-import { Badge } from '@/components/ui/badge';
-import { Card, CardEyebrow, CardTitle } from '@/components/ui/card';
-import { getSession } from '@/lib/session';
-import { CheckCircle2 } from 'lucide-react';
-import { redirect } from 'next/navigation';
-import { Field } from './_components/field';
-import { ChangePasswordForm } from './_components/password-form';
+import { Badge } from "@/components/ui/badge";
+import { Card, CardEyebrow, CardTitle } from "@/components/ui/card";
+import { getSession } from "@/lib/session";
+import { CheckCircle2 } from "lucide-react";
+import { redirect } from "next/navigation";
+import { Field } from "./_components/field";
+import { ChangePasswordForm } from "./_components/password-form";
 
 export default async function AccountProfilePage() {
   const session = await getSession();
-  if (!session) redirect('/login');
+  if (!session) redirect("/login");
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5">
       <Card bezel className="space-y-5">
         <div>
           <CardEyebrow>profile</CardEyebrow>
@@ -28,7 +28,7 @@ export default async function AccountProfilePage() {
                 {session.user_id}
               </div>
             </div>
-            <Badge tone={session.org_role === 'owner' ? 'accent' : 'success'}>
+            <Badge tone={session.org_role === "owner" ? "accent" : "success"}>
               {session.org_role}
             </Badge>
           </div>
@@ -56,24 +56,10 @@ export default async function AccountProfilePage() {
           Password
         </CardTitle>
         <p className="text-sm text-fg-muted -mt-1">
-          Changing your password signs you out from any other device with an active session.
-          Argon2id-hashed at rest.
+          Changing your password signs you out from any other device with an
+          active session. Argon2id-hashed at rest.
         </p>
         <ChangePasswordForm />
-      </Card>
-
-      <Card className="opacity-70">
-        <CardTitle className="flex-wrap">
-          Two-factor authentication
-          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle border border-border rounded-sm px-1.5 py-0.5">
-            on the roadmap
-          </span>
-        </CardTitle>
-        <p className="text-sm text-fg-muted -mt-1 flex items-start gap-2">
-          <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-fg-subtle" />
-          TOTP enrollment is on the way. Until then your account is protected by your password and
-          rate-limited login.
-        </p>
       </Card>
     </div>
   );
