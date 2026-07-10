@@ -1,10 +1,8 @@
 import './globals.css';
-import { ToastFlashHandler } from '@/components/ui/toast-flash-handler';
-import { Toaster } from '@/components/ui/toaster';
 import { GeistMono } from 'geist/font/mono';
 import { GeistSans } from 'geist/font/sans';
 import type { Metadata } from 'next';
-import { type ReactNode, Suspense } from 'react';
+import { type ReactNode } from 'react';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://keynv.dev'),
@@ -25,13 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${GeistSans.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen antialiased">
-        {children}
-        <Toaster />
-        <Suspense fallback={null}>
-          <ToastFlashHandler />
-        </Suspense>
-      </body>
+      <body className="min-h-screen antialiased">{children}</body>
     </html>
   );
 }

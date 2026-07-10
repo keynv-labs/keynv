@@ -1,9 +1,6 @@
-import { Logomark } from "@/components/brand/logomark";
 import { CsrfProvider } from "@/components/security/csrf-field";
 import { SkipLink } from "@/components/ui/skip-link";
-import { getCapabilities } from "@/lib/capabilities";
 import { createCsrfToken } from "@/lib/csrf";
-import Link from "next/link";
 import { LoginForm } from "./_components/form";
 
 export default async function LoginPage({
@@ -13,7 +10,6 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const nextParam = params.next ?? "/dashboard";
-  const { publicSignup } = await getCapabilities();
   const csrfToken = createCsrfToken();
 
   return (
@@ -49,18 +45,6 @@ export default async function LoginPage({
             ) : null}
             <LoginForm next={nextParam} />
           </div>
-
-          {publicSignup ? (
-            <p
-              className="text-center text-xs text-fg-muted mt-5 animate-hero-rise"
-              style={{ animationDelay: "160ms" }}
-            >
-              New to keynv?{" "}
-              <Link className="text-accent hover:underline" href="/register">
-                Create an account
-              </Link>
-            </p>
-          ) : null}
         </div>
       </main>
     </CsrfProvider>

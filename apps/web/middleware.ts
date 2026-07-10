@@ -1,12 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-function getOrigin(req: NextRequest): string {
-  const forwardedHost = req.headers.get('x-forwarded-host');
-  const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
-  if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
-  return req.nextUrl.origin;
-}
-
 /**
  * Auth middleware. Public:
  *   - The landing pages: '/', '/login', '/register'
@@ -39,7 +32,7 @@ const PUBLIC_PREFIXES = ['/docs/', '/changelog/'];
 const STATIC_OR_DISCOVERY = /\.[a-zA-Z0-9]+$/;
 
 export function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const { pathname } = req.nextUrl;
   if (
     PUBLIC_PATHS.has(pathname) ||
     PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) ||
@@ -50,13 +43,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const session = req.cookies.get('keynv_session')?.value;
-  if (!session) {
-    const origin = getOrigin(req);
-    const url = new URL('/login', origin);
-    url.searchParams.set('next', `${pathname}${search}`);
-    return NextResponse.redirect(url);
-  }
+  // Protected route redirects are enforced again in server layouts/pages.
+  // Keeping middleware passive avoids redirect loops in standalone production.
   return NextResponse.next();
 }
 
