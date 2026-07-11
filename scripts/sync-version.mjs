@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,7 +17,6 @@ const VERSIONED_PACKAGES = [
   'apps/server/package.json',
   'apps/web/package.json',
   'apps/mcp/package.json',
-  'apps/landing/package.json',
 ];
 
 const args = process.argv.slice(2);
@@ -39,6 +38,12 @@ let changed = false;
 
 for (const relativePath of VERSIONED_PACKAGES) {
   const path = join(ROOT, relativePath);
+  // Defensive: a package can be removed from the monorepo (e.g. apps/landing).
+  // Skip missing files with a warning rather than crashing the release build.
+  if (!existsSync(path)) {
+    console.warn(`skipping ${relativePath} (not found)`);
+    continue;
+  }
   const source = readFileSync(path, 'utf8');
   const updated = source.replace(/("version"\s*:\s*")[^"]+("\s*,)/, `$1${version}$2`);
 

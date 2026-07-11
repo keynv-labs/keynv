@@ -220,6 +220,11 @@ jobs:
     name: npm (@keynv/core, redactor, testers)
     needs: [prepare, security-gate]
     runs-on: ubuntu-latest
+    # These libs are consumed by the separate keynv-mcp repo. Publishing them
+    # needs an NPM_TOKEN with create/publish rights for these scoped names;
+    # until that access is granted npm returns 404. Don't block the CLI +
+    # Docker release on it — track the token grant separately.
+    continue-on-error: true
     permissions:
       contents: read
       id-token: write
@@ -355,6 +360,11 @@ jobs:
           cat SHA256SUMS
       - uses: sigstore/cosign-installer@v3
       - name: Sign release artifacts
+        # Keyless (cosign OIDC) signing is still stabilizing — see CHANGELOG:
+        # "signed binaries deferred to 0.2.0". If the ambient OIDC token fetch
+        # flakes, don't block the release; the binaries + SHA256SUMS still ship
+        # (unsigned) and the GitHub Release is still created.
+        continue-on-error: true
         working-directory: dist-release
         run: |
           set -euo pipefail
