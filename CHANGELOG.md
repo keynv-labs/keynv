@@ -12,6 +12,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc.23] — 2026-07-11
+
+The **vault-first** release. keynv leads as a self-hosted secrets vault for
+teams and AI-assisted development — store secrets, reference them by alias
+(`@project.env.key`), and run your app normally while the real values stay out
+of your code, shell history, and AI transcripts. The local leak-scrubbing tools
+(`doctor` / `scrub` / `watch`) become a secondary "clean up existing leaks"
+layer. Self-hosting is now a single-command deploy, and the hosted keynv.dev
+path is first-class.
+
+### Added
+- **Single-command self-host** — the server boots with **zero** required env
+  vars: the JWT secret, master/KEK, and web session secret are all generated and
+  persisted to `/data` on first start (`lib/jwt-secret.ts`, `kek/load.ts`,
+  `web/lib/session-secret.ts`). The only values an operator sets are
+  `KEYNV_BOOTSTRAP_OWNER_EMAIL` + `KEYNV_BOOTSTRAP_OWNER_PASSWORD`, and
+  missing/short values only warn instead of crash-looping. One Coolify resource
+  runs both the server and the panel; litestream backup moved behind a `backup`
+  compose profile so `up` works with no S3.
+- **Hosted keynv.dev is first-class** — `/login` shows a capability-gated
+  "Create account" link (hosted instances only) that carries `?next` back to the
+  CLI device-flow authorize page, so a brand-new user can sign up mid-login
+  instead of dead-ending. `keynv` prints a "create a free account first" hint
+  when the cloud target is chosen, and the connect-menu labels are even-handed.
+- **Clearer `keynv init`** — one explicit "About to apply" summary lists every
+  file it touches (wrapped scripts, `.keynv.env`, `AGENTS.md`,
+  `.env`→`.env.backup`) under a single confirmation; a greenfield project with
+  no `.env` gets a concrete first-secret path instead of a "nothing to do"
+  dead-end; the secret picker notes its selections are pre-checked and Enter
+  accepts.
+
+### Changed
+- **Transparent script-wrapping** — setup wraps your `package.json` scripts so
+  you run `npm run dev` / `npm test` normally and never type `keynv exec`
+  yourself. Wrapping now also recognises monorepo/task runners (turbo, nx,
+  lerna, make, npm-run-all).
+- **`secret get` is safe by default** — a bare `keynv secret get` copies to the
+  clipboard on a TTY and refuses to print in a non-interactive context;
+  `--reveal` forces raw stdout, `--json` emits the structured value.
+- **Self-host build is panel-only** — the marketing/SEO surface (second landing,
+  changelog/RSS, `llms.txt`, sitemap, opengraph) is gated behind `KEYNV_HOSTED`
+  and dropped from the self-host bundle; the root `/` goes straight to
+  login/dashboard.
+- **READMEs + docs rewritten vault-first** — the root and npm (`@keynv/cli`)
+  READMEs lead with the vault + hosted quickstart; self-host docs are aligned
+  with the one-command deploy (real pino boot logs, a single `app.` / `api.`
+  domain convention, a Coolify "what you'll do" checklist, corrected
+  `/data/master.key` path and `db:fail` health field).
+
+### Removed
+- **Dead surface** — inert notification settings and the `user_preferences`
+  table, the unused `users.mfa_enrolled` column, and the stub `vault` /
+  `integrations` panel pages.
+
+### Fixed
+- **Web session / CSRF 500** — CSRF signing and session sealing now share the
+  one auto-generated web session secret; a duplicate getter previously threw in
+  production when the env var was unset.
+- **Empty-string env crash** — a compose `${VAR:-}` passing an empty string no
+  longer trips the min-length validators; empty values are treated as unset.
+- **Green main** — restored the authed-route login redirect and cleared
+  stale-test / unused-import regressions that had left the panel Docker build
+  red.
+- **Misleading master-key error** — the "master key file not found" message no
+  longer points at a nonexistent `keynv-server bootstrap` command.
+
 ## [0.1.0-rc.22] — 2026-07-02
 
 ### Added
@@ -238,7 +304,9 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
 - **Postgres adapter, KEK rotation flow, MFA, SSO/SAML, multi-region** —
   Phase 6 (commercial tier + keynv Cloud).
 
-[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.21...HEAD
+[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.23...HEAD
+[0.1.0-rc.23]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.22...v0.1.0-rc.23
+[0.1.0-rc.22]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.21...v0.1.0-rc.22
 [0.1.0-rc.21]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.20...v0.1.0-rc.21
 [0.1.0-rc.17]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.16...v0.1.0-rc.17
 [0.1.0-rc.16]: https://github.com/keynv-labs/keynv/releases/tag/v0.1.0-rc.16
