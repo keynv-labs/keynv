@@ -44,6 +44,15 @@ const ENV_AWARE_TOOLS = new Set([
   'forever',
   'nodemon',
   'concurrently',
+  // Monorepo / task runners — wrapping the orchestrator injects secrets into
+  // every child task it spawns, so `npm run dev` still needs no `keynv exec`.
+  'turbo',
+  'nx',
+  'lerna',
+  'make',
+  'npm-run-all',
+  'run-p',
+  'run-s',
   'pytest',
   'python',
   'python3',

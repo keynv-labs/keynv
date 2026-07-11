@@ -52,6 +52,20 @@ describe('analyzeScript', () => {
     expect(analyzeScript('e2e', 'playwright test').verdict).toBe('wrap');
   });
 
+  it('recognizes monorepo/task runners so `npm run dev` still needs no keynv exec', () => {
+    for (const cmd of [
+      'turbo run dev',
+      'nx serve web',
+      'lerna run dev',
+      'make dev',
+      'npm-run-all -p dev:*',
+    ]) {
+      const a = analyzeScript('dev', cmd);
+      expect(a.verdict).toBe('wrap');
+      expect(a.wrapped).toBe(`keynv exec -- ${cmd}`);
+    }
+  });
+
   it('skips lint/format tools as no-env', () => {
     expect(analyzeScript('lint', 'eslint .').verdict).toBe('skip-no-env-tool');
     expect(analyzeScript('format', 'prettier --write .').verdict).toBe('skip-no-env-tool');

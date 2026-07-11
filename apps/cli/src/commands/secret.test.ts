@@ -77,12 +77,20 @@ describe('SecretGetCommand', () => {
       .mockResolvedValueOnce({ alias: '@billing.dev.api_key', version: 2, value: 'sk-secret-123' });
   }
 
-  function newGet(overrides: Partial<SecretGetCommand>): SecretGetCommand {
+  function newGet(overrides: {
+    alias?: string;
+    json?: boolean;
+    copy?: boolean;
+    reveal?: boolean;
+  }): SecretGetCommand {
     const cmd = new SecretGetCommand();
     // Set every flag explicitly — a directly-constructed clipanion command
     // hasn't been through the parser, so option defaults aren't applied.
-    Object.assign(cmd, { alias: '@billing.dev.api_key', json: false, copy: false, reveal: false });
-    Object.assign(cmd, overrides);
+    Object.assign(
+      cmd,
+      { alias: '@billing.dev.api_key', json: false, copy: false, reveal: false },
+      overrides,
+    );
     return cmd;
   }
 

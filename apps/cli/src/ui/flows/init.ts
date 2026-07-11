@@ -532,11 +532,17 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   }
 
   // 17. Summary -------------------------------------------------------------
-  outro(
-    failed.length > 0
-      ? `Done with ${failed.length} failure(s) — see warnings above.`
-      : `Done. Try: ${scriptWrapSelection.includes('dev') ? 'pnpm dev' : 'keynv exec -- <your command>'}`,
-  );
+  let doneMsg: string;
+  if (failed.length > 0) {
+    doneMsg = `Done with ${failed.length} failure(s) — see warnings above.`;
+  } else if (scriptWrapSelection.length > 0) {
+    doneMsg =
+      'Done. Your scripts are wrapped — just run them as usual (e.g. `npm run dev`). Secrets are injected automatically; you never type `keynv exec`.';
+  } else {
+    doneMsg =
+      'Done. Prefix commands with `keynv exec --` to inject secrets (e.g. `keynv exec -- npm run dev`).';
+  }
+  outro(doneMsg);
   return { exitCode: failed.length > 0 ? 1 : 0 };
 }
 

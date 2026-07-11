@@ -42,7 +42,7 @@ When the user asks about secrets or env vars, follow this decision tree:
 |---|---|
 | "Add a new API key" / "set up a secret" | \`keynv secret create\` (interactive prompt picks project + env + key) |
 | "I have a \`.env\`, migrate it" | Run \`keynv\` and choose **Set up this project** |
-| "Run the app / dev server / tests" | \`keynv exec -- <their existing command>\` (auto-loads \`.keynv.env\`) |
+| "Run the app / dev server / tests" | Run the project's script as usual (e.g. \`npm run dev\`) — setup already wrapped it with keynv. For a one-off command that isn't a package.json script, use \`keynv exec -- <cmd>\`. |
 | "Show me the value of X" | Don't reveal it. \`keynv secret get @alias --copy\` puts the value on the clipboard without printing it. Bare \`keynv secret get\` refuses to print in a non-interactive context; \`--reveal\` forces raw stdout — avoid it in agent contexts. |
 | "Rotate this key" | \`keynv secret rotate @alias\` |
 | "Add a new env var to the project" | Edit \`.keynv.env\` and add \`NAME=@project.env.key\` (after creating the secret with \`keynv secret create\`) |
