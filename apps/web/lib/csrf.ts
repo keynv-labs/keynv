@@ -1,20 +1,12 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import { CSRF_FIELD_NAME, csrfFieldName } from './csrf-field-name';
+import { getSessionSecret } from './session-secret';
 
 const TOKEN_TTL_MS = 2 * 60 * 60 * 1000;
 
-function getSecret(): string {
-  const secret = process.env.KEYNV_WEB_SESSION_SECRET;
-  if (secret && secret.length >= 32) return secret;
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('KEYNV_WEB_SESSION_SECRET must be set (min 32 chars) in production.');
-  }
-  return 'dev-session-secret-32chars-minimum-length';
-}
-
 function sign(payload: string): string {
-  return createHmac('sha256', getSecret()).update(payload, 'utf8').digest('base64url');
+  return createHmac('sha256', getSessionSecret()).update(payload, 'utf8').digest('base64url');
 }
 
 export { csrfFieldName };
