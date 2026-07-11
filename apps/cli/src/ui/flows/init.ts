@@ -104,10 +104,20 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   const envFiles = findEnvFilesRecursive(root.path);
   const intoExisting = hasExistingKeynvEnv(root.path);
   if (envFiles.length === 0 && !intoExisting) {
-    log.info(
-      `No .env files found in ${root.path} (scanned root and subdirectories). There's nothing to migrate yet — create a .keynv.env by hand or run \`keynv exec\` once you have one.`,
+    note(
+      [
+        `No .env files found in ${root.path} (scanned root and subdirectories),`,
+        'so there is nothing to migrate yet. To start from scratch:',
+        '',
+        '  1. keynv secret create      — add your first secret to the vault',
+        '  2. add its alias to .keynv.env, e.g.  OPENAI_API_KEY=@myapp.dev.openai-key',
+        '  3. run your app normally — keynv injects the real value',
+        '',
+        'Or re-run `keynv` → "Set up this project" once you have a .env to import.',
+      ].join('\n'),
+      'Nothing to migrate yet',
     );
-    outro('Nothing to do.');
+    outro('Create your first secret with `keynv secret create`.');
     return { exitCode: 0 };
   }
   note(
@@ -294,7 +304,8 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
 
   const selectedComposites = unwrap(
     await multiselect({
-      message: 'Mark which keys are secrets (vault-uploaded). Unchecked keys stay as literals.',
+      message:
+        'Which keys are secrets? (pre-selected by keynv — press Enter to accept; unchecked stay as literals)',
       options: choices.map((c) => ({
         value: c.composite,
         label: c.label,
