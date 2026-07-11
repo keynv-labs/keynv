@@ -77,6 +77,10 @@ path is first-class.
   red.
 - **Misleading master-key error** — the "master key file not found" message no
   longer points at a nonexistent `keynv-server bootstrap` command.
+- **Clearer contributor setup** — a preinstall guard now blocks `npm` / `yarn`
+  with instructions to use `pnpm`, instead of the cryptic "@keynv/core not
+  found" you'd hit because the internal packages are declared `workspace:*`
+  (a pnpm-only protocol npm can't resolve).
 
 ## [0.1.0-rc.22] — 2026-07-02
 
