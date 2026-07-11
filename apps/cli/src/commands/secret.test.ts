@@ -2,7 +2,7 @@ import { reference } from '@keynv/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiClient } from '../client/http.js';
 import { resolveProjectId } from './project.js';
-import { SecretRotationsCommand, SecretSetRotationCommand } from './secret.js';
+import { SecretGetCommand, SecretRotationsCommand, SecretSetRotationCommand } from './secret.js';
 
 const requestMock = vi.hoisted(() => vi.fn());
 
@@ -68,6 +68,49 @@ describe('SecretGetCommand', () => {
       environment: 'prod',
       key: 'db_password',
     });
+  });
+
+  function mockGet(): void {
+    requestMock
+      .mockReset()
+      .mockResolvedValueOnce({ projects: [{ id: 'p_abc', name: 'billing' }] })
+      .mockResolvedValueOnce({ alias: '@billing.dev.api_key', version: 2, value: 'sk-secret-123' });
+  }
+
+  function newGet(overrides: Partial<SecretGetCommand>): SecretGetCommand {
+    const cmd = new SecretGetCommand();
+    // Set every flag explicitly — a directly-constructed clipanion command
+    // hasn't been through the parser, so option defaults aren't applied.
+    Object.assign(cmd, { alias: '@billing.dev.api_key', json: false, copy: false, reveal: false });
+    Object.assign(cmd, overrides);
+    return cmd;
+  }
+
+  it('--reveal prints the raw value to stdout', async () => {
+    mockGet();
+    const cmd = newGet({ reveal: true });
+    const { stdout } = attachContext(cmd);
+    expect(await cmd.execute()).toBe(0);
+    expect(stdout).toHaveBeenCalledWith('sk-secret-123\n');
+  });
+
+  it('refuses to print to a non-interactive stdout by default (no leak)', async () => {
+    mockGet();
+    const cmd = newGet({});
+    const { stdout, stderr } = attachContext(cmd);
+    expect(await cmd.execute()).toBe(1);
+    expect(stdout).not.toHaveBeenCalledWith('sk-secret-123\n');
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('refusing to print'));
+  });
+
+  it('--json outputs the structured value', async () => {
+    mockGet();
+    const cmd = newGet({ json: true });
+    const { stdout } = attachContext(cmd);
+    expect(await cmd.execute()).toBe(0);
+    expect(stdout).toHaveBeenCalledWith(
+      `${JSON.stringify({ alias: '@billing.dev.api_key', version: 2, value: 'sk-secret-123' })}\n`,
+    );
   });
 });
 

@@ -104,13 +104,16 @@ export class SecretGetCommand extends Command {
   static override paths = [['secret', 'get']];
   static override usage = Command.Usage({
     description:
-      'Resolve a secret. Prints the value to stdout, or use --copy to put it on the clipboard without printing it.',
+      'Resolve a secret. By default the value is copied to the OS clipboard (never printed). Use --reveal to print it to stdout, or --json for automation.',
   });
   alias = Option.String({ required: false });
   json = Option.Boolean('--json', false);
   copy = Option.Boolean('--copy', false, {
+    description: 'Copy the value to the OS clipboard (the default in an interactive terminal).',
+  });
+  reveal = Option.Boolean('--reveal', false, {
     description:
-      'Copy the value to the OS clipboard instead of printing it (never shown in output).',
+      'Print the raw value to stdout. Opt-in, because it can land in terminal scrollback or an AI transcript.',
   });
 
   async execute(): Promise<number> {
@@ -139,34 +142,46 @@ export class SecretGetCommand extends Command {
       const data = await client.request<{ alias: string; value: string; version: number }>(
         `/v1/projects/${projectId}/secrets/${parsed.environment}/${parsed.key}`,
       );
-      if (this.copy) {
-        // Clipboard path: the value goes to the OS clipboard and is NEVER
-        // written to stdout/stderr, so it can't land in an AI transcript,
-        // terminal scrollback, or shell log. On failure we error out — we
-        // must not silently fall back to printing the secret.
-        try {
-          await copyToClipboard(data.value);
-        } catch (err) {
-          if (err instanceof ClipboardUnavailableError) {
-            this.context.stderr.write(
-              `keynv: ${err.message}.\n       Install one (pbcopy/clip are built in; Linux: wl-clipboard or xclip), or omit --copy to print to stdout.\n`,
-            );
-            return 1;
-          }
-          throw err;
-        } finally {
-          data.value = '';
-        }
-        this.context.stderr.write(`keynv: copied ${data.alias} (v${data.version}) to clipboard.\n`);
-        return 0;
-      }
+      // --json: structured output for automation (explicit opt-in).
       if (this.json) {
         this.context.stdout.write(
           `${JSON.stringify({ alias: data.alias, version: data.version, value: data.value })}\n`,
         );
-      } else {
-        this.context.stdout.write(`${data.value}\n`);
+        return 0;
       }
+      // --reveal: explicit raw print. Opt-in so a secret never lands in a
+      // terminal / AI transcript unless the caller asked for it.
+      if (this.reveal) {
+        this.context.stdout.write(`${data.value}\n`);
+        return 0;
+      }
+      // Default (and --copy): copy to the OS clipboard, never printed. Refuse
+      // to guess in a non-interactive context — a script must pick --reveal or
+      // --json rather than silently leak the value to stdout.
+      if (!this.copy && !isInteractive()) {
+        this.context.stderr.write(
+          'keynv: refusing to print a secret to a non-interactive stdout.\n       Pass --reveal to print it, --copy to copy it, or --json for automation.\n',
+        );
+        return 1;
+      }
+      // Clipboard path: the value goes to the OS clipboard and is NEVER
+      // written to stdout/stderr, so it can't land in an AI transcript,
+      // terminal scrollback, or shell log. On failure we error out — we must
+      // not silently fall back to printing the secret.
+      try {
+        await copyToClipboard(data.value);
+      } catch (err) {
+        if (err instanceof ClipboardUnavailableError) {
+          this.context.stderr.write(
+            `keynv: ${err.message}.\n       Install one (pbcopy/clip are built in; Linux: wl-clipboard or xclip), or pass --reveal to print to stdout / --json for automation.\n`,
+          );
+          return 1;
+        }
+        throw err;
+      } finally {
+        data.value = '';
+      }
+      this.context.stderr.write(`keynv: copied ${data.alias} (v${data.version}) to clipboard.\n`);
       return 0;
     } catch (err) {
       return handleExecError(this.context.stderr, err);

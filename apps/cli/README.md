@@ -73,6 +73,10 @@ keynv secret create @demo.dev.api_key --value 'whatever'
 keynv exec -- npm run dev      # aliases resolved into the child, redacted from output
 ```
 
+On a headless Linux box without an OS keychain (no libsecret), set
+`KEYNV_DISABLE_KEYCHAIN=1` before `keynv login` — credentials then persist to an
+encrypted file instead of the system keychain.
+
 Running `keynv` with no arguments opens an interactive TUI that walks through the
 same operations.
 

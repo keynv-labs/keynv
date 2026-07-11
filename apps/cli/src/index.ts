@@ -23,13 +23,13 @@ import {
   SecretRotationsCommand,
   SecretSetRotationCommand,
 } from './commands/secret.js';
-import { ServerInitCommand } from './commands/server.js';
 import {
   ShellInstallCommand,
   ShellStatusCommand,
   ShellUninstallCommand,
 } from './commands/shell.js';
 import { TestCommand } from './commands/test.js';
+import { UICommand } from './commands/ui.js';
 import { WatchStartCommand, WatchStatusCommand, WatchStopCommand } from './commands/watch.js';
 import { fmtError } from './ui/format.js';
 import { VERSION } from './version.js';
@@ -86,7 +86,7 @@ cli.register(WatchStopCommand);
 cli.register(WatchStatusCommand);
 
 cli.register(TestCommand);
-cli.register(ServerInitCommand);
+cli.register(UICommand);
 
 const argv = process.argv.slice(2);
 
