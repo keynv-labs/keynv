@@ -28,4 +28,30 @@ describe('middleware', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
   });
+
+  function withHosted(value: string | undefined, fn: () => void): void {
+    const prev = process.env.KEYNV_HOSTED;
+    if (value === undefined) delete process.env.KEYNV_HOSTED;
+    else process.env.KEYNV_HOSTED = value;
+    try {
+      fn();
+    } finally {
+      if (prev === undefined) delete process.env.KEYNV_HOSTED;
+      else process.env.KEYNV_HOSTED = prev;
+    }
+  }
+
+  it('404s hosted-only marketing routes on self-host', () => {
+    withHosted(undefined, () => {
+      for (const path of ['/changelog', '/changelog/rss.xml', '/llms.txt']) {
+        expect(middleware(makeRequest(`http://localhost${path}`)).status).toBe(404);
+      }
+    });
+  });
+
+  it('serves marketing routes when KEYNV_HOSTED is enabled', () => {
+    withHosted('true', () => {
+      expect(middleware(makeRequest('http://localhost/changelog')).status).toBe(200);
+    });
+  });
 });

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { isHostedInstance } from './lib/hosted';
 
 /**
  * Auth middleware. Public:
@@ -31,8 +32,20 @@ const PUBLIC_PATHS = new Set([
 const PUBLIC_PREFIXES = ['/docs/', '/changelog/'];
 const STATIC_OR_DISCOVERY = /\.[a-zA-Z0-9]+$/;
 
+// Marketing / SEO surface that a self-hoster's panel doesn't need. Served
+// only on the hosted keynv Cloud (KEYNV_HOSTED=true); 404'd otherwise.
+const HOSTED_ONLY_PREFIXES = ['/changelog', '/llms.txt'];
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (
+    !isHostedInstance() &&
+    HOSTED_ONLY_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  ) {
+    return new NextResponse('Not Found', { status: 404 });
+  }
+
   if (
     PUBLIC_PATHS.has(pathname) ||
     PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) ||

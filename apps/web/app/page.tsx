@@ -1,7 +1,10 @@
-import { Github, Mail, ShieldCheck, Star, Terminal, Zap } from 'lucide-react';
+import { isHostedInstance } from '@/lib/hosted';
+import { getSession } from '@/lib/session';
+import { Github, LogIn, Mail, ShieldCheck, Terminal, Zap } from 'lucide-react';
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -11,6 +14,7 @@ const poppins = Poppins({
 const TITLE = 'keynv — developer-first secrets management';
 const DESCRIPTION =
   'Store API keys, database credentials, and secrets in one vault. Use safe aliases everywhere.';
+const GITHUB_URL = 'https://github.com/keynv-labs/keynv';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -18,16 +22,21 @@ export const metadata: Metadata = {
 };
 
 export default async function LandingPage() {
+  // Self-host is the default: the root is the app, not a marketing page.
+  // Send visitors straight to the panel (or login). Only the hosted keynv
+  // Cloud instance (KEYNV_HOSTED=true) renders the marketing landing below.
+  if (!isHostedInstance()) {
+    const session = await getSession();
+    redirect(session ? '/dashboard' : '/login');
+  }
+
   return (
     <div
       className={`min-h-screen bg-[#fafafa] text-[#1a1a1a] selection:bg-orange-100 ${poppins.className}`}
     >
       {/* Background Effects */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        {/* Dot Grid Effect */}
         <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
-
-        {/* Soft Magnetic Glow */}
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-orange-50/50 blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-50/50 blur-[120px]" />
       </div>
@@ -43,21 +52,26 @@ export default async function LandingPage() {
             {DESCRIPTION}
           </p>
 
-          {/* Github & Stats Section */}
-          <div className="flex flex-col items-center gap-6 pt-4">
-            <Link
-              href="https://github.com/keynv-labs/keynv"
-              className="group flex items-center gap-4 px-6 py-3 rounded-2xl bg-black text-white hover:bg-black/80 transition-all duration-300 shadow-xl shadow-black/5"
-            >
-              <Github className="text-white" size={20} />
-              <span className="text-sm font-medium text-white">View on GitHub</span>
-              <div className="h-4 w-[1px] bg-white/20 mx-1" />
-              <div className="flex items-center gap-1.5 text-orange-300">
-                <Star size={14} fill="currentColor" />
-              </div>
-            </Link>
+          {/* Primary actions */}
+          <div className="flex flex-col items-center gap-4 pt-4">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href={{ pathname: '/login' }}
+                className="group flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-orange-500 text-white hover:bg-orange-600 transition-all duration-300 shadow-xl shadow-orange-500/10"
+              >
+                <LogIn size={18} />
+                <span className="text-sm font-medium">Sign in</span>
+              </Link>
+              <Link
+                href={GITHUB_URL}
+                className="group flex items-center gap-3 px-6 py-3 rounded-2xl bg-black text-white hover:bg-black/80 transition-all duration-300 shadow-xl shadow-black/5"
+              >
+                <Github className="text-white" size={20} />
+                <span className="text-sm font-medium text-white">View on GitHub</span>
+              </Link>
+            </div>
 
-            <div className="flex items-center gap-8 text-[12px] text-black/40 uppercase tracking-widest font-medium">
+            <div className="flex items-center gap-8 text-[12px] text-black/40 uppercase tracking-widest font-medium pt-2">
               <div className="flex flex-col items-center gap-1">
                 <span>Core Devs</span>
                 <span className="text-black/80">Keynv Labs</span>
@@ -102,8 +116,8 @@ export default async function LandingPage() {
             <Link href="/docs" className="hover:text-black transition-colors">
               Documentation
             </Link>
-            <Link href="/privacy" className="hover:text-black transition-colors">
-              Privacy
+            <Link href={{ pathname: '/login' }} className="hover:text-black transition-colors">
+              Sign in
             </Link>
           </div>
 
@@ -116,7 +130,11 @@ export default async function LandingPage() {
               <span>hello@keynv.dev</span>
             </a>
             <div className="flex items-center gap-4">
-              <Link href="#" className="p-2 rounded-full hover:bg-black/[0.03] transition-colors">
+              <Link
+                href={GITHUB_URL}
+                className="p-2 rounded-full hover:bg-black/[0.03] transition-colors"
+                aria-label="keynv on GitHub"
+              >
                 <Github size={18} className="text-black/40" />
               </Link>
             </div>

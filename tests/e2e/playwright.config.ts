@@ -28,6 +28,10 @@ export default defineConfig({
           url: baseURL,
           reuseExistingServer: !process.env.CI,
           cwd: fileURLToPath(new URL('../../', import.meta.url)),
+          // The e2e suite exercises the full hosted surface (marketing
+          // landing, changelog). Self-host (KEYNV_HOSTED unset) redirects
+          // the root to /login and 404s those routes — covered separately.
+          env: { KEYNV_HOSTED: 'true' },
         },
       }),
 });
