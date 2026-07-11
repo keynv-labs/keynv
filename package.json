@@ -10,6 +10,7 @@
   },
   "packageManager": "pnpm@9.12.0",
   "scripts": {
+    "preinstall": "node scripts/ensure-pnpm.mjs",
     "build": "keynv exec -- pnpm -r build",
     "build:direct": "pnpm -r build",
     "dev": "keynv exec -- pnpm -r --parallel dev",
