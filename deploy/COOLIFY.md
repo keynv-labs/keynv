@@ -7,12 +7,25 @@ secrets live in a persistent SQLite file.
 |              |                                                              |
 | ------------ | ------------------------------------------------------------ |
 | **Time**     | ~15 minutes — most of it waiting on the first Docker build   |
-| **Result**   | `https://<your-domain>` (the panel) + `https://api.<your-domain>` (the API/CLI) |
+| **Result**   | `https://app.<your-domain>` (the panel) + `https://api.<your-domain>` (the API/CLI) |
 | **You need** | A Coolify v4+ instance and one or two subdomains. No `openssl`, no secret generation — keynv makes its own keys |
 
 > [!NOTE]
 > One resource runs both services (`deploy/coolify.yml`). If you only use the
-> CLI, just skip the web domain in Step 4 — the server runs fine on its own.
+> CLI, just skip the web domain in Step 3 — the server runs fine on its own.
+
+---
+
+## What you'll do (8 steps)
+
+1. **DNS** — point `app.<your-domain>` and `api.<your-domain>` A records at the Coolify server.
+2. **Create one resource** from `deploy/coolify.yml` — both services build from it.
+3. **Set 2 env vars** — `KEYNV_BOOTSTRAP_OWNER_EMAIL` + `KEYNV_BOOTSTRAP_OWNER_PASSWORD` (≥ 12 chars). Optionally set `KEYNV_WEB_URL` to `https://app.<your-domain>` (with the `https://` scheme).
+4. **Map 2 domains** — `keynv-web` → port `3000`, `keynv-server` → port `8080`.
+5. **Deploy** and wait for the server healthcheck to turn green.
+6. **Back up `/data/master.key`** off-host (into a password manager).
+7. **Verify + log in** to the panel.
+8. **Install the CLI** and connect it.
 
 ---
 
@@ -51,7 +64,7 @@ Helm chart, S3, or Litestream is load-bearing for the deploy.
 |---|---|
 | **Coolify** | v4+ instance you can sign into |
 | **Server** | 1 vCPU · 2 GB RAM · 10 GB free disk (build is the spike — native compile of better-sqlite3/argon2 wants ≥1 GB) |
-| **DNS** | `A` record for `api.<your-domain>` → Coolify server IP. Add a second `A` for `<your-domain>` (apex) if you want the web dashboard. Cloudflare users: leave the proxy (orange cloud) OFF until Let's Encrypt issues certs. |
+| **DNS** | `A` record for `api.<your-domain>` → Coolify server IP. Add a second `A` for `app.<your-domain>` if you want the web dashboard. Cloudflare users: leave the proxy (orange cloud) OFF until Let's Encrypt issues certs. |
 | **Repo access** | This repo reachable from Coolify (public works; private needs a connected GitHub source) |
 
 ---
@@ -111,16 +124,18 @@ In the resource's **Domains** tab, map each service:
 
 | Service | Domain | Container port |
 |---|---|---|
-| `keynv-web` | `https://<your-domain>` | `3000` |
+| `keynv-web` | `https://app.<your-domain>` | `3000` |
 | `keynv-server` | `https://api.<your-domain>` | `8080` |
 
 Coolify provisions Let's Encrypt certs automatically once DNS resolves. If you
 only use the CLI, map just `keynv-server` and skip the web domain.
 
 > [!TIP]
-> Set `KEYNV_WEB_URL` to `https://<your-domain>` on the resource so the API
-> knows the public web origin (CORS/redirects). On a single host the web
-> reaches the API in-network via the default `KEYNV_SERVER_URL`.
+> Set `KEYNV_WEB_URL` to `https://app.<your-domain>` on the resource so the API
+> knows the public web origin (CORS/redirects). It **must include the scheme**
+> (`https://app.<your-domain>`, not a bare host) or the server refuses to start.
+> On a single host the web reaches the API in-network via the default
+> `KEYNV_SERVER_URL`.
 
 ---
 
@@ -186,7 +201,7 @@ curl https://api.<your-domain>/v1/health/ready
 # {"ok":true,"version":"...","db":"ok",...}
 ```
 
-Then open `https://<your-domain>` — the login page renders. Log in with the
+Then open `https://app.<your-domain>` — the login page renders. Log in with the
 owner account from Step 2.
 
 > [!TIP]
@@ -250,7 +265,7 @@ The full restore drill lives in
 |---|---|---|
 | Can't log in; server is healthy | No owner account created | Set `KEYNV_BOOTSTRAP_OWNER_EMAIL` + `KEYNV_BOOTSTRAP_OWNER_PASSWORD` (≥12 chars) and redeploy. Check the deploy log for the warning |
 | Build fails on `pnpm install` | Lockfile out of sync | `pnpm install` locally, commit `pnpm-lock.yaml`, redeploy |
-| `/v1/health/ready` returns 503 with `"db":"error"` | Volume not persisted | Confirm `keynv-data` is mounted at `/data` in the resource UI |
+| `/v1/health/ready` returns 503 with `"db":"fail"` | Volume not persisted | Confirm `keynv-data` is mounted at `/data` in the resource UI |
 | TLS cert provisioning fails | DNS not propagated, or Cloudflare proxy on | `dig api.<your-domain>` to confirm it resolves to the Coolify IP; set the record DNS-only (grey cloud) until the cert issues |
 | Build runs out of memory | better-sqlite3 + argon2 native compile is RAM-hungry | Bump build RAM to ≥ 1 GB; runtime needs ~256 MB |
 | Login returns 401 with the right password | Wrong owner email recorded | Coolify Terminal: `sqlite3 /data/keynv.db 'SELECT email FROM users'` |

@@ -13,9 +13,10 @@
 # boot. No secret to generate, no crash-loop.
 #
 # Domains (Coolify → each service → Domains tab):
-#   keynv-web    → https://<your-domain>        (port 3000)  ← the panel
+#   keynv-web    → https://app.<your-domain>    (port 3000)  ← the panel
 #   keynv-server → https://api.<your-domain>    (port 8080)  ← the API/CLI
-# Set KEYNV_WEB_URL to the web domain and point the web's
+# Set KEYNV_WEB_URL to the web domain (include the https:// scheme,
+# e.g. https://app.<your-domain>, not a bare host) and point the web's
 # KEYNV_SERVER_URL at the server domain if you split them across hosts;
 # on a single host the in-network default below is enough.
 #

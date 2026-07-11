@@ -8,7 +8,7 @@ Coolify resource, then points the CLI and your AI coding agent at it.
 ## What you'll need
 
 - A VPS with Docker + Coolify. 1 vCPU / 2 GB RAM is plenty for a starter team.
-- A domain you can point at the VPS (we'll use `keynv.example.com`).
+- A domain you can point at the VPS (we'll use `example.com` — `app.` for the panel, `api.` for the API).
 - Node.js 20+ on your laptop, for the CLI.
 
 ## 1 · Deploy (server + panel)
@@ -32,13 +32,13 @@ Everything else — the JWT secret, master key, and web session secret — is
 auto-generated and persisted on the volumes on first boot. Under the
 resource's **Domains** tab, map the two services:
 
-- `keynv-web` → `https://keynv.example.com` (port `3000`) — the panel
-- `keynv-server` → `https://api.keynv.example.com` (port `8080`) — the API
+- `keynv-web` → `https://app.example.com` (port `3000`) — the panel
+- `keynv-server` → `https://api.example.com` (port `8080`) — the API
 
 Deploy. When the server's readiness probe is green:
 
 ```bash
-curl https://api.keynv.example.com/v1/health/ready
+curl https://api.example.com/v1/health/ready
 # {"ok":true,"version":"...","db":"ok",...}
 ```
 
@@ -53,7 +53,7 @@ For the full Coolify walkthrough (master-key backup, troubleshooting), see
 
 ## 2 · Sign in
 
-Open `https://keynv.example.com/login` and sign in with the owner account
+Open `https://app.example.com/login` and sign in with the owner account
 you just set. Invite teammates from `/admin/users` (public signup is off by
 default; flip `KEYNV_PUBLIC_REGISTRATION=true` to open it).
 

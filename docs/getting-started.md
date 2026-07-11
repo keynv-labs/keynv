@@ -62,11 +62,9 @@ pnpm install
 # Build (use build:direct if keynv CLI isn't installed yet)
 pnpm build:direct
 
-# Required — server refuses to start without this.
-# Generate with: node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-export KEYNV_JWT_SECRET='your-48-byte-base64-secret'
-
-# Bootstrap credentials for the auto-created owner account
+# The only values you must set — credentials for the auto-created owner.
+# The JWT secret, master key, and web session secret are auto-generated
+# and persisted on first boot; there is nothing to create by hand.
 export KEYNV_BOOTSTRAP_OWNER_EMAIL='dev@localhost'
 export KEYNV_BOOTSTRAP_OWNER_PASSWORD='a-local-dev-password'
 
@@ -79,8 +77,7 @@ On Windows (PowerShell), set the env vars with `$env:` instead:
 pnpm install
 pnpm build:direct
 
-# node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-$env:KEYNV_JWT_SECRET = 'your-48-byte-base64-secret'
+# The JWT secret, master key, and web session secret are auto-generated on first boot.
 $env:KEYNV_BOOTSTRAP_OWNER_EMAIL = 'dev@localhost'
 $env:KEYNV_BOOTSTRAP_OWNER_PASSWORD = 'a-local-dev-password'
 
@@ -90,9 +87,9 @@ pnpm --filter @keynv/server dev
 The server auto-bootstraps the owner account on first start. You will see:
 
 ```text
-[auto-bootstrap] master key missing — initializing fresh deployment
-[auto-bootstrap] created org "default" (id=org_...)
-[auto-bootstrap] created owner dev@localhost (id=u_...)
+msg: "initializing fresh deployment — creating owner + org"
+msg: "created org"   orgName: "default"
+msg: "created owner" ownerEmail: "dev@localhost"
 keynv-server listening on http://localhost:8080
 ```
 
@@ -131,7 +128,7 @@ interactive login. Generate one from the web dashboard at
 
 ```bash
 export KEYNV_TOKEN=kt_<your-token>
-export KEYNV_SERVER_URL=https://api.keynv.example.com
+export KEYNV_SERVER_URL=https://api.example.com
 keynv exec -- <your-build-command>
 ```
 

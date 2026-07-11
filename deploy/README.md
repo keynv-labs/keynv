@@ -159,7 +159,7 @@ keynv audit verify
 This compose file does not include HTTPS. In production:
 
 - Run nginx / Caddy / Traefik on the same host (or in front of it)
-- Proxy `https://keynv.your-domain.com` → `http://keynv-server:8080`
+- Proxy `https://api.your-domain.com` → `http://keynv-server:8080`
 - Set the public CLI / web `KEYNV_SERVER_URL` to the public HTTPS URL
 
 A worked Caddyfile lives at [`deploy/caddy.example.Caddyfile`](./caddy.example.Caddyfile).

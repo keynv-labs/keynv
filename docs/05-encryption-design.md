@@ -46,10 +46,10 @@ We do **not** use:
 
 ### Master KEK lifecycle
 
-- **Generation**: at first server bootstrap, `keynv-server bootstrap` generates a 32-byte random KEK.
-- **Storage (MVP)**: written to `/etc/keynv/master.key` with mode `0400`, owned by the keynv service user. Loaded into memory at startup; zeroed on shutdown.
+- **Generation**: on first server start the server auto-generates a 32-byte random KEK — there is no manual `keynv-server bootstrap` command.
+- **Storage (MVP)**: written to `/data/master.key` with mode `0400`, owned by the keynv service user. Loaded into memory at startup; zeroed on shutdown.
 - **Storage (Phase 6 commercial)**: backed by AWS KMS / GCP KMS / Vault Transit. The on-disk file is replaced by a wrapper config pointing at the KMS key.
-- **Backup**: the bootstrap output prints a one-time recovery code (the KEK in armored form). The Owner is instructed to store it in a separate password manager. Loss of both the on-disk file and the recovery code = **all data unrecoverable**. (We make this explicit in onboarding; no silent recovery.)
+- **Backup**: the operator copies `/data/master.key` off-host (base64-encoded) right after first boot and stores it in a separate password manager — see the deploy guides. Loss of both the on-disk file and that backup = **all data unrecoverable**. (We make this explicit in onboarding; no silent recovery.)
 - **Rotation**: online KEK rotation is planned but not implemented in the OSS CLI/server yet. The intended design is to generate a new KEK, decrypt and re-encrypt every project DEK with the new KEK, and atomically swap the on-disk file. Cost is O(projects), not O(secrets), because secrets are wrapped by DEKs not the KEK directly. Until this ships, suspected KEK exposure is handled by rebuilding the deployment and re-entering rotated upstream credentials.
 
 ### Per-project DEK lifecycle

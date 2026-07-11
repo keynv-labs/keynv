@@ -21,7 +21,9 @@ export async function loadOrCreateKek(opts: {
     return new Uint8Array(raw);
   }
   if (!opts.generateIfMissing) {
-    throw new Error(`keynv: master key file ${opts.path} not found. Run 'keynv-server bootstrap'.`);
+    throw new Error(
+      `keynv: master key file ${opts.path} not found — restore your backup of it, or let the server create one on first start.`,
+    );
   }
   const fresh = await crypto.generateKey();
   writeFileSync(opts.path, fresh, { mode: 0o400 });
