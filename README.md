@@ -21,28 +21,38 @@ agent sees `@billing.prod.stripe_key`, never the key itself.
 
 ## Quick start
 
-### 1 · Self-host the server + panel
+Two ways to get a vault — use the hosted **keynv.dev**, or run your own. Either
+way you drive everything from the `keynv` CLI.
+
+### Option A · Use keynv.dev (hosted — fastest)
+
+1. Create a free account at **[keynv.dev/register](https://keynv.dev/register)**.
+2. Install the CLI and connect:
+
+   ```bash
+   npm install -g @keynv/cli
+   keynv                       # pick "keynv.dev", then "Set up this project"
+   ```
+
+### Option B · Self-host the server + panel
 
 Point Coolify (or Docker Compose) at `deploy/coolify.yml` and set just two
 values — the owner email and password. The encryption keys, JWT secret, and web
 session secret are all generated automatically on first boot. See the
-[Coolify walkthrough](deploy/COOLIFY.md) (~15 min) or the
-[Docker Compose guide](deploy/README.md).
-
-### 2 · Connect and set up your project
+[Coolify walkthrough](deploy/COOLIFY.md) or the
+[Docker Compose guide](deploy/README.md). Then connect the CLI to your server:
 
 ```bash
 npm install -g @keynv/cli
-keynv                       # log in, then choose "Set up this project"
+keynv                       # pick "Self-hosted server", enter your API URL
 ```
 
-`keynv` opens an interactive menu: it logs you in to your server, imports any
-existing `.env` files into the vault, and writes a committable `.keynv.env` that
-maps your environment variables to aliases.
+### Set up your project, then run it normally
 
-### 3 · Run your app — the way you already do
-
-Setup wraps your `package.json` scripts, so you just run them normally:
+`keynv` opens an interactive menu: it logs you in, imports any existing `.env`
+files into the vault, and writes a committable `.keynv.env` that maps your
+environment variables to aliases. Setup also wraps your `package.json` scripts,
+so you just run them the way you already do:
 
 ```bash
 npm run dev        # secrets injected automatically — no `keynv exec` to type

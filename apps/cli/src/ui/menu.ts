@@ -1,5 +1,5 @@
 import { cancel, confirm, intro, isCancel, log, outro, select, text } from '@clack/prompts';
-import { DEFAULT_SERVER_URL } from '../client/defaults.js';
+import { DEFAULT_SERVER_URL, DEFAULT_WEB_URL } from '../client/defaults.js';
 import { ApiClient } from '../client/http.js';
 import { clearCredentials } from '../client/store.js';
 import { findProjectRoot, hasExistingKeynvEnv } from '../init/detect.js';
@@ -141,17 +141,20 @@ async function pickConnectionTarget(): Promise<string | null> {
   const target = await select({
     message: 'Connect to keynv',
     options: [
-      { value: 'cloud', label: 'keynv.dev', hint: 'hosted (beta)' },
+      { value: 'cloud', label: 'keynv.dev', hint: 'hosted — fastest way to start' },
       {
         value: 'self-hosted',
         label: 'Self-hosted server',
-        hint: 'recommended — enter your API URL',
+        hint: 'your own deployment — enter its API URL',
       },
       { value: 'exit', label: 'Exit' },
     ],
   });
   if (isCancel(target) || target === 'exit') return null;
-  if (target === 'cloud') return DEFAULT_SERVER_URL;
+  if (target === 'cloud') {
+    log.info(`New to keynv? Create a free account first: ${DEFAULT_WEB_URL}/register`);
+    return DEFAULT_SERVER_URL;
+  }
 
   const server = await text({
     message: 'Server API URL',

@@ -1,6 +1,8 @@
 import { CsrfProvider } from '@/components/security/csrf-field';
 import { SkipLink } from '@/components/ui/skip-link';
+import { getCapabilities } from '@/lib/capabilities';
 import { createCsrfToken } from '@/lib/csrf';
+import Link from 'next/link';
 import { LoginForm } from './_components/form';
 
 export default async function LoginPage({
@@ -11,6 +13,10 @@ export default async function LoginPage({
   const params = await searchParams;
   const nextParam = params.next ?? '/dashboard';
   const csrfToken = createCsrfToken();
+  // Only surface the sign-up link when this instance actually allows public
+  // registration (hosted keynv.dev). On a locked-down self-host the probe
+  // returns false and we keep the page sign-in-only.
+  const { publicSignup } = await getCapabilities();
 
   return (
     <CsrfProvider token={csrfToken}>
@@ -35,6 +41,17 @@ export default async function LoginPage({
               </p>
             ) : null}
             <LoginForm next={nextParam} />
+            {publicSignup ? (
+              <p className="mt-4 text-center text-xs text-fg-muted">
+                New to keynv?{' '}
+                <Link
+                  className="text-accent hover:underline"
+                  href={{ pathname: '/register', query: { next: nextParam } }}
+                >
+                  Create an account
+                </Link>
+              </p>
+            ) : null}
           </div>
         </div>
       </main>
