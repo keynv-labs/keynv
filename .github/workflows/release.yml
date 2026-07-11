@@ -220,11 +220,9 @@ jobs:
     name: npm (@keynv/core, redactor, testers)
     needs: [prepare, security-gate]
     runs-on: ubuntu-latest
-    # These libs are consumed by the separate keynv-mcp repo. Publishing them
-    # needs an NPM_TOKEN with create/publish rights for these scoped names;
-    # until that access is granted npm returns 404. Don't block the CLI +
-    # Docker release on it — track the token grant separately.
-    continue-on-error: true
+    # Requires NPM_TOKEN to have publish rights for the @keynv scope and to
+    # bypass 2FA (npm "require 2FA for write actions" off, or an automation
+    # token). First published at rc.23 (2026-07-11); now a required job.
     permissions:
       contents: read
       id-token: write
