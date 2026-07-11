@@ -335,21 +335,26 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     plan.renamed.length > 0
       ? `Renamed vault keys: ${plan.renamed.length} (to avoid cross-app collisions)`
       : '';
+  const scriptWrapLine =
+    scriptWrapSelection.length > 0
+      ? `package.json:      wrap ${scriptWrapSelection.length} script(s) with \`keynv exec\` — ${scriptWrapSelection.join(', ')}`
+      : 'package.json:      not modified (no wrappable scripts)';
   const planSummary = [
     `Project:           ${projectChoice.name}${projectChoice.created ? ' (will be created)' : ''}`,
     `Environments:      ${distinctEnvs.join(', ')}`,
     'Per-env breakdown:',
     perEnvCounts,
-    `Script wraps:      ${scriptWrapSelection.length}`,
-    '.keynv.env files:  will be written under',
+    '.keynv.env files:  written under (safe to commit — aliases, not values)',
     writeDirsLines,
-    'Original .env files: rename to .env.backup after upload',
+    scriptWrapLine,
+    'AGENTS.md:         write/update keynv guidance for AI agents at the project root',
+    '.env files:        renamed to .env.backup after their values are uploaded',
     renameLine,
     opts.dryRun ? 'Dry-run: no changes will be made.' : '',
   ]
     .filter(Boolean)
     .join('\n');
-  note(planSummary, 'About to apply');
+  note(planSummary, 'About to apply — one confirmation applies all of the below');
 
   const proceed = unwrap(await confirm({ message: 'Proceed?', initialValue: true }));
   if (!proceed) {
