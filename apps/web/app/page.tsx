@@ -1,16 +1,16 @@
-import { Poppins } from "next/font/google";
-import { Github, Star, Mail, Terminal, ShieldCheck, Zap } from "lucide-react";
-import type { Metadata } from "next";
-import Link from "next/link";
+import { Github, Mail, ShieldCheck, Star, Terminal, Zap } from 'lucide-react';
+import type { Metadata } from 'next';
+import { Poppins } from 'next/font/google';
+import Link from 'next/link';
 
 const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["300", "400", "600"],
+  subsets: ['latin'],
+  weight: ['300', '400', '600'],
 });
 
-const TITLE = "keynv — developer-first secrets management";
+const TITLE = 'keynv — developer-first secrets management';
 const DESCRIPTION =
-  "Store API keys, database credentials, and secrets in one vault. Use safe aliases everywhere.";
+  'Store API keys, database credentials, and secrets in one vault. Use safe aliases everywhere.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -50,9 +50,7 @@ export default async function LandingPage() {
               className="group flex items-center gap-4 px-6 py-3 rounded-2xl bg-black text-white hover:bg-black/80 transition-all duration-300 shadow-xl shadow-black/5"
             >
               <Github className="text-white" size={20} />
-              <span className="text-sm font-medium text-white">
-                View on GitHub
-              </span>
+              <span className="text-sm font-medium text-white">View on GitHub</span>
               <div className="h-4 w-[1px] bg-white/20 mx-1" />
               <div className="flex items-center gap-1.5 text-orange-300">
                 <Star size={14} fill="currentColor" />
@@ -104,10 +102,7 @@ export default async function LandingPage() {
             <Link href="/docs" className="hover:text-black transition-colors">
               Documentation
             </Link>
-            <Link
-              href="/privacy"
-              className="hover:text-black transition-colors"
-            >
+            <Link href="/privacy" className="hover:text-black transition-colors">
               Privacy
             </Link>
           </div>
@@ -121,10 +116,7 @@ export default async function LandingPage() {
               <span>hello@keynv.dev</span>
             </a>
             <div className="flex items-center gap-4">
-              <Link
-                href="#"
-                className="p-2 rounded-full hover:bg-black/[0.03] transition-colors"
-              >
+              <Link href="#" className="p-2 rounded-full hover:bg-black/[0.03] transition-colors">
                 <Github size={18} className="text-black/40" />
               </Link>
             </div>
@@ -149,9 +141,7 @@ function Feature({
       <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-black/[0.03] text-black/40 group-hover:text-orange-500 group-hover:border-orange-100 transition-all duration-500 shadow-sm">
         {icon}
       </div>
-      <h3 className="text-sm font-semibold tracking-tight text-black">
-        {title}
-      </h3>
+      <h3 className="text-sm font-semibold tracking-tight text-black">{title}</h3>
       <p className="text-sm text-black/40 leading-relaxed font-light">{desc}</p>
     </div>
   );

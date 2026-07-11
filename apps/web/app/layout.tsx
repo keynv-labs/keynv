@@ -2,7 +2,7 @@ import './globals.css';
 import { GeistMono } from 'geist/font/mono';
 import { GeistSans } from 'geist/font/sans';
 import type { Metadata } from 'next';
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://keynv.dev'),

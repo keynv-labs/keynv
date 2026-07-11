@@ -30,7 +30,8 @@ export default function VaultPage() {
           <CardEyebrow>audit</CardEyebrow>
           <CardTitle>Review vault activity</CardTitle>
           <p className="text-sm text-fg-muted leading-relaxed">
-            See who changed secrets, when they changed them, and which project the action belonged to.
+            See who changed secrets, when they changed them, and which project the action belonged
+            to.
           </p>
           <Link href="/audit" className="mt-4 inline-flex text-sm text-accent hover:underline">
             Open Audit log

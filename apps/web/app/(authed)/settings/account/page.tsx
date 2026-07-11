@@ -1,13 +1,13 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardEyebrow, CardTitle } from "@/components/ui/card";
-import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
-import { Field } from "./_components/field";
-import { ChangePasswordForm } from "./_components/password-form";
+import { Badge } from '@/components/ui/badge';
+import { Card, CardEyebrow, CardTitle } from '@/components/ui/card';
+import { getSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
+import { Field } from './_components/field';
+import { ChangePasswordForm } from './_components/password-form';
 
 export default async function AccountProfilePage() {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect('/login');
 
   return (
     <div className="space-y-5">
@@ -27,7 +27,7 @@ export default async function AccountProfilePage() {
                 {session.user_id}
               </div>
             </div>
-            <Badge tone={session.org_role === "owner" ? "accent" : "success"}>
+            <Badge tone={session.org_role === 'owner' ? 'accent' : 'success'}>
               {session.org_role}
             </Badge>
           </div>
@@ -55,8 +55,8 @@ export default async function AccountProfilePage() {
           Password
         </CardTitle>
         <p className="text-sm text-fg-muted -mt-1">
-          Changing your password signs you out from any other device with an
-          active session. Argon2id-hashed at rest.
+          Changing your password signs you out from any other device with an active session.
+          Argon2id-hashed at rest.
         </p>
         <ChangePasswordForm />
       </Card>

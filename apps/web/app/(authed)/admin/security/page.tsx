@@ -19,9 +19,13 @@ export default function AdminSecurityPage() {
           <CardEyebrow>organization</CardEyebrow>
           <CardTitle>Org controls</CardTitle>
           <p className="text-sm text-fg-muted leading-relaxed">
-            Manage organization identity, active workspace context, and member visibility from org settings.
+            Manage organization identity, active workspace context, and member visibility from org
+            settings.
           </p>
-          <Link href="/settings/org" className="mt-4 inline-flex text-sm text-accent hover:underline">
+          <Link
+            href="/settings/org"
+            className="mt-4 inline-flex text-sm text-accent hover:underline"
+          >
             Open organization settings
           </Link>
         </Card>
@@ -32,7 +36,10 @@ export default function AdminSecurityPage() {
           <p className="text-sm text-fg-muted leading-relaxed">
             Review org membership and roles for everyone who can reach this workspace.
           </p>
-          <Link href="/admin/users" className="mt-4 inline-flex text-sm text-accent hover:underline">
+          <Link
+            href="/admin/users"
+            className="mt-4 inline-flex text-sm text-accent hover:underline"
+          >
             Open Users
           </Link>
         </Card>

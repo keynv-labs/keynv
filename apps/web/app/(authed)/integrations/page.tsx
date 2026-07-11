@@ -21,7 +21,10 @@ export default function IntegrationsPage() {
           <p className="text-sm text-fg-muted leading-relaxed">
             Review and revoke account tokens used by local CLI sessions and automations.
           </p>
-          <Link href="/settings/account/cli-tokens" className="mt-4 inline-flex text-sm text-accent hover:underline">
+          <Link
+            href="/settings/account/cli-tokens"
+            className="mt-4 inline-flex text-sm text-accent hover:underline"
+          >
             Open CLI tokens
           </Link>
         </Card>
@@ -32,7 +35,10 @@ export default function IntegrationsPage() {
           <p className="text-sm text-fg-muted leading-relaxed">
             Browser-side approval flow used when the CLI asks a signed-in user to authorize access.
           </p>
-          <Link href="/cli/authorize" className="mt-4 inline-flex text-sm text-accent hover:underline">
+          <Link
+            href="/cli/authorize"
+            className="mt-4 inline-flex text-sm text-accent hover:underline"
+          >
             Open authorize flow
           </Link>
         </Card>
@@ -43,7 +49,10 @@ export default function IntegrationsPage() {
           <p className="text-sm text-fg-muted leading-relaxed">
             Operator and developer docs for wiring keynv into apps, agents, and local tooling.
           </p>
-          <Link href="/docs/quickstart" className="mt-4 inline-flex text-sm text-accent hover:underline">
+          <Link
+            href="/docs/quickstart"
+            className="mt-4 inline-flex text-sm text-accent hover:underline"
+          >
             Open quickstart
           </Link>
         </Card>

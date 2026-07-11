@@ -43,9 +43,14 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protected route redirects are enforced again in server layouts/pages.
-  // Keeping middleware passive avoids redirect loops in standalone production.
-  return NextResponse.next();
+  // Protected route. The middleware stays passive — it never redirects, to
+  // avoid redirect loops under Next.js standalone output; the actual auth
+  // gate lives in the server layouts/pages. We surface the requested
+  // path+query here so those gates can redirect to /login?next=… and return
+  // the user to their deep link after login.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-keynv-pathname', `${pathname}${req.nextUrl.search}`);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {

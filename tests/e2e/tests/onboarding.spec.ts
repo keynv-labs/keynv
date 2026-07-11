@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('TUI-first onboarding copy', () => {
-  test('landing page explains the install to TUI to project setup path', async ({ page }) => {
+  test('landing page communicates the vault + safe-alias value prop', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
     const body = page.locator('body');
-    await expect(body).toContainText('run keynv');
-    await expect(body).toContainText('Set up this project');
+    await expect(body).toContainText('vault');
+    await expect(body).toContainText('Safe Aliases');
   });
 
   test('quickstart keeps users on keynv TUI instead of legacy commands', async ({ page }) => {

@@ -1,17 +1,15 @@
-"use client";
+'use client';
 
-import { logoutAction, switchOrgAction } from "@/app/(authed)/actions";
-import { Logomark } from "@/components/brand/logomark";
-import { CreateOrgDialog } from "@/components/layout/create-org-dialog";
-import { CsrfField } from "@/components/security/csrf-field";
-import { cn } from "@/lib/cn";
+import { logoutAction, switchOrgAction } from '@/app/(authed)/actions';
+import { CreateOrgDialog } from '@/components/layout/create-org-dialog';
+import { CsrfField } from '@/components/security/csrf-field';
+import { cn } from '@/lib/cn';
 import {
   Activity,
   Blocks,
   Building2,
   Check,
   ChevronDown,
-  CreditCard,
   FolderKanban,
   Inbox,
   Lock,
@@ -21,10 +19,10 @@ import {
   Settings,
   ShieldCheck,
   Users,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { type ComponentType, useState } from "react";
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { type ComponentType, useState } from 'react';
 
 interface NavItem {
   href: string;
@@ -46,93 +44,93 @@ interface NavGroup {
 function buildGroups(role: string): NavGroup[] {
   const groups: NavGroup[] = [
     {
-      title: "Workspace",
+      title: 'Workspace',
       items: [
         {
-          href: "/dashboard",
-          label: "Activity",
+          href: '/dashboard',
+          label: 'Activity',
           icon: Activity,
-          shortcut: "g h",
-          match: (p) => p === "/dashboard",
+          shortcut: 'g h',
+          match: (p) => p === '/dashboard',
         },
         {
-          href: "/projects",
-          label: "Projects",
+          href: '/projects',
+          label: 'Projects',
           icon: FolderKanban,
-          shortcut: "g p",
-          match: (p) => p === "/projects" || p.startsWith("/projects/"),
+          shortcut: 'g p',
+          match: (p) => p === '/projects' || p.startsWith('/projects/'),
         },
         {
-          href: "/vault",
-          label: "Team Vault",
+          href: '/vault',
+          label: 'Team Vault',
           icon: Lock,
-          shortcut: "g v",
-          match: (p) => p === "/vault",
+          shortcut: 'g v',
+          match: (p) => p === '/vault',
         },
         {
-          href: "/inbox",
-          label: "Inbox",
+          href: '/inbox',
+          label: 'Inbox',
           icon: Inbox,
-          shortcut: "g i",
-          match: (p) => p === "/inbox",
+          shortcut: 'g i',
+          match: (p) => p === '/inbox',
         },
       ],
     },
     {
-      title: "Developer",
+      title: 'Developer',
       items: [
         {
-          href: "/integrations",
-          label: "Integrations",
+          href: '/integrations',
+          label: 'Integrations',
           icon: Blocks, // MCP, API, SDK bağlantıları
-          match: (p) => p.startsWith("/integrations"),
+          match: (p) => p.startsWith('/integrations'),
         },
         {
-          href: "/audit",
-          label: "Audit log",
+          href: '/audit',
+          label: 'Audit log',
           icon: ScrollText,
-          shortcut: "g a",
-          match: (p) => p === "/audit",
+          shortcut: 'g a',
+          match: (p) => p === '/audit',
         },
       ],
     },
     {
-      title: "Account",
+      title: 'Account',
       items: [
         {
-          href: "/settings/org",
-          label: "Organization",
+          href: '/settings/org',
+          label: 'Organization',
           icon: Building2,
-          match: (p) => p.startsWith("/settings/org") && !p.includes("billing"),
+          match: (p) => p.startsWith('/settings/org') && !p.includes('billing'),
         },
         {
-          href: "/settings/account",
-          label: "Settings",
+          href: '/settings/account',
+          label: 'Settings',
           icon: Settings,
-          shortcut: "g s",
-          match: (p) => p.startsWith("/settings/account"),
+          shortcut: 'g s',
+          match: (p) => p.startsWith('/settings/account'),
         },
       ],
     },
   ];
 
   // Admin veya Owner ise "Users" ve "Security" gibi yönetim panellerini ekle
-  if (role === "owner" || role === "admin") {
+  if (role === 'owner' || role === 'admin') {
     groups.push({
-      title: "Admin",
+      title: 'Admin',
       items: [
         {
-          href: "/admin/users",
-          label: "Users",
+          href: '/admin/users',
+          label: 'Users',
           icon: Users,
-          shortcut: "g u",
-          match: (p) => p.startsWith("/admin/users"),
+          shortcut: 'g u',
+          match: (p) => p.startsWith('/admin/users'),
         },
         {
-          href: "/admin/security",
-          label: "Security",
+          href: '/admin/security',
+          label: 'Security',
           icon: ShieldCheck,
-          match: (p) => p.startsWith("/admin/security"),
+          match: (p) => p.startsWith('/admin/security'),
         },
       ],
     });
@@ -162,7 +160,7 @@ export function SidebarContent({
   orgs,
   onNavigate,
 }: SidebarContentProps) {
-  const pathname = usePathname() ?? "";
+  const pathname = usePathname() ?? '';
   const initials = email.slice(0, 2).toUpperCase();
   const handleNavigate = onNavigate ?? NOOP;
   const navGroups = buildGroups(role);
@@ -186,13 +184,13 @@ export function SidebarContent({
                     <Link
                       href={item.href}
                       onClick={handleNavigate}
-                      aria-current={active ? "page" : undefined}
+                      aria-current={active ? 'page' : undefined}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2 py-1.5",
-                        "text-sm transition-colors duration-fast ease-snap",
+                        'group relative flex items-center gap-2.5 rounded-md px-2 py-1.5',
+                        'text-sm transition-colors duration-fast ease-snap',
                         active
-                          ? "bg-bg-elevated-hover text-fg"
-                          : "text-fg-muted hover:bg-bg-elevated-hover hover:text-fg",
+                          ? 'bg-bg-elevated-hover text-fg'
+                          : 'text-fg-muted hover:bg-bg-elevated-hover hover:text-fg',
                       )}
                     >
                       {active ? (
@@ -224,8 +222,8 @@ export function SidebarContent({
           onClick={() => setOrgSwitcherOpen(!orgSwitcherOpen)}
           aria-expanded={orgSwitcherOpen}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2.5 text-xs transition-colors duration-fast ease-snap",
-            "border-border bg-bg-inset/50 hover:border-border-strong hover:bg-bg-elevated-hover cursor-pointer",
+            'flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2.5 text-xs transition-colors duration-fast ease-snap',
+            'border-border bg-bg-inset/50 hover:border-border-strong hover:bg-bg-elevated-hover cursor-pointer',
           )}
         >
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-bg-elevated text-fg-muted">
@@ -235,16 +233,14 @@ export function SidebarContent({
             <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-fg-subtle">
               Active org
             </div>
-            <div className="text-fg leading-tight truncate mt-0.5">
-              {activeOrgName}
-            </div>
+            <div className="text-fg leading-tight truncate mt-0.5">{activeOrgName}</div>
           </div>
           <ChevronDown
             size={12}
             strokeWidth={2}
             className={cn(
-              "shrink-0 text-fg-subtle transition-transform duration-fast ease-snap",
-              orgSwitcherOpen ? "rotate-180" : "",
+              'shrink-0 text-fg-subtle transition-transform duration-fast ease-snap',
+              orgSwitcherOpen ? 'rotate-180' : '',
             )}
           />
         </button>
@@ -258,7 +254,7 @@ export function SidebarContent({
                     Organizations
                   </div>
                   <div className="mt-0.5 text-xs text-fg-muted">
-                    {orgCount} workspace{orgCount === 1 ? "" : "s"} connected
+                    {orgCount} workspace{orgCount === 1 ? '' : 's'} connected
                   </div>
                 </div>
                 <Link
@@ -279,18 +275,18 @@ export function SidebarContent({
                     type="submit"
                     disabled={isActive}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors duration-fast ease-snap disabled:cursor-default",
+                      'flex w-full items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors duration-fast ease-snap disabled:cursor-default',
                       isActive
-                        ? "bg-accent-soft text-accent"
-                        : "text-fg-muted hover:bg-bg-elevated-hover hover:text-fg",
+                        ? 'bg-accent-soft text-accent'
+                        : 'text-fg-muted hover:bg-bg-elevated-hover hover:text-fg',
                     )}
                   >
                     <span
                       className={cn(
-                        "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border font-mono text-[10px]",
+                        'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border font-mono text-[10px]',
                         isActive
-                          ? "border-accent/30 bg-accent-soft text-accent"
-                          : "border-border bg-bg-inset text-fg-subtle",
+                          ? 'border-accent/30 bg-accent-soft text-accent'
+                          : 'border-border bg-bg-inset text-fg-subtle',
                       )}
                     >
                       {o.name.slice(0, 1).toUpperCase()}

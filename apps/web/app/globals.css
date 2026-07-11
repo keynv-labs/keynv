@@ -1,330 +1,311 @@
 @import "tailwindcss";
 
 html {
-    scrollbar-width: none;
+  scrollbar-width: none;
 }
 
 @theme {
-    /* ─── Surfaces ─────────────────────────────────────────────────────────────
+  /* ─── Surfaces ─────────────────────────────────────────────────────────────
    * Cool slate with a barely-perceptible warm cast (the amber accent reads
    * truer on a slightly desaturated bg than on pure neutral). Six steps from
    * deepest (page) to lightest (overlay/hover). */
-    --color-bg: #0b0d11;
-    --color-bg-elevated: #14171d;
-    --color-bg-elevated-hover: #1a1e25;
-    --color-bg-overlay: #1f242c;
-    --color-bg-inset: #07090c;
+  --color-bg: #0b0d11;
+  --color-bg-elevated: #14171d;
+  --color-bg-elevated-hover: #1a1e25;
+  --color-bg-overlay: #1f242c;
+  --color-bg-inset: #07090c;
 
-    /* ─── Borders ──────────────────────────────────────────────────────────────
+  /* ─── Borders ──────────────────────────────────────────────────────────────
    * Hairlines only. `border` for resting, `border-strong` for hover/focus. */
-    --color-border: #23262e;
-    --color-border-strong: #313640;
-    --color-border-bright: #4a5060;
+  --color-border: #23262e;
+  --color-border-strong: #313640;
+  --color-border-bright: #4a5060;
 
-    /* ─── Foreground
+  /* ─── Foreground
    * WCAG AA verified against --color-bg #0b0d11:
    *   --color-fg          ≈ 14.0 : 1
    *   --color-fg-muted    ≈ 6.8  : 1
    *   --color-fg-subtle   ≈ 4.7  : 1   (clears AA normal at 11–13 px)
    * The three-step hierarchy (fg > muted > subtle) is load-bearing for
    * the design — do not collapse it. */
-    --color-fg: #e9ecf2;
-    --color-fg-muted: #9098a4;
-    --color-fg-subtle: #7a8593;
-    --color-fg-on-accent: #1a1206;
+  --color-fg: #e9ecf2;
+  --color-fg-muted: #9098a4;
+  --color-fg-subtle: #7a8593;
+  --color-fg-on-accent: #1a1206;
 
-    /* ─── Accent — sodium amber
+  /* ─── Accent — sodium amber
    * Single primary, used for primary action only (one per view). The on-accent
    * fg is a deep brown rather than black so the chip reads as a warm chip,
    * not a punched-out hole. */
-    --color-accent: #ffb74d;
-    --color-accent-hover: #ffc56e;
-    --color-accent-pressed: #e89c2f;
-    --color-accent-soft: #2a1d0a;
-    --color-accent-soft-border: #5a3d18;
+  --color-accent: #ffb74d;
+  --color-accent-hover: #ffc56e;
+  --color-accent-pressed: #e89c2f;
+  --color-accent-soft: #2a1d0a;
+  --color-accent-soft-border: #5a3d18;
 
-    /* ─── Semantic
+  /* ─── Semantic
    * Warn is shifted to deep orange so it does not collide with the amber
    * accent; success is a cooler mint to avoid the "generic green" look. */
-    --color-success: #5dd9a8;
-    --color-success-soft: #0e2620;
-    --color-success-soft-border: #205040;
-    --color-warn: #ff8c42;
-    --color-warn-soft: #2a1810;
-    --color-warn-soft-border: #5a3520;
-    --color-danger: #ff5e62;
-    --color-danger-soft: #2a1015;
-    --color-danger-soft-border: #5a2030;
+  --color-success: #5dd9a8;
+  --color-success-soft: #0e2620;
+  --color-success-soft-border: #205040;
+  --color-warn: #ff8c42;
+  --color-warn-soft: #2a1810;
+  --color-warn-soft-border: #5a3520;
+  --color-danger: #ff5e62;
+  --color-danger-soft: #2a1015;
+  --color-danger-soft-border: #5a2030;
 
-    /* ─── Environment tier — semantic coloring for dev / staging / prod badges
+  /* ─── Environment tier — semantic coloring for dev / staging / prod badges
    * Tuned so prod reads as "danger-adjacent" without being identical to
    * the danger tone. */
-    --color-env-dev-fg: #9098a4;
-    --color-env-dev-bg: #1a1e25;
-    --color-env-dev-border: #313640;
-    --color-env-stg-fg: #ffb74d;
-    --color-env-stg-bg: #2a1d0a;
-    --color-env-stg-border: #5a3d18;
-    --color-env-prod-fg: #ff7a7a;
-    --color-env-prod-bg: #2a1518;
-    --color-env-prod-border: #5a2530;
+  --color-env-dev-fg: #9098a4;
+  --color-env-dev-bg: #1a1e25;
+  --color-env-dev-border: #313640;
+  --color-env-stg-fg: #ffb74d;
+  --color-env-stg-bg: #2a1d0a;
+  --color-env-stg-border: #5a3d18;
+  --color-env-prod-fg: #ff7a7a;
+  --color-env-prod-bg: #2a1518;
+  --color-env-prod-border: #5a2530;
 
-    /* ─── Typography
+  /* ─── Typography
    * Geist family — variable fonts loaded by next/font on the root layout.
    * Display class uses negative tracking and slightly heavier weight for
    * editorial-grade headlines. */
-    --font-sans:
-        var(--font-geist-sans), "ui-sans-serif", "system-ui", "-apple-system",
-        "Segoe UI", sans-serif;
-    --font-mono:
-        var(--font-geist-mono), "ui-monospace", "SF Mono", "Menlo", "Consolas",
-        monospace;
+  --font-sans: var(--font-geist-sans), "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI",
+    sans-serif;
+  --font-mono: var(--font-geist-mono), "ui-monospace", "SF Mono", "Menlo", "Consolas", monospace;
 
-    /* ─── Radius — slightly tighter than before; precision over softness. */
-    --radius-sm: 3px;
-    --radius-md: 5px;
-    --radius-lg: 7px;
-    --radius-xl: 10px;
-    --radius-2xl: 14px;
+  /* ─── Radius — slightly tighter than before; precision over softness. */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
+  --radius-xl: 10px;
+  --radius-2xl: 14px;
 
-    /* ─── Motion */
-    --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-in-out-snap: cubic-bezier(0.45, 0, 0.55, 1);
-    --duration-fast: 120ms;
-    --duration-base: 180ms;
-    --duration-slow: 240ms;
+  /* ─── Motion */
+  --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-snap: cubic-bezier(0.45, 0, 0.55, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
 }
 
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html,
 body {
-    background: var(--color-bg);
-    color: var(--color-fg);
-    font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv01", "cv02", "cv11";
-    font-variant-ligatures: contextual;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-    margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv01", "cv02", "cv11";
+  font-variant-ligatures: contextual;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  margin: 0;
 }
 
 a {
-    color: inherit;
-    text-decoration: none;
+  color: inherit;
+  text-decoration: none;
 }
 
 code,
 pre,
 .mono {
-    font-family: var(--font-mono);
-    font-feature-settings: "ss01", "ss02", "calt", "zero", "cv01";
-    font-size: 0.92em;
+  font-family: var(--font-mono);
+  font-feature-settings: "ss01", "ss02", "calt", "zero", "cv01";
+  font-size: 0.92em;
 }
 
 /* ─── Display headings — used by page heroes and section openers.
  * Tight tracking, generous size step. Pair with .display-eyebrow for the
  * little uppercase mono label above. */
 .display {
-    font-family: var(--font-sans);
-    font-weight: 600;
-    letter-spacing: -0.025em;
-    line-height: 1.02;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
 }
 .display-eyebrow {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-fg-subtle);
 }
 
 /* ─── Tabular nums utility — applied to anything counting (counts, hashes,
  * timestamps, key counts in env badges). */
 .tabular {
-    font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Atmospheric — noise overlay + micro-grid for backdrops.
  * Both are pointer-events-none and additive; pair with a parent
  * .relative + overflow-hidden. */
 .bg-noise::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.025;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-    z-index: 1;
-    mix-blend-mode: overlay;
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  z-index: 1;
+  mix-blend-mode: overlay;
 }
 
 .bg-grid {
-    background-image:
-        linear-gradient(to right, var(--color-border) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
-    background-size: 32px 32px;
+  background-image: linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 .bg-grid-fade {
-    -webkit-mask-image: radial-gradient(
-        ellipse 70% 60% at 50% 0%,
-        rgba(0, 0, 0, 0.5),
-        transparent 75%
-    );
-    mask-image: radial-gradient(
-        ellipse 70% 60% at 50% 0%,
-        rgba(0, 0, 0, 0.5),
-        transparent 75%
-    );
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 60% at 50% 0%,
+    rgba(0, 0, 0, 0.5),
+    transparent 75%
+  );
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(0, 0, 0, 0.5), transparent 75%);
 }
 
 /* ─── Amber glow — the hero-only ambient halo behind the primary CTA cluster.
  * Use sparingly; overuse cheapens it. */
 .bg-amber-glow {
-    background: radial-gradient(
-        ellipse 50% 40% at 50% 30%,
-        color-mix(in oklab, var(--color-accent) 22%, transparent),
-        transparent 70%
-    );
+  background: radial-gradient(
+    ellipse 50% 40% at 50% 30%,
+    color-mix(in oklab, var(--color-accent) 22%, transparent),
+    transparent 70%
+  );
 }
 
 /* ─── Scrollbar styling — native scrollbars look broken on dark surfaces. */
 * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-strong) transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 *::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+  width: 10px;
+  height: 10px;
 }
 *::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-    background: var(--color-border-strong);
-    border: 2px solid var(--color-bg);
-    border-radius: 9999px;
+  background: var(--color-border-strong);
+  border: 2px solid var(--color-bg);
+  border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-    background: var(--color-fg-subtle);
+  background: var(--color-fg-subtle);
 }
 
 /* ─── Focus ring — amber tint, generous halo. */
-:where(
-    button,
-    a,
-    input,
-    textarea,
-    select,
-    [role="button"],
-    [role="option"]
-):focus-visible {
-    outline: none;
-    box-shadow:
-        0 0 0 2px var(--color-bg),
-        0 0 0 4px color-mix(in oklab, var(--color-accent) 60%, transparent);
-    border-radius: var(--radius-md);
+:where(button, a, input, textarea, select, [role="button"], [role="option"]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px
+    color-mix(in oklab, var(--color-accent) 60%, transparent);
+  border-radius: var(--radius-md);
 }
 
 /* ─── Selection — amber tint so highlighted text feels native. */
 ::selection {
-    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
-    color: var(--color-fg);
+  background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+  color: var(--color-fg);
 }
 
 /* ─── Animations */
 @keyframes list-item-enter {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .animate-list-enter {
-    animation: list-item-enter var(--duration-base) var(--ease-snap) both;
+  animation: list-item-enter var(--duration-base) var(--ease-snap) both;
 }
 
 @keyframes hero-rise {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .animate-hero-rise {
-    animation: hero-rise 600ms var(--ease-snap) both;
+  animation: hero-rise 600ms var(--ease-snap) both;
 }
 
 @keyframes amber-pulse {
-    0%,
-    100% {
-        box-shadow: 0 0 0 0
-            color-mix(in oklab, var(--color-accent) 40%, transparent);
-    }
-    50% {
-        box-shadow: 0 0 0 6px
-            color-mix(in oklab, var(--color-accent) 0%, transparent);
-    }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-accent) 0%, transparent);
+  }
 }
 .animate-amber-pulse {
-    animation: amber-pulse 2.4s var(--ease-in-out-snap) infinite;
+  animation: amber-pulse 2.4s var(--ease-in-out-snap) infinite;
 }
 
 @keyframes scan {
-    from {
-        transform: translateY(-100%);
-    }
-    to {
-        transform: translateY(100%);
-    }
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
 }
 .animate-scan {
-    animation: scan 4s linear infinite;
+  animation: scan 4s linear infinite;
 }
 
 /* ─── cmdk palette */
 [cmdk-input] {
-    background: transparent;
-    outline: none;
+  background: transparent;
+  outline: none;
 }
 [cmdk-group-heading] {
-    padding: 6px 10px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--color-fg-subtle);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--color-fg-subtle);
 }
 [cmdk-item] {
-    cursor: pointer;
-    user-select: none;
-    outline: none;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
 }
 [cmdk-item][data-selected="true"] {
-    background: var(--color-bg-elevated-hover);
-    color: var(--color-fg);
-    border-left: 2px solid var(--color-accent);
-    padding-left: calc(0.625rem - 2px);
+  background: var(--color-bg-elevated-hover);
+  color: var(--color-fg);
+  border-left: 2px solid var(--color-accent);
+  padding-left: calc(0.625rem - 2px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

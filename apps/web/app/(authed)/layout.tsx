@@ -1,13 +1,14 @@
-import { AppPalette } from "@/components/command-palette/app-palette";
-import { MobileTopBar } from "@/components/layout/mobile-top-bar";
-import { Sidebar } from "@/components/layout/sidebar";
-import { CsrfProvider } from "@/components/security/csrf-field";
-import { SkipLink } from "@/components/ui/skip-link";
-import { api } from "@/lib/api";
-import { createCsrfToken } from "@/lib/csrf";
-import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
+import { AppPalette } from '@/components/command-palette/app-palette';
+import { MobileTopBar } from '@/components/layout/mobile-top-bar';
+import { Sidebar } from '@/components/layout/sidebar';
+import { CsrfProvider } from '@/components/security/csrf-field';
+import { SkipLink } from '@/components/ui/skip-link';
+import { api } from '@/lib/api';
+import { createCsrfToken } from '@/lib/csrf';
+import { getSession } from '@/lib/session';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 interface OrgInfo {
   id: string;
@@ -26,14 +27,19 @@ export default async function AuthedLayout({
   children: ReactNode;
 }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) {
+    // Preserve the requested deep link (surfaced by the middleware) so the
+    // user lands back where they were headed after logging in.
+    const next = (await headers()).get('x-keynv-pathname');
+    redirect(next ? `/login?next=${encodeURIComponent(next)}` : '/login');
+  }
 
   // Fetch org info for the sidebar switcher.
   let orgs: OrgInfo[] = [];
   let activeOrgName = session.org_id;
   let activeOrgRole = session.org_role;
   try {
-    const data = await api<WhoamiResponse>("/v1/whoami");
+    const data = await api<WhoamiResponse>('/v1/whoami');
     orgs = data.orgs ?? [];
     activeOrgName = data.org_name ?? session.org_id;
     activeOrgRole = data.org_role ?? session.org_role;
