@@ -1,7 +1,7 @@
 {
   "name": "@keynv/cli",
   "version": "0.1.0-rc.21",
-  "description": "keynv command-line interface — AI-safe secrets management with alias-based references and a privileged subprocess wrapper.",
+  "description": "Secrets vault CLI for teams and AI-assisted development — reference secrets by alias so the real values stay out of your code, shell history, and AI transcripts.",
   "license": "MIT",
   "type": "module",
   "bin": {
