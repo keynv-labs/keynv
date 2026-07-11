@@ -6,13 +6,11 @@ import { CsrfField } from '@/components/security/csrf-field';
 import { cn } from '@/lib/cn';
 import {
   Activity,
-  Blocks,
   Building2,
   Check,
   ChevronDown,
   FolderKanban,
   Inbox,
-  Lock,
   LogOut,
   Plus,
   ScrollText,
@@ -61,13 +59,6 @@ function buildGroups(role: string): NavGroup[] {
           match: (p) => p === '/projects' || p.startsWith('/projects/'),
         },
         {
-          href: '/vault',
-          label: 'Team Vault',
-          icon: Lock,
-          shortcut: 'g v',
-          match: (p) => p === '/vault',
-        },
-        {
           href: '/inbox',
           label: 'Inbox',
           icon: Inbox,
@@ -79,12 +70,6 @@ function buildGroups(role: string): NavGroup[] {
     {
       title: 'Developer',
       items: [
-        {
-          href: '/integrations',
-          label: 'Integrations',
-          icon: Blocks, // MCP, API, SDK bağlantıları
-          match: (p) => p.startsWith('/integrations'),
-        },
         {
           href: '/audit',
           label: 'Audit log',

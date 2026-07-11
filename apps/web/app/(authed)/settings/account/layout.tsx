@@ -7,7 +7,6 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   const tabs: RouteTab[] = [
     { href: '/settings/account', label: 'Profile' },
     { href: '/settings/account/cli-tokens', label: 'CLI tokens', nested: true },
-    { href: '/settings/account/notifications', label: 'Notifications' },
   ];
 
   return (

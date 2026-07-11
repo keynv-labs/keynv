@@ -222,7 +222,6 @@ function normalizeUsersRoute(segments: string[]): string {
   if (!segments[2]) return '/v1/users';
   if (segments[2] === 'accept-invite') return '/v1/users/accept-invite';
   if (segments[2] === 'invite') return '/v1/users/invite';
-  if (segments[2] === 'preferences') return '/v1/users/preferences';
   return segments[3] ? `/v1/users/:id/${segments[3]}` : '/v1/users/:id';
 }
 
