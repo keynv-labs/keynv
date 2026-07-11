@@ -17,6 +17,7 @@ function makeEnv(dir: string): ServerEnvT {
     KEYNV_DB_PATH: join(dir, 'keynv.db'),
     KEYNV_MASTER_KEY_FILE: join(dir, 'master.key'),
     KEYNV_JWT_SECRET: 'x'.repeat(32),
+    KEYNV_JWT_SECRET_FILE: join(dir, 'jwt.secret'),
     KEYNV_PORT: 8080,
     KEYNV_ACCESS_TOKEN_TTL_S: 900,
     KEYNV_REFRESH_TOKEN_TTL_S: 604800,
@@ -54,29 +55,53 @@ describe('maybeAutoBootstrap', () => {
     savedVars.clear();
   });
 
-  it('is a no-op when master.key already exists', async () => {
+  it('creates the owner even when master.key already exists, as long as no org exists yet', async () => {
+    // Owner creation keys off org existence, not the master-key file, so an
+    // operator can deploy first (key generated) and add the bootstrap vars
+    // on a later restart.
     const env = makeEnv(dir);
     writeFileSync(env.KEYNV_MASTER_KEY_FILE, Buffer.alloc(32, 0xab));
-    process.env['KEYNV_BOOTSTRAP_OWNER_EMAIL'] = 'should@be.ignored';
+    process.env['KEYNV_BOOTSTRAP_OWNER_EMAIL'] = 'owner@team.com';
     process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD'] = 'long-enough-password';
     await maybeAutoBootstrap(env);
-    // No DB created — proves we returned before openDb.
-    expect(existsSync(env.KEYNV_DB_PATH)).toBe(false);
+    const { db, raw } = openDb({ path: env.KEYNV_DB_PATH, migrate: false });
+    try {
+      const users = await db.select().from(schema.users);
+      expect(users).toHaveLength(1);
+      expect(users[0]?.email).toBe('owner@team.com');
+    } finally {
+      raw.close();
+    }
   });
 
-  it('is a no-op when master.key is missing but no bootstrap env vars are set', async () => {
+  it('generates the master key and boots ownerless when no bootstrap vars are set', async () => {
     const env = makeEnv(dir);
     await maybeAutoBootstrap(env);
-    expect(existsSync(env.KEYNV_MASTER_KEY_FILE)).toBe(false);
-    expect(existsSync(env.KEYNV_DB_PATH)).toBe(false);
+    // The master key IS created so the server can start (no crash-loop)...
+    expect(existsSync(env.KEYNV_MASTER_KEY_FILE)).toBe(true);
+    // ...but no org/owner is created without the bootstrap vars.
+    const { db, raw } = openDb({ path: env.KEYNV_DB_PATH, migrate: false });
+    try {
+      expect(await db.select().from(schema.orgs)).toHaveLength(0);
+      expect(await db.select().from(schema.users)).toHaveLength(0);
+    } finally {
+      raw.close();
+    }
   });
 
-  it('rejects bootstrap passwords shorter than 12 characters', async () => {
+  it('warns (never throws) and skips owner creation when the bootstrap password is too short', async () => {
     const env = makeEnv(dir);
     process.env['KEYNV_BOOTSTRAP_OWNER_EMAIL'] = 'owner@team.com';
     process.env['KEYNV_BOOTSTRAP_OWNER_PASSWORD'] = 'short';
-    await expect(maybeAutoBootstrap(env)).rejects.toThrow(/at least 12/);
-    expect(existsSync(env.KEYNV_MASTER_KEY_FILE)).toBe(false);
+    // A misconfigured password must not crash-loop the server.
+    await expect(maybeAutoBootstrap(env)).resolves.toBeUndefined();
+    expect(existsSync(env.KEYNV_MASTER_KEY_FILE)).toBe(true);
+    const { db, raw } = openDb({ path: env.KEYNV_DB_PATH, migrate: false });
+    try {
+      expect(await db.select().from(schema.users)).toHaveLength(0);
+    } finally {
+      raw.close();
+    }
   });
 
   it('creates master.key, org, and owner when env vars are set and master.key is missing', async () => {

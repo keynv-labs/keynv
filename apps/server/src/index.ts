@@ -6,6 +6,7 @@ import { openDb } from './db/index.js';
 import { loadOrCreateKek } from './kek/load.js';
 import { loadEnv } from './lib/env.js';
 import { configureTrustedProxyCount } from './lib/ip.js';
+import { resolveJwtSecret } from './lib/jwt-secret.js';
 
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -27,11 +28,15 @@ async function main(): Promise<void> {
   });
   await maybeAutoBootstrap(env);
   const { db } = openDb({ path: env.KEYNV_DB_PATH, migrate: true, verbose: true });
-  const kek = await loadOrCreateKek({ path: env.KEYNV_MASTER_KEY_FILE, generateIfMissing: false });
+  const kek = await loadOrCreateKek({ path: env.KEYNV_MASTER_KEY_FILE, generateIfMissing: true });
+  const jwtSecret = resolveJwtSecret({
+    envValue: env.KEYNV_JWT_SECRET,
+    path: env.KEYNV_JWT_SECRET_FILE,
+  });
 
   const app = createApp({
     db,
-    jwtSecret: env.KEYNV_JWT_SECRET,
+    jwtSecret,
     accessTtlS: env.KEYNV_ACCESS_TOKEN_TTL_S,
     refreshTtlS: env.KEYNV_REFRESH_TOKEN_TTL_S,
     webUrl: env.KEYNV_WEB_URL,

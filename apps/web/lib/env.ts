@@ -5,7 +5,11 @@ const Schema = z.object({
   KEYNV_WEB_SESSION_SECRET: z.string().min(32).optional(),
 });
 
+// Treat empty-string vars (compose `${VAR:-}` defaults) as unset so the
+// schema default / optional applies instead of failing validation.
+const clean = (v: string | undefined): string | undefined => (v ? v : undefined);
+
 export const env = Schema.parse({
-  KEYNV_SERVER_URL: process.env.KEYNV_SERVER_URL,
-  KEYNV_WEB_SESSION_SECRET: process.env.KEYNV_WEB_SESSION_SECRET,
+  KEYNV_SERVER_URL: clean(process.env.KEYNV_SERVER_URL),
+  KEYNV_WEB_SESSION_SECRET: clean(process.env.KEYNV_WEB_SESSION_SECRET),
 });

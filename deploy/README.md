@@ -44,34 +44,36 @@ node -e "require('fs').copyFileSync('deploy/.env.example','deploy/.env')"
 # Then open deploy/.env in your editor
 ```
 
-Required values in `deploy/.env`:
+The only values you must set in `deploy/.env`:
 
 | Key | How to fill |
 |---|---|
-| `KEYNV_JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"` |
 | `KEYNV_BOOTSTRAP_OWNER_EMAIL` | your login email |
 | `KEYNV_BOOTSTRAP_OWNER_PASSWORD` | 12+ char password — what you'll use when connecting from `keynv` |
-| `KEYNV_BOOTSTRAP_ORG_NAME` | optional, defaults to `default` |
-| `LITESTREAM_*` | only if you keep the litestream sidecar; otherwise comment that service out |
+
+Everything else is optional. The JWT secret, master key, and web session
+secret are auto-generated and persisted on the volumes on first boot —
+there is nothing to generate by hand.
 
 ```bash
-# 2. build the server image
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env build
+# 2. build + start the whole stack (server + web dashboard) in one command
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 
-# 3. start the stack — the server auto-bootstraps on first start
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
+# 3. verify the server is ready (503 until the DB is up, then 200)
+curl http://localhost:8080/v1/health/ready
+# {"ok":true,"version":"...","db":"ok",...}
 
-# 4. verify
-curl http://localhost:8080/v1/health
-# {"ok":true,"version":"...","db":"ok"}
+# 4. open the dashboard
+open http://localhost:3000
 ```
 
-You should see this in the server logs (`docker compose logs keynv-server`):
+You should see this in the server logs (`docker compose logs keynv-server`,
+pino JSON — shown here trimmed):
 
 ```text
-[auto-bootstrap] master key missing — initializing fresh deployment
-[auto-bootstrap] created org "default" (id=org_...)
-[auto-bootstrap] created owner you@example.com (id=u_...)
+msg: "initializing fresh deployment — creating owner + org"
+msg: "created org"   orgName: "default"
+msg: "created owner" email: "you@example.com"
 keynv-server listening on http://localhost:8080
 ```
 
@@ -88,8 +90,8 @@ keynv-server listening on http://localhost:8080
 
 > [!TIP]
 > After the first successful boot, blank out `KEYNV_BOOTSTRAP_OWNER_PASSWORD`
-> in `deploy/.env` and restart. The bootstrap branch is unreachable now
-> that the master key file exists, so removing the var is safe.
+> in `deploy/.env` and restart. Owner creation is skipped once an org
+> exists, so removing the var is safe.
 
 ---
 

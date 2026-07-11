@@ -3,7 +3,15 @@ import { z } from 'zod';
 const ServerEnv = z.object({
   KEYNV_DB_PATH: z.string().min(1).default('./keynv.db'),
   KEYNV_MASTER_KEY_FILE: z.string().min(1).default('./master.key'),
-  KEYNV_JWT_SECRET: z.string().min(32),
+  /**
+   * JWT signing secret. Optional: when unset (or shorter than 32
+   * chars) the server auto-generates one and persists it to
+   * KEYNV_JWT_SECRET_FILE, so a single-command deploy needs no
+   * operator-provided secret. Set it explicitly to pin a value or to
+   * share one secret across horizontally-scaled replicas.
+   */
+  KEYNV_JWT_SECRET: z.string().min(32).optional(),
+  KEYNV_JWT_SECRET_FILE: z.string().min(1).default('./jwt.secret'),
   KEYNV_PORT: z.coerce.number().int().min(1).max(65535).default(8080),
   KEYNV_WEB_URL: z.string().url().optional(),
   KEYNV_ACCESS_TOKEN_TTL_S: z.coerce
@@ -73,7 +81,14 @@ const ServerEnv = z.object({
 export type ServerEnvT = z.infer<typeof ServerEnv>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnvT {
-  const parsed = ServerEnv.safeParse(source);
+  // Treat empty-string vars (common with compose `${VAR:-}` defaults) as
+  // unset, so schema defaults / optionals apply instead of failing
+  // validation (e.g. an empty KEYNV_JWT_SECRET means "auto-generate").
+  const cleaned: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(source)) {
+    cleaned[k] = v === '' ? undefined : v;
+  }
+  const parsed = ServerEnv.safeParse(cleaned);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`keynv-server: invalid environment\n${issues}`);

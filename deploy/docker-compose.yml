@@ -1,17 +1,18 @@
-# keynv self-host stack. One server + an optional Litestream sidecar
-# that replicates the SQLite WAL to S3/B2 in real time. Bring up with:
+# keynv self-host stack — server + web dashboard in one command.
 #
 #   cp deploy/.env.example deploy/.env
-#   # edit deploy/.env (KEYNV_JWT_SECRET + KEYNV_BOOTSTRAP_OWNER_*)
-#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
+#   # edit deploy/.env: set KEYNV_BOOTSTRAP_OWNER_EMAIL + _PASSWORD
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 #
-# The server auto-bootstraps on first start: it generates the master
-# key, runs migrations, and creates the owner account from the env
-# vars. No separate `docker compose run` step required.
+# On first start the server auto-generates its master key + JWT secret
+# (persisted on the keynv-data volume) and creates the owner account
+# from the bootstrap vars — no secret to generate, no separate command,
+# no crash-loop. The web container auto-generates its session secret the
+# same way. The only values you must set are the owner email + password.
 #
-# Litestream is OPTIONAL. Comment the litestream service out if you
-# don't have S3 yet — keynv works fine without backup, you just lose
-# the disaster-recovery story.
+# Offsite backup (Litestream → S3/B2) is OFF by default. Turn it on with:
+#   docker compose -f deploy/docker-compose.yml --profile backup up -d
+# after filling the LITESTREAM_* vars in deploy/.env.
 
 name: keynv
 
@@ -25,44 +26,69 @@ services:
     environment:
       KEYNV_DB_PATH: /data/keynv.db
       KEYNV_MASTER_KEY_FILE: /data/master.key
-      KEYNV_JWT_SECRET: ${KEYNV_JWT_SECRET:?set in deploy/.env}
+      # JWT secret is optional — auto-generated + persisted to /data if unset.
+      KEYNV_JWT_SECRET_FILE: /data/jwt.secret
+      KEYNV_JWT_SECRET: ${KEYNV_JWT_SECRET:-}
       KEYNV_LOG_LEVEL: ${KEYNV_LOG_LEVEL:-info}
       KEYNV_PORT: 8080
-      # First-deploy auto-bootstrap. After /data/master.key exists
-      # these are no-ops; blank them out post-deploy to keep the
-      # password out of the running config.
+      KEYNV_WEB_URL: ${KEYNV_WEB_URL:-http://localhost:3000}
+      # First-deploy owner — the only values you must set.
       KEYNV_BOOTSTRAP_OWNER_EMAIL: ${KEYNV_BOOTSTRAP_OWNER_EMAIL:-}
       KEYNV_BOOTSTRAP_OWNER_PASSWORD: ${KEYNV_BOOTSTRAP_OWNER_PASSWORD:-}
       KEYNV_BOOTSTRAP_ORG_NAME: ${KEYNV_BOOTSTRAP_ORG_NAME:-default}
-      # Public registration (defaults to off; flip to true on the
-      # hosted keynv Cloud instance only).
       KEYNV_PUBLIC_REGISTRATION: ${KEYNV_PUBLIC_REGISTRATION:-false}
-      KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE: ${KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE:-5}
       KEYNV_RATE_LIMIT_PER_MINUTE: ${KEYNV_RATE_LIMIT_PER_MINUTE:-120}
     ports:
       - '${KEYNV_PORT:-8080}:8080'
     volumes:
       - keynv-data:/data
     healthcheck:
-      # /v1/health/ready returns 503 when the DB check fails; plain /v1/health
-      # always returns 200, so a DB-broken container would stay "healthy"
-      # (AUDIT-FINDINGS-4 B4). wget exits non-zero on 503.
+      # /v1/health/ready returns 503 when the DB check fails (plain
+      # /v1/health always returns 200). wget exits non-zero on 503.
       test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/v1/health/ready || exit 1']
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
 
-  # Real-time SQLite WAL replication. Comment out to disable.
+  keynv-web:
+    image: keynv-web:local
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Server API URL. Defaults to the in-network service; the web
+      # calls it server-side, so the internal hostname is correct.
+      KEYNV_SERVER_URL: ${KEYNV_SERVER_URL:-http://keynv-server:8080}
+      # Session secret is optional — auto-generated + persisted to /data if unset.
+      KEYNV_WEB_SESSION_SECRET: ${KEYNV_WEB_SESSION_SECRET:-}
+      KEYNV_WEB_SESSION_SECRET_FILE: /data/web-session.secret
+    ports:
+      - '${KEYNV_WEB_PORT:-3000}:3000'
+    volumes:
+      - keynv-web-data:/data
+    depends_on:
+      keynv-server:
+        condition: service_healthy
+
+  # Optional real-time SQLite WAL replication to S3/B2. Disabled by
+  # default (the `backup` profile). Enable with:
+  #   docker compose --profile backup up -d
+  # No :? guards here so a plain `up` (no profile) never fails on
+  # missing S3 creds — litestream itself errors clearly if you enable
+  # the profile without them.
   litestream:
     image: litestream/litestream:0.3.13
+    profiles: ['backup']
     restart: unless-stopped
     depends_on:
       - keynv-server
     environment:
-      LITESTREAM_ACCESS_KEY_ID: ${LITESTREAM_ACCESS_KEY_ID:?}
-      LITESTREAM_SECRET_ACCESS_KEY: ${LITESTREAM_SECRET_ACCESS_KEY:?}
-      LITESTREAM_BUCKET: ${LITESTREAM_BUCKET:?}
+      LITESTREAM_ACCESS_KEY_ID: ${LITESTREAM_ACCESS_KEY_ID:-}
+      LITESTREAM_SECRET_ACCESS_KEY: ${LITESTREAM_SECRET_ACCESS_KEY:-}
+      LITESTREAM_BUCKET: ${LITESTREAM_BUCKET:-}
       LITESTREAM_ENDPOINT: ${LITESTREAM_ENDPOINT:-https://s3.amazonaws.com}
       LITESTREAM_REGION: ${LITESTREAM_REGION:-us-east-1}
     volumes:
@@ -72,4 +98,4 @@ services:
 
 volumes:
   keynv-data:
-    driver: local
+  keynv-web-data:

@@ -80,6 +80,12 @@ COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules ./packa
 COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules ./repo/packages/core/node_modules
 COPY --from=builder --chown=keynv:keynv /repo/packages/core/node_modules /repo/packages/core/node_modules
 
+# Writable volume mount point for the auto-generated web session secret
+# (KEYNV_WEB_SESSION_SECRET_FILE). Owned by the runtime user so a fresh
+# named volume inherits writable perms.
+RUN mkdir -p /data && chown keynv:keynv /data
+VOLUME /data
+
 USER keynv
 ENV NODE_ENV=production
 ENV PORT=3000

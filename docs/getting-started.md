@@ -18,25 +18,26 @@ plan to run the server.
 ## Docker Compose
 
 If you prefer Compose over Coolify, the repo ships a reference
-`deploy/docker-compose.yml` that runs the server + Litestream sidecar.
+`deploy/docker-compose.yml` that runs the server + web panel (with an
+optional Litestream backup profile, off by default).
 
 The full step-by-step guide (config, TLS proxy, ops commands, disaster recovery)
 lives in [`deploy/README.md`](../deploy/README.md). Quick summary:
 
 ```bash
 git clone https://github.com/keynv-labs/keynv
-cd keynv/deploy
+cd keynv
 
-# 1. configure (fill in JWT secret, owner email/password)
-node -e "require('fs').copyFileSync('.env.example','.env')"
-# Then open .env in your editor
+# 1. configure — set only the owner email + password
+node -e "require('fs').copyFileSync('deploy/.env.example','deploy/.env')"
+# Then open deploy/.env in your editor
 
-# 2. start — the server auto-bootstraps on first launch
-docker compose --env-file .env up -d
+# 2. build + start (server + web) in one command
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 
 # 3. verify
-curl http://localhost:8080/v1/health
-# {"ok":true,"version":"...","db":"ok"}
+curl http://localhost:8080/v1/health/ready
+# {"ok":true,"version":"...","db":"ok",...}
 ```
 
 The server creates the owner account automatically on first start using the
@@ -44,7 +45,7 @@ credentials in `.env`. No manual bootstrap command is needed. See
 [`deploy/README.md`](../deploy/README.md) for the expected log output and
 the mandatory master-key backup step.
 
-Then pick up at [Quickstart Step 4](./quickstart.md#4--install-the-cli).
+Then pick up at [Quickstart Step 3](./quickstart.md#3--install-the-cli).
 
 ---
 

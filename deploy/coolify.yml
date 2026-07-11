@@ -1,13 +1,26 @@
-# Coolify-friendly compose for keynv-server.
+# Coolify one-resource deploy for keynv — server + web dashboard.
 #
-# In Coolify: New Resource → Docker Compose Empty (or "From Git Repository")
-# → point at this file (`deploy/coolify.yml`). Coolify reads the compose,
-# exposes env-var slots in its UI, and routes its $SERVICE_FQDN_KEYNVSERVER
-# magic domain to the service.
+# In Coolify: New Resource → Docker Compose Empty (or "From Git
+# Repository") → point at this file (`deploy/coolify.yml`). Coolify
+# reads the compose, exposes env-var slots in its UI, and routes a
+# domain to each service.
 #
-# This is the SERVER ONLY. Litestream (S3 backup) and the web UI are
-# intentionally separate so day-one deploy stays simple. Add them as
-# additional Coolify resources later when you actually need them.
+# The ONLY values you must set are the first-deploy owner account:
+#   KEYNV_BOOTSTRAP_OWNER_EMAIL
+#   KEYNV_BOOTSTRAP_OWNER_PASSWORD   (>= 12 chars)
+# Everything else — the JWT secret, the master key, the web session
+# secret — is auto-generated and persisted on the volumes on first
+# boot. No secret to generate, no crash-loop.
+#
+# Domains (Coolify → each service → Domains tab):
+#   keynv-web    → https://<your-domain>        (port 3000)  ← the panel
+#   keynv-server → https://api.<your-domain>    (port 8080)  ← the API/CLI
+# Set KEYNV_WEB_URL to the web domain and point the web's
+# KEYNV_SERVER_URL at the server domain if you split them across hosts;
+# on a single host the in-network default below is enough.
+#
+# Litestream (S3 backup) is intentionally NOT here — add it later as a
+# separate resource if you need offsite disaster recovery.
 
 name: keynv
 
@@ -20,35 +33,45 @@ services:
     environment:
       KEYNV_DB_PATH: /data/keynv.db
       KEYNV_MASTER_KEY_FILE: /data/master.key
-      KEYNV_JWT_SECRET: ${KEYNV_JWT_SECRET}
+      KEYNV_JWT_SECRET_FILE: /data/jwt.secret
+      KEYNV_JWT_SECRET: ${KEYNV_JWT_SECRET:-}
       KEYNV_LOG_LEVEL: ${KEYNV_LOG_LEVEL:-info}
       KEYNV_PORT: 8080
-      # First-deploy auto-bootstrap. Set these in Coolify's env-var UI
-      # for the very first deploy; the server creates master.key + the
-      # owner account on startup. After it succeeds, blank these out
-      # and redeploy — they're no-ops once master.key exists.
+      KEYNV_WEB_URL: ${KEYNV_WEB_URL:-}
       KEYNV_BOOTSTRAP_OWNER_EMAIL: ${KEYNV_BOOTSTRAP_OWNER_EMAIL:-}
       KEYNV_BOOTSTRAP_OWNER_PASSWORD: ${KEYNV_BOOTSTRAP_OWNER_PASSWORD:-}
       KEYNV_BOOTSTRAP_ORG_NAME: ${KEYNV_BOOTSTRAP_ORG_NAME:-default}
-      # Public registration toggle. Self-host: leave at false (or unset);
-      # invite users via /admin/users. Hosted Cloud (keynv.dev): set true.
       KEYNV_PUBLIC_REGISTRATION: ${KEYNV_PUBLIC_REGISTRATION:-false}
-      KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE: ${KEYNV_REGISTER_RATE_LIMIT_PER_MINUTE:-5}
       KEYNV_RATE_LIMIT_PER_MINUTE: ${KEYNV_RATE_LIMIT_PER_MINUTE:-120}
-      KEYNV_WEB_URL: ${KEYNV_WEB_URL:-https://keynv.dev}
     volumes:
       - keynv-data:/data
     expose:
       - '8080'
     healthcheck:
-      # /v1/health/ready returns 503 when the DB check fails; plain /v1/health
-      # always returns 200, so a DB-broken container would stay "healthy"
-      # (AUDIT-FINDINGS-4 B4). wget exits non-zero on 503.
       test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/v1/health/ready || exit 1']
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
 
+  keynv-web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KEYNV_SERVER_URL: ${KEYNV_SERVER_URL:-http://keynv-server:8080}
+      KEYNV_WEB_SESSION_SECRET: ${KEYNV_WEB_SESSION_SECRET:-}
+      KEYNV_WEB_SESSION_SECRET_FILE: /data/web-session.secret
+    volumes:
+      - keynv-web-data:/data
+    expose:
+      - '3000'
+    depends_on:
+      keynv-server:
+        condition: service_healthy
+
 volumes:
   keynv-data:
+  keynv-web-data:
