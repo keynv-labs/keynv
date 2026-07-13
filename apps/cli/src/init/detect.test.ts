@@ -119,6 +119,14 @@ describe('findEnvFiles', () => {
     expect(findEnvFiles(root).map((h) => h.name)).toEqual(['.env']);
   });
 
+  it('skips keynv-created .env.backup files (never re-ingests its own backups)', () => {
+    writeFileSync(join(root, '.env.backup'), '');
+    writeFileSync(join(root, '.env.backup-20260713-1551'), '');
+    writeFileSync(join(root, '.env.backup-20260713-1551-2'), '');
+    writeFileSync(join(root, '.env'), '');
+    expect(findEnvFiles(root).map((h) => h.name)).toEqual(['.env']);
+  });
+
   it('returns empty list when no env files exist', () => {
     expect(findEnvFiles(root)).toEqual([]);
   });

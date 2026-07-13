@@ -22,6 +22,8 @@ const GIT_MARKER = '.git';
 
 const ENV_GLOB = /^\.env(\.[A-Za-z0-9_-]+)?$/;
 const ENV_EXAMPLE = /^\.env\.(example|sample|template|dist|defaults)$/;
+/** Matches keynv's own `.env.backup` / `.env.backup-YYYYMMDD-HHmm[-N]` output. */
+const ENV_BACKUP_EXCLUDE = /^\.env\.backup(-\d{8}-\d{4}(-\d+)?)?$/;
 const KEYNV_ENV_BASENAME = '.keynv.env';
 /** Matches `.keynv.env` and `.keynv.<env>.env` — keynv's own output. */
 const KEYNV_ENV_EXCLUDE = /^\.keynv\.(.+\.)?env$/;
@@ -301,6 +303,7 @@ export function findEnvFilesRecursive(
       if (isFile) {
         if (!ENV_GLOB.test(entry.name)) continue;
         if (ENV_EXAMPLE.test(entry.name)) continue;
+        if (ENV_BACKUP_EXCLUDE.test(entry.name)) continue;
         if (KEYNV_ENV_EXCLUDE.test(entry.name)) continue;
         const suffixMatch = entry.name.match(/^\.env\.(.+)$/);
         const suffix = suffixMatch ? (suffixMatch[1] as string) : null;
