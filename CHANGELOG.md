@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`keynv` setup stays scoped to the current project** — project-root
+  detection no longer climbs into (or above) the home directory, so a stray
+  `package.json`/`.git` in `$HOME` can no longer turn the whole home tree into
+  the scan root (`apps/cli/src/init/detect.ts`). The `.env` discovery now skips
+  arbitrary hidden directories (`.gemini`, `.config`, …) and caps its results,
+  and when several `.env` files are found the setup flow asks which to import —
+  defaulting to just the current directory's own `.env` — instead of prompting
+  once per file (`apps/cli/src/ui/flows/init.ts`).
+
 ## [0.1.0-rc.23] — 2026-07-11
 
 The **vault-first** release. keynv leads as a self-hosted secrets vault for

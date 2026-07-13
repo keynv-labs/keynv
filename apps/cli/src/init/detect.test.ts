@@ -66,21 +66,27 @@ describe('findProjectRoot', () => {
     expect(findProjectRoot(root)?.marker).toBe('.git');
   });
 
-  it('returns null when neither marker is found anywhere up the tree', () => {
-    // root is a fresh tmpdir with nothing — but the parent chain may
-    // contain a real .git or package.json. Walk to a dir that we know
-    // is empty by descending into a sub we just made.
+  it('falls back to the start dir when no marker is found up to the boundary', () => {
     const sub = join(root, 'leaf');
     mkdirSync(sub);
-    // If the host machine's tmp dir has no markers up to /, this is
-    // null. If it does (rare), the test reveals an env quirk.
-    const r = findProjectRoot(sub);
-    if (r !== null) {
-      // we'd have walked all the way up to an actual project — make
-      // sure the marker is one of the recognized ones, not a false
-      // positive
-      expect(r.marker).toBeDefined();
-    }
+    // Boundary at `root` (stands in for the home dir): the walk from
+    // `sub` reaches the boundary without finding any marker, so it falls
+    // back to `sub` itself rather than climbing past it.
+    const r = findProjectRoot(sub, root);
+    expect(r?.path).toBe(sub);
+    expect(r?.marker).toBe('current directory');
+  });
+
+  it('never ascends to or past the boundary (home) directory', () => {
+    // A marker exists only at the boundary ("home"); the project dir
+    // below it has none. Detection must not climb into the boundary and
+    // turn the home tree into a project root.
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'home-pkg' }));
+    const proj = join(root, 'proj');
+    mkdirSync(proj);
+    const r = findProjectRoot(proj, root);
+    expect(r?.path).toBe(proj);
+    expect(r?.marker).toBe('current directory');
   });
 });
 
@@ -254,6 +260,25 @@ describe('findEnvFilesRecursive', () => {
         .map((h) => h.relativeDir)
         .sort(),
     ).toEqual(['', 'apps/api']);
+  });
+
+  it('skips arbitrary hidden (dot) directories not in the ignore list', () => {
+    // .gemini is not in IGNORE_DIRS, but hidden dirs are skipped generically
+    // so unrelated tool configs never leak into the scan.
+    mkdirSync(join(root, '.gemini'), { recursive: true });
+    writeFileSync(join(root, '.gemini', '.env'), 'X=1');
+    writeFileSync(join(root, '.env'), '');
+    const hits = findEnvFilesRecursive(root);
+    expect(hits.map((h) => `${h.relativeDir}/${h.name}`)).toEqual(['/.env']);
+  });
+
+  it('stops collecting once the result limit is reached', () => {
+    for (let i = 0; i < 10; i++) {
+      const d = join(root, `app-${i}`);
+      mkdirSync(d, { recursive: true });
+      writeFileSync(join(d, '.env'), '');
+    }
+    expect(findEnvFilesRecursive(root, { limit: 4 })).toHaveLength(4);
   });
 
   it('excludes .keynv.env and .keynv.<env>.env (own outputs) everywhere', () => {

@@ -5,8 +5,8 @@
  * (recursively, with a sensible ignore list).
  */
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { basename, join, relative, sep } from 'node:path';
-import { walkUp } from '../util/fs.js';
+import { homedir } from 'node:os';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 const PROJECT_MARKERS = [
   'package.json',
@@ -85,6 +85,13 @@ export const IGNORE_DIRS: ReadonlySet<string> = new Set([
 ]);
 
 const DEFAULT_MAX_DEPTH = 5;
+/**
+ * Safety cap on how many env files a single scan collects. A correctly
+ * scoped project has a handful; hitting this many usually means the scan
+ * root is too high (e.g. keynv run in the home directory). Callers can
+ * treat a result at this length as "possibly truncated" and warn.
+ */
+export const DEFAULT_MAX_RESULTS = 100;
 
 export interface ProjectRoot {
   /** Absolute path of the directory containing the project marker. */
@@ -100,23 +107,53 @@ export interface ProjectRoot {
 }
 
 /**
- * Walk up from `startDir` looking for the nearest project marker.
- * Returns null if the filesystem root is reached with no marker.
+ * Walk up from `startDir` looking for the nearest project marker, but
+ * never ascend to or past `boundaryDir` (the user's home directory by
+ * default). A stray marker in the home directory — or anywhere above
+ * it — must not turn the whole home tree into a "project root", which
+ * would then make the env scan crawl the user's entire home folder.
+ *
+ * When no marker is found within that bounded region, the starting
+ * directory itself becomes the root, so setup stays scoped to wherever
+ * the user actually ran `keynv`. Only returns null in pathological
+ * cases where the starting directory can't be resolved.
  */
-export function findProjectRoot(startDir: string): ProjectRoot | null {
-  const result = walkUp(startDir, (dir) => {
-    for (const marker of PROJECT_MARKERS) {
-      if (existsSync(join(dir, marker))) {
-        return { dir, marker };
-      }
-    }
-    if (existsSync(join(dir, GIT_MARKER))) {
-      return { dir, marker: GIT_MARKER };
-    }
-    return null;
-  });
-  if (!result) return null;
-  return buildRoot(result.dir, result.marker);
+export function findProjectRoot(
+  startDir: string,
+  boundaryDir: string = homedir(),
+): ProjectRoot | null {
+  const start = resolve(startDir);
+  const boundary = resolve(boundaryDir);
+
+  let dir = start;
+  for (let i = 0; i < 64; i++) {
+    // Never treat the boundary (home) or anything at/above it as a root.
+    if (dir === boundary || isAncestorOf(dir, boundary)) break;
+    const marker = markerAt(dir);
+    if (marker) return buildRoot(dir, marker);
+    const parent = dirname(dir);
+    if (parent === dir) break; // reached the filesystem root
+    dir = parent;
+  }
+
+  // No project marker found within scope — fall back to the starting
+  // directory so setup stays scoped to the current project.
+  return buildRoot(start, 'current directory');
+}
+
+/** Return the project-marker filename present in `dir`, or null. */
+function markerAt(dir: string): string | null {
+  for (const marker of PROJECT_MARKERS) {
+    if (existsSync(join(dir, marker))) return marker;
+  }
+  if (existsSync(join(dir, GIT_MARKER))) return GIT_MARKER;
+  return null;
+}
+
+/** True when `ancestor` is a strict parent (any level up) of `descendant`. */
+function isAncestorOf(ancestor: string, descendant: string): boolean {
+  const rel = relative(resolve(ancestor), resolve(descendant));
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
 }
 
 function buildRoot(dir: string, marker: string): ProjectRoot {
@@ -177,6 +214,8 @@ export interface FindEnvFilesOptions {
   maxDepth?: number;
   /** Directory basenames to skip when descending. Defaults to {@link IGNORE_DIRS}. */
   ignore?: ReadonlySet<string>;
+  /** Max number of hits to collect before stopping. Defaults to {@link DEFAULT_MAX_RESULTS}. */
+  limit?: number;
 }
 
 /**
@@ -207,6 +246,7 @@ export function findEnvFilesRecursive(
 ): EnvFileHit[] {
   const maxDepth = Math.max(1, opts.maxDepth ?? DEFAULT_MAX_DEPTH);
   const ignore = opts.ignore ?? IGNORE_DIRS;
+  const limit = Math.max(1, opts.limit ?? DEFAULT_MAX_RESULTS);
 
   let rootReal: string;
   try {
@@ -274,11 +314,19 @@ export function findEnvFilesRecursive(
           relativeDir,
           containingDir: dir,
         });
+        if (hits.length >= limit) {
+          queue.length = 0; // stop scanning: hit the safety cap
+          break;
+        }
         continue;
       }
 
       if (isDir && depth + 1 < maxDepth) {
         if (ignore.has(entry.name)) continue;
+        // Skip arbitrary hidden dirs (.gemini, .config, .omniroute, …) that
+        // aren't in the ignore allowlist — they're not project source and
+        // would otherwise pull in unrelated .env files.
+        if (entry.name.startsWith('.')) continue;
         let realDir: string;
         try {
           realDir = realpathSync(full);

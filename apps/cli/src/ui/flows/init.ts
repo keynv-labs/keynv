@@ -14,7 +14,8 @@
  * file or `KEYNV_ENV_FILE`).
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { homedir } from 'node:os';
+import { join, relative, resolve } from 'node:path';
 import {
   cancel,
   confirm,
@@ -34,6 +35,7 @@ import { writeAiContext } from '../../init/ai-context.js';
 import { backupEnvFile } from '../../init/backup.js';
 import { type ResolvedEntry, type SourceEntry, planVaultKeys } from '../../init/collision.js';
 import {
+  DEFAULT_MAX_RESULTS,
   type EnvFileHit,
   findEnvFilesRecursive,
   findProjectRoot,
@@ -101,7 +103,16 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   if (root.packageJsonInvalid) {
     log.warn(`package.json at ${root.path} is not valid JSON — script wrapping will be skipped.`);
   }
-  const envFiles = findEnvFilesRecursive(root.path);
+  // When keynv is run directly in the home directory there is no real
+  // project to scope to, so scan only that one folder (never the whole
+  // home tree) and nudge the user to cd into an actual project.
+  const atHome = resolve(root.path) === resolve(homedir());
+  if (atHome) {
+    log.warn(
+      'Running in your home directory — scanning only this folder, not the whole tree. cd into a project directory for a focused setup.',
+    );
+  }
+  const envFiles = findEnvFilesRecursive(root.path, atHome ? { maxDepth: 1 } : undefined);
   const intoExisting = hasExistingKeynvEnv(root.path);
   if (envFiles.length === 0 && !intoExisting) {
     note(
@@ -120,19 +131,45 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     outro('Create your first secret with `keynv secret create`.');
     return { exitCode: 0 };
   }
+  if (envFiles.length >= DEFAULT_MAX_RESULTS) {
+    log.warn(
+      `Found ${envFiles.length}+ env files — that usually means keynv is running too high up the tree. Consider cd-ing into a specific project.`,
+    );
+  }
   note(
     [
       `Project root: ${root.path}`,
       `Marker: ${root.marker}`,
-      envFiles.length > 0
-        ? `Found env files:\n${envFiles.map((f) => `  ${displayName(f)}`).join('\n')}`
-        : 'Found env files: (none)',
+      envFiles.length === 0
+        ? 'Found env files: (none)'
+        : envFiles.length === 1
+          ? `Found env file: ${displayName(envFiles[0] as EnvFileHit)}`
+          : `Found ${envFiles.length} env files`,
       intoExisting ? 'Existing root .keynv.env detected — will merge new entries in.' : '',
     ]
       .filter(Boolean)
       .join('\n'),
     'Detected',
   );
+
+  // 1b. When several env files were found, let the user choose which to
+  // import. Default selection is just the current directory's own
+  // .env(s); nested/monorepo files are listed but left unchecked so the
+  // user opts into them instead of being prompted for every single one.
+  let selectedFiles = envFiles;
+  if (envFiles.length > 1) {
+    const initialValues = envFiles.filter((f) => f.relativeDir === '').map((f) => f.path);
+    const picked = unwrap(
+      await multiselect({
+        message: 'Which env files do you want to import?',
+        options: envFiles.map((f) => ({ value: f.path, label: displayName(f) })),
+        initialValues,
+        required: true,
+      }),
+    ) as string[];
+    const pickedSet = new Set(picked);
+    selectedFiles = envFiles.filter((f) => pickedSet.has(f.path));
+  }
 
   // 2. Pick (or create) the keynv project -----------------------------------
   const projectChoice = await pickOrCreateProject(client, root.suggestedName);
@@ -141,8 +178,8 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
     return { exitCode: 130 };
   }
 
-  // 3. Map each .env file to a keynv environment ----------------------------
-  const fileMapping = await pickFileEnvMapping(envFiles, projectChoice);
+  // 3. Map each selected .env file to a keynv environment -------------------
+  const fileMapping = await pickFileEnvMapping(selectedFiles, projectChoice);
   if (fileMapping === null) {
     cancel('No env mapping selected.');
     return { exitCode: 130 };
@@ -291,7 +328,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   for (const g of groups.values()) {
     const dirs = [...new Set(g.sources.map((s) => s.source.relativeDir || '<root>'))];
     if (dirs.length > 1) g.label = `${g.label}  (shared by ${dirs.join(', ')})`;
-    else if (envFiles.some((f) => f.relativeDir !== '')) {
+    else if (selectedFiles.some((f) => f.relativeDir !== '')) {
       const only = dirs[0];
       if (only && only !== '<root>') g.label = `${g.label}  [${only}]`;
     }
@@ -516,7 +553,7 @@ export async function runInitFlow(client: ApiClient, opts: RunInitOptions): Prom
   }
 
   // 15. Rename the original .env files to .env.backup ----------------------
-  for (const f of envFiles) {
+  for (const f of selectedFiles) {
     const relSrc = relFromRoot(root.path, f.path);
     try {
       const { renamedTo } = backupEnvFile(f.path);
