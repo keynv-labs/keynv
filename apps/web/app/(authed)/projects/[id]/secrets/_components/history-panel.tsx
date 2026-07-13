@@ -6,6 +6,7 @@ import { FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { type SecretHistoryState, loadSecretHistoryAction } from '../_actions/history-action';
+import { RevealSecret } from './reveal-secret';
 import type { ParsedSecret } from './secrets-table';
 
 function Meta({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
@@ -134,6 +135,9 @@ export function SecretHistoryPanel({
             <span className="text-fg-subtle">$ </span>keynv exec --{' '}
             <span className="text-accent">{alias}</span>
           </code>
+        </div>
+        <div className="pt-1">
+          <RevealSecret projectId={projectId} env={secret.env} keyName={secret.keyName} />
         </div>
       </aside>
     </div>
