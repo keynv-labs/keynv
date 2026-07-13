@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc.24] — 2026-07-13
+
 ### Fixed
 - **`keynv` setup stays scoped to the current project** — project-root
   detection no longer climbs into (or above) the home directory, so a stray
@@ -316,7 +318,8 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
 - **Postgres adapter, KEK rotation flow, MFA, SSO/SAML, multi-region** —
   Phase 6 (commercial tier + keynv Cloud).
 
-[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.23...HEAD
+[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.24...HEAD
+[0.1.0-rc.24]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.23...v0.1.0-rc.24
 [0.1.0-rc.23]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.22...v0.1.0-rc.23
 [0.1.0-rc.22]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.21...v0.1.0-rc.22
 [0.1.0-rc.21]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.20...v0.1.0-rc.21
