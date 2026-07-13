@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc.25] — 2026-07-13
+
+### Added
+- **Reveal a secret's value from the web panel** — the secret-detail panel now
+  has a "Reveal value" control that fetches the decrypted value on demand (it is
+  never shipped in the page payload). It reuses the same server endpoint the CLI
+  uses, so it enforces the `secret.read` permission and the production-approval
+  flow, and **every reveal is recorded in the audit log** (`secret.read.allowed`).
+  The revealed value can be masked/unmasked and copied to the clipboard
+  (`apps/web/app/(authed)/projects/[id]/secrets/_components/reveal-secret.tsx`,
+  `.../_actions/reveal-action.ts`).
+
+### Fixed
+- **keynv no longer re-ingests its own `.env.backup` files** — the setup scan now
+  excludes the `.env.backup` / `.env.backup-YYYYMMDD-HHmm[-N]` files keynv creates
+  when it migrates a `.env`, so re-running "Set up this project" no longer imports a
+  previous backup into a junk `backup` environment (`apps/cli/src/init/detect.ts`).
+
 ## [0.1.0-rc.24] — 2026-07-13
 
 ### Fixed
@@ -318,7 +336,8 @@ server, CLI, MCP server, web dashboard, and the AI-safety layer
 - **Postgres adapter, KEK rotation flow, MFA, SSO/SAML, multi-region** —
   Phase 6 (commercial tier + keynv Cloud).
 
-[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.24...HEAD
+[Unreleased]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.25...HEAD
+[0.1.0-rc.25]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.24...v0.1.0-rc.25
 [0.1.0-rc.24]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.23...v0.1.0-rc.24
 [0.1.0-rc.23]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.22...v0.1.0-rc.23
 [0.1.0-rc.22]: https://github.com/keynv-labs/keynv/compare/v0.1.0-rc.21...v0.1.0-rc.22
