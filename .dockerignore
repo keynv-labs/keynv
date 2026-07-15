@@ -16,6 +16,8 @@
 **/credentials.json
 .env
 .env.*
+*.env
+**/*.env
 !.env.example
 scripts/
 tests/

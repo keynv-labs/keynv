@@ -16,6 +16,7 @@ FROM node:20-alpine AS deps
 
 WORKDIR /repo
 RUN corepack enable
+ENV NODE_OPTIONS=--dns-result-order=ipv4first
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web/package.json ./apps/web/
@@ -29,6 +30,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /repo
 RUN corepack enable
+ENV NODE_OPTIONS=--dns-result-order=ipv4first
 
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/web/node_modules ./apps/web/node_modules
@@ -45,7 +47,7 @@ COPY CHANGELOG.md ./CHANGELOG.md
 COPY docs ./docs
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV NODE_OPTIONS=--dns-result-order=ipv4first --max-old-space-size=4096
 # Build-time defaults for env vars that are required at runtime but
 # must not cause the build to fail. Real values come from Coolify at
 # deploy time; these are only used during `next build`.

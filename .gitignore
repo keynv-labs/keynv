@@ -76,6 +76,8 @@ temp/
 # Agent / IDE local state
 .claude/
 .continuum/
+.opencode-tmp/
+/srv.env
 
 # Playwright
 tests/e2e/playwright-report/

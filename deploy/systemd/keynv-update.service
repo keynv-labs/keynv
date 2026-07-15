@@ -1,0 +1,15 @@
+[Unit]
+Description=Check and install keynv updates
+Requires=docker.service keynv.service
+Wants=network-online.target
+After=docker.service network-online.target keynv.service
+ConditionPathExists=/etc/keynv/update.conf
+
+[Service]
+Type=oneshot
+Environment=KEYNV_UPDATE_CONFIG=/etc/keynv/update.conf
+ExecStart=/usr/local/libexec/keynv/auto-updater.sh update
+TimeoutStartSec=0
+UMask=0077
+Nice=10
+IOSchedulingClass=idle

@@ -7,7 +7,7 @@ Two supported paths. Pick whichever matches how you operate.
 | **Best when**    | You already run Coolify or want HTTPS handled  | You want full control over the host      |
 | **Time**         | ~15 minutes                                    | ~10 minutes + your own TLS proxy         |
 | **HTTPS**        | automatic (Coolify proxy + Let's Encrypt)      | bring your own (Caddy / nginx / Traefik) |
-| **Auto-deploy**  | optional, on push to `main`                    | manual `docker compose pull && up -d`    |
+| **Auto-deploy**  | optional, on push to `main`                    | systemd timer, release or branch channel  |
 
 > [!TIP]
 > If both paths work for you, use Coolify — it removes the TLS proxy step
@@ -33,6 +33,50 @@ flowchart LR
   Lite -. read .-> Vol
   Lite --> S3
 ```
+
+---
+
+## Automated Linux installation
+
+The installer creates an isolated checkout under `/opt/keynv`, stores runtime
+configuration under `/etc/keynv`, and installs a Compose-backed systemd service
+plus a polling timer. Docker Engine, Docker Compose v2, Git, and systemd must
+already be installed.
+
+Prepare the runtime environment from [`deploy/.env.example`](./.env.example),
+then run:
+
+```bash
+sudo ./deploy/scripts/auto-installer.sh \
+  --runtime-env /path/to/keynv-runtime.env \
+  --channel release
+```
+
+Update channels:
+
+| Channel | Target |
+|---|---|
+| `release` | Most recently created semver tag, including prereleases |
+| `stable` | Most recently created stable semver tag |
+| `branch` | Latest commit on `--branch` (defaults to `main`) |
+
+The timer polls every five minutes with a randomized delay. Each target is
+checked out into an immutable release directory and built into commit-tagged
+images. Before switching versions, the updater stops writes and snapshots both
+persistent volumes. Failed startup or health checks restore the snapshot and
+restart the previous release.
+
+```bash
+sudo systemctl status keynv.service
+sudo systemctl status keynv-update.timer
+sudo systemctl start keynv-update.service
+sudo /usr/local/libexec/keynv/auto-updater.sh status
+journalctl -u keynv-update.service
+```
+
+To change channels, edit `/etc/keynv/update.conf` and start
+`keynv-update.service`. The updater uses `flock`, so timer, service, and manual
+runs cannot overlap. It never runs `docker compose down -v`.
 
 ---
 

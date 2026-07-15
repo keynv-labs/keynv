@@ -18,6 +18,8 @@ RUN apk add --no-cache python3 make g++ libc6-compat
 
 WORKDIR /repo
 RUN corepack enable
+ENV NODE_OPTIONS=--dns-result-order=ipv4first
+RUN printf "precedence ::ffff:0:0/96 100\n" > /etc/gai.conf
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/core/package.json packages/core/tsconfig.json ./packages/core/

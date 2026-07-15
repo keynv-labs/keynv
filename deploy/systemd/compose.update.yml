@@ -1,0 +1,11 @@
+services:
+  keynv-server:
+    image: ${KEYNV_SERVER_IMAGE:?KEYNV_SERVER_IMAGE is required}
+  keynv-web:
+    image: ${KEYNV_WEB_IMAGE:?KEYNV_WEB_IMAGE is required}
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/login >/dev/null || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

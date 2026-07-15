@@ -18,7 +18,7 @@ name: keynv
 
 services:
   keynv-server:
-    image: keynv-server:local
+    image: ${KEYNV_SERVER_IMAGE:-keynv-server:local}
     build:
       context: ..
       dockerfile: apps/server/Dockerfile
@@ -39,7 +39,7 @@ services:
       KEYNV_PUBLIC_REGISTRATION: ${KEYNV_PUBLIC_REGISTRATION:-false}
       KEYNV_RATE_LIMIT_PER_MINUTE: ${KEYNV_RATE_LIMIT_PER_MINUTE:-120}
     ports:
-      - '${KEYNV_PORT:-8080}:8080'
+      - '${KEYNV_BIND_ADDRESS:-127.0.0.1}:${KEYNV_PORT:-8080}:8080'
     volumes:
       - keynv-data:/data
     healthcheck:
@@ -52,7 +52,7 @@ services:
       start_period: 30s
 
   keynv-web:
-    image: keynv-web:local
+    image: ${KEYNV_WEB_IMAGE:-keynv-web:local}
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
@@ -66,12 +66,18 @@ services:
       KEYNV_WEB_SESSION_SECRET: ${KEYNV_WEB_SESSION_SECRET:-}
       KEYNV_WEB_SESSION_SECRET_FILE: /data/web-session.secret
     ports:
-      - '${KEYNV_WEB_PORT:-3000}:3000'
+      - '${KEYNV_BIND_ADDRESS:-127.0.0.1}:${KEYNV_WEB_PORT:-3000}:3000'
     volumes:
       - keynv-web-data:/data
     depends_on:
       keynv-server:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/login >/dev/null || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Optional real-time SQLite WAL replication to S3/B2. Disabled by
   # default (the `backup` profile). Enable with:

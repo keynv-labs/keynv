@@ -1,0 +1,13 @@
+[Unit]
+Description=Poll for keynv releases or commits
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=1min
+AccuracySec=1min
+Persistent=true
+Unit=keynv-update.service
+
+[Install]
+WantedBy=timers.target

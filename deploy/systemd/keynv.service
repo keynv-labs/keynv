@@ -1,0 +1,20 @@
+[Unit]
+Description=keynv application stack
+Requires=docker.service
+Wants=network-online.target
+After=docker.service network-online.target
+Before=keynv-update.service
+ConditionPathExists=/etc/keynv/update.conf
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=KEYNV_UPDATE_CONFIG=/etc/keynv/update.conf
+ExecStart=/usr/local/libexec/keynv/auto-updater.sh start
+ExecStop=/usr/local/libexec/keynv/auto-updater.sh stop
+TimeoutStartSec=180
+TimeoutStopSec=180
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
